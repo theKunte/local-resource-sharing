@@ -1,8 +1,19 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home"; // Make sure Home.tsx is present
+//import PostResource from "./pages/PostResource"; // Optional
+//import Login from "./pages/Login"; // Optional
+import Header from "./components/Header"; // Optional but nice for navigation
+
 function App() {
   return (
-    <div className="bg-red-500 min-h-screen flex items-center justify-center">
-      <h1 className="text-white text-4xl font-bold">Tailwind is working 🎉</h1>
-    </div>
+    <BrowserRouter>
+      <Header />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        {/* <Route path="/post" element={<PostResource />} />
+        <Route path="/login" element={<Login />} /> */}
+      </Routes>
+    </BrowserRouter>
   );
 }
 
