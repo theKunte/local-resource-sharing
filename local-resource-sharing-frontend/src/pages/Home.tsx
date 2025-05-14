@@ -2,12 +2,24 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const resources = [
-  { id: 1, title: "Resource 1", description: "Description of Resource 1" },
-  { id: 2, title: "Resource 2", description: "Description of Resource 2" },
-  { id: 3, title: "Resource 3", description: "Description of Resource 3" },
+  {
+    id: 1,
+    title: "Free Tutoring - Grade 10 Math",
+    description: "Volunteer offering online help on weekday evenings.",
+  },
+  {
+    id: 2,
+    title: "Gently Used Winter Coats",
+    description: "Available for pickup near downtown community center.",
+  },
+  {
+    id: 3,
+    title: "Job Mentorship - IT Field",
+    description: "Professional offering 1:1 career guidance for juniors.",
+  },
 ];
 
-function Home() {
+export default function Home() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
       {/* Hero */}
@@ -48,5 +60,3 @@ function Home() {
     </div>
   );
 }
-
-export default Home;
