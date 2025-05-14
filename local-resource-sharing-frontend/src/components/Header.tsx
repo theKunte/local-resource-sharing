@@ -2,31 +2,24 @@ import { Link } from "react-router-dom";
 
 function Header() {
   return (
-    <header className="bg-white shadow-sm border-b">
-      <nav className="flex justify-between items-center max-w-6xl mx-auto px-6 py-4">
-        <Link
-          to="/"
-          className="text-2xl font-bold text-blue-600 tracking-tight"
-        >
-          Local<span className="text-gray-800">Share</span>
-        </Link>
-        <div className="flex gap-4">
-          <Link
-            to="/"
-            className="text-gray-700 hover:text-blue-600 transition font-medium"
-          >
+    <header className="bg-blue-700 text-white shadow">
+      <nav className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        {/* Left: Logo and Nav */}
+        <div className="flex items-center space-x-6">
+          <Link to="/" className="text-2xl font-bold tracking-tight">
+            🛠️ LocalToolShare
+          </Link>
+          <Link to="/" className="hover:underline">
             Home
           </Link>
-          <Link
-            to="/post"
-            className="bg-blue-600 text-white px-4 py-1.5 rounded-md hover:bg-blue-700 transition"
-          >
-            Post Resource
+          <Link to="/post" className="hover:underline">
+            Post Tool
           </Link>
-          <Link
-            to="/login"
-            className="text-gray-700 hover:text-blue-600 transition font-medium"
-          >
+        </div>
+
+        {/* Right: Login */}
+        <div>
+          <Link to="/login" className="hover:underline">
             Login
           </Link>
         </div>
