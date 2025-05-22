@@ -1,3 +1,122 @@
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Fun, friendly, and local vibe enhancements */
+html,
+body,
+#root {
+  min-height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Fredoka", "Inter", system-ui, sans-serif;
+  background: linear-gradient(135deg, #fdf6e3 0%, #e0f2fe 100%);
+}
+
+/* Header navigation row fix */
+.header-nav-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2.5rem;
+  flex-wrap: nowrap;
+}
+.header-nav-right {
+  margin-left: auto;
+}
+
+/* Add a playful shadow and rounded corners to cards and sections */
+.card,
+.bg-white,
+.rounded-2xl,
+.rounded-lg {
+  border-radius: 1.5rem !important;
+  box-shadow: 0 4px 24px 0 rgba(54, 228, 118, 0.1),
+    0 1.5px 6px 0 rgba(161, 82, 157, 0.08);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.card:hover,
+.bg-white:hover {
+  box-shadow: 0 8px 32px 0 rgba(34, 197, 94, 0.18),
+    0 3px 12px 0 rgba(59, 130, 246, 0.16);
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* Fun accent for headers */
+h1,
+h2,
+h3 {
+  font-family: "Fredoka", "Inter", system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  color: #224183;
+  text-shadow: 0 2px 8px #bae6fd44;
+}
+
+/* Button styles for a playful look */
+button,
+.btn,
+.bg-blue-600 {
+  border-radius: 9999px !important;
+  background: linear-gradient(90deg, #38bdf8 0%, #34d399 100%);
+  color: #fff !important;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px 0 #38bdf855;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+button:hover,
+.btn:hover,
+.bg-blue-600:hover {
+  background: linear-gradient(90deg, #34d399 0%, #38bdf8 100%);
+  box-shadow: 0 4px 16px 0 #34d39955;
+  transform: scale(1.03);
+}
+
+/* Add a subtle border to input fields for a friendly look */
+input,
+textarea {
+  border-radius: 1rem !important;
+  border: 2px solid #bae6fd;
+  background: #fff;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+input:focus,
+textarea:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px #bae6fd88;
+}
+
+/* Add a fun accent to links */
+a {
+  color: #0ea5e9;
+  transition: color 0.2s;
+}
+a:hover {
+  color: #22d3ee;
+  text-decoration: underline wavy #34d399;
+}
+
+/* Add a little bounce to icons and emojis */
+.emoji,
+.icon,
+.tool-emoji {
+  display: inline-block;
+  transition: transform 0.2s;
+}
+.emoji:hover,
+.icon:hover,
+.tool-emoji:hover {
+  transform: scale(1.2) rotate(-8deg);
+}
+
+/* Responsive padding for main content */
+@media (max-width: 640px) {
+  .max-w-5xl,
+  .max-w-3xl,
+  .max-w-md {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+}
