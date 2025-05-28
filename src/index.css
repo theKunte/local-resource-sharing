@@ -20,19 +20,18 @@ body,
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 2.5rem;
   flex-wrap: nowrap;
 }
 .header-nav-right {
-  margin-left: auto;
+  margin-left: 2rem;
 }
 
 /* Add a playful shadow and rounded corners to cards and sections */
 .card,
 .bg-white,
 .rounded-3xl,
-.rounded-lg {
-  border-radius: 1.5rem !important;
+.rounded-xl {
+  border-radius: 0.5rem !important;
   box-shadow: 0 4px 24px 0 rgba(54, 228, 118, 0.1),
     0 1.5px 6px 0 rgba(161, 82, 157, 0.08);
   transition: box-shadow 0.2s, transform 0.2s;
@@ -58,7 +57,7 @@ h3 {
 button,
 .btn,
 .bg-blue-600 {
-  border-radius: 9999px !important;
+  border-radius: 0.5rem !important;
   background: linear-gradient(90deg, #38bdf8 0%, #34d399 100%);
   color: #fff !important;
   font-weight: 700;
@@ -77,8 +76,7 @@ button:hover,
 /* Add a subtle border to input fields for a friendly look */
 input,
 textarea {
-  margin-left: 2px;
-  border-radius: 1rem !important;
+  border-radius: 0.5rem !important;
   border: 2px solid #bae6fd;
   background: #fff;
   transition: border 0.2s, box-shadow 0.2s;
