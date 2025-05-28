@@ -3,24 +3,40 @@ import { useState } from "react";
 export default function PostResource() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setImage(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setImagePreview(null);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ title, description });
+    console.log({ title, description, image });
     alert("Resource submitted!");
     setTitle("");
     setDescription("");
+    setImage(null);
+    setImagePreview(null);
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-3xl mx-auto px-4 sm:px-8 lg:px-12 py-12">
       <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">
         🛠️ Share a Tool
       </h1>
 
-      <div className="bg-white p-8 sm:p-10 rounded-2xl shadow-lg border border-gray-200">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div>
+      <div className="bg-white p-6 sm:p-10 rounded-none shadow-lg border border-gray-200">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="mb-4">
             <label className="block mb-3 text-base font-medium text-gray-700">
               Tool Name
             </label>
@@ -30,12 +46,12 @@ export default function PostResource() {
               onChange={(e) => setTitle(e.target.value)}
               required
               placeholder="e.g., Cordless Drill"
-              className="w-full px-5 py-3 border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
             />
           </div>
 
-          <div>
-            <label className="block mb-3 text-base font-medium text-gray-700">
+          <div className="mb-4">
+            <label className="block mb-4 text-base font-medium text-gray-700">
               Description
             </label>
             <textarea
@@ -44,8 +60,30 @@ export default function PostResource() {
               required
               rows={6}
               placeholder="Briefly describe how it can be used and availability"
-              className="w-full px-5 py-3 border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+              className="w-full px-4 py-3 border border-gray-300 square-lg text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
             />
+          </div>
+
+          <div className="mb-4">
+            <label className="block mb-3 text-base font-medium text-gray-700">
+              Tool Image (optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {imagePreview && (
+              <div className="mt-4 flex justify-center">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="max-w-full max-h-60 w-auto h-auto rounded-xl border border-gray-200 shadow object-contain"
+                  style={{ maxWidth: '100%', maxHeight: '15rem' }}
+                />
+              </div>
+            )}
           </div>
 
           <button

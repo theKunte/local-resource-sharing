@@ -30,7 +30,7 @@ body,
 /* Add a playful shadow and rounded corners to cards and sections */
 .card,
 .bg-white,
-.rounded-2xl,
+.rounded-3xl,
 .rounded-lg {
   border-radius: 1.5rem !important;
   box-shadow: 0 4px 24px 0 rgba(54, 228, 118, 0.1),
@@ -77,6 +77,7 @@ button:hover,
 /* Add a subtle border to input fields for a friendly look */
 input,
 textarea {
+  margin-left: 2px;
   border-radius: 1rem !important;
   border: 2px solid #bae6fd;
   background: #fff;
