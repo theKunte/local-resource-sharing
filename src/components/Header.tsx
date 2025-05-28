@@ -17,15 +17,12 @@ function Header() {
         {/* Navigation Links */}
         <div className="flex flex-1 items-center ml-8">
           <div className="flex flex-row gap-10 items-center flex-1">
-            <Link
-              to="/"
-              className="px-4 text-lg font-semibold hover:underline hover:text-green-200 transition"
-            >
+            <Link to="/" className="px-8 text-lg font-semibold transition mr-6">
               Home
             </Link>
             <Link
               to="/post"
-              className="px-4 text-lg font-semibold hover:underline hover:text-green-200 transition"
+              className="px-8 text-lg font-semibold hover:underline hover:text-green-200 transition"
             >
               Post Tool
             </Link>
@@ -33,8 +30,8 @@ function Header() {
           <div className="flex-1"></div>
           <Link
             to="/login"
-            className="px-4 text-lg font-semibold hover:underline hover:text-green-200 transition"
-            style={{ marginLeft: 'auto' }}
+            className="px-8 text-lg font-semibold hover:underline hover:text-green-200 transition"
+            style={{ marginLeft: "auto" }}
           >
             Login
           </Link>
