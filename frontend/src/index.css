@@ -31,10 +31,12 @@ body,
 .bg-white,
 .rounded-3xl,
 .rounded-xl {
+  /* margin: 2rem; */ /* Removed to prevent overflow */
   border-radius: 0.5rem !important;
   box-shadow: 0 4px 24px 0 rgba(54, 228, 118, 0.1),
     0 1.5px 6px 0 rgba(161, 82, 157, 0.08);
   transition: box-shadow 0.2s, transform 0.2s;
+  /* Optionally add padding for inner spacing */
 }
 .card:hover,
 .bg-white:hover {
@@ -51,12 +53,13 @@ h3 {
   letter-spacing: 0.01em;
   color: #224183;
   text-shadow: 0 2px 8px #bae6fd44;
+  text-align: center; /* Center all main headings */
 }
 
 /* Button styles for a playful look */
 button,
 .btn,
-.bg-blue-600 {
+.bg-blue-500 {
   border-radius: 0.5rem !important;
   background: linear-gradient(90deg, #38bdf8 0%, #34d399 100%);
   color: #fff !important;
@@ -76,10 +79,12 @@ button:hover,
 /* Add a subtle border to input fields for a friendly look */
 input,
 textarea {
+  box-sizing: border-box;
   border-radius: 0.5rem !important;
   border: 2px solid #bae6fd;
   background: #fff;
   transition: border 0.2s, box-shadow 0.2s;
+  max-width: 100%;
 }
 input:focus,
 textarea:focus {
