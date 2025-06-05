@@ -80,7 +80,7 @@ export default function PostResource() {
                   src={imagePreview}
                   alt="Preview"
                   className="max-w-full max-h-60 w-auto h-auto rounded-xl border border-gray-200 shadow object-contain"
-                  style={{ maxWidth: '100%', maxHeight: '15rem' }}
+                  style={{ maxWidth: "100%", maxHeight: "15rem" }}
                 />
               </div>
             )}
