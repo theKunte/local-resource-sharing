@@ -42,9 +42,9 @@ export default function Home() {
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">
           Latest Shared Resources
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {resources.length === 0 ? (
-            <div className="text-gray-500 text-center col-span-2">
+            <div className="text-gray-500 text-center col-span-full">
               No resources posted yet.
             </div>
           ) : (
