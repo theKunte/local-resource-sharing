@@ -50,6 +50,43 @@ app.post("/api/resources", async (req, res) => {
   }
 });
 
+// Update a resource by id
+app.put("/api/resources/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { title, description, image } = req.body;
+  if (isNaN(id)) {
+    return res.status(400).json({ error: "Invalid resource id" });
+  }
+  if (!title || !description) {
+    return res.status(400).json({ error: "Title and description are required." });
+  }
+  try {
+    const updated = await prisma.resource.update({
+      where: { id },
+      data: { title, description, image },
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating resource:", error);
+    res.status(404).json({ error: "Resource not found" });
+  }
+});
+
+// Delete a resource by id
+app.delete("/api/resources/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    return res.status(400).json({ error: "Invalid resource id" });
+  }
+  try {
+    await prisma.resource.delete({ where: { id } });
+    res.status(204).end();
+  } catch (error) {
+    console.error("Error deleting resource:", error);
+    res.status(404).json({ error: "Resource not found" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
 });
