@@ -9,7 +9,6 @@ body,
 #root {
   min-height: 100%;
   width: 100%;
-  margin: 0;
   padding: 0;
   font-family: "Fredoka", "Inter", system-ui, sans-serif;
   background: linear-gradient(135deg, #fdf6e3 0%, #e0f2fe 100%);
@@ -37,6 +36,7 @@ body,
     0 1.5px 6px 0 rgba(161, 82, 157, 0.08);
   transition: box-shadow 0.2s, transform 0.2s;
   /* Optionally add padding for inner spacing */
+  margin: 1.4rem;
 }
 .card:hover,
 .bg-white:hover {
