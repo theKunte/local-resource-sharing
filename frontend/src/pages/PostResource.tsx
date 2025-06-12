@@ -19,41 +19,32 @@ export default function PostResource() {
       setImagePreview(null);
     }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+
     let imageData: string | undefined = undefined;
     if (image) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        imageData = reader.result as string;
-        await axios.post("http://localhost:3001/api/resources", {
-          title,
-          description,
-          image: imageData,
-        });
-        setTitle("");
-        setDescription("");
-        setImage(null);
-        setImagePreview(null);
-        setSubmitting(false);
-        alert("Resource submitted!");
-      };
-      reader.readAsDataURL(image);
-    } else {
-      await axios.post("http://localhost:3001/api/resources", {
-        title,
-        description,
-        image: undefined,
+      imageData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(image);
       });
-      setTitle("");
-      setDescription("");
-      setImage(null);
-      setImagePreview(null);
-      setSubmitting(false);
-      alert("Resource submitted!");
     }
+
+    await axios.post("http://localhost:3001/api/resources", {
+      title,
+      description,
+      image: imageData,
+    });
+
+    setTitle("");
+    setDescription("");
+    setImage(null);
+    setImagePreview(null);
+    setSubmitting(false);
+    alert("Resource submitted!");
   };
 
   return (
