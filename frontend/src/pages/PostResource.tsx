@@ -1,10 +1,12 @@
 import { useState } from "react";
+import axios from "axios";
 
 export default function PostResource() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -18,14 +20,40 @@ export default function PostResource() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ title, description, image });
-    alert("Resource submitted!");
-    setTitle("");
-    setDescription("");
-    setImage(null);
-    setImagePreview(null);
+    setSubmitting(true);
+    let imageData: string | undefined = undefined;
+    if (image) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        imageData = reader.result as string;
+        await axios.post("http://localhost:3001/api/resources", {
+          title,
+          description,
+          image: imageData,
+        });
+        setTitle("");
+        setDescription("");
+        setImage(null);
+        setImagePreview(null);
+        setSubmitting(false);
+        alert("Resource submitted!");
+      };
+      reader.readAsDataURL(image);
+    } else {
+      await axios.post("http://localhost:3001/api/resources", {
+        title,
+        description,
+        image: undefined,
+      });
+      setTitle("");
+      setDescription("");
+      setImage(null);
+      setImagePreview(null);
+      setSubmitting(false);
+      alert("Resource submitted!");
+    }
   };
 
   return (
@@ -89,8 +117,9 @@ export default function PostResource() {
           <button
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition"
+            disabled={submitting}
           >
-            📤 Submit Tool
+            {submitting ? "Submitting..." : "📤 Submit Tool"}
           </button>
         </form>
       </div>

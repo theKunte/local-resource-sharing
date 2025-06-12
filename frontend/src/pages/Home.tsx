@@ -1,9 +1,23 @@
-import { Link } from "react-router-dom";
-import { useResourceContext } from "../context/ResourceContext";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import ResourceCard from "../components/ResourceCard";
+import { Link } from "react-router-dom";
+
+type Resource = {
+  id: number;
+  title: string;
+  description: string;
+  image?: string;
+};
 
 export default function Home() {
-  const { resources } = useResourceContext();
+  const [resources, setResources] = useState<Resource[]>([]);
+
+  useEffect(() => {
+    axios
+      .get<Resource[]>("http://localhost:3001/api/resources")
+      .then((res) => setResources(res.data));
+  }, []);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
