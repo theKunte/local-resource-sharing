@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import ResourceCard from "../components/ResourceCard";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
 export default function Home() {
   const { user, loading, signInWithGoogle } = useFirebaseAuth();
   const [resources, setResources] = useState<any[]>([]);
   const [loadingResources, setLoadingResources] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -34,8 +33,9 @@ export default function Home() {
           Local Resource Sharing
         </h1>
         <p className="text-gray-600 max-w-2xl mx-auto mb-6">
-          Find and share helpful community resources — from tools and tutoring to
-          clothing drives and more. Sign in to post and manage your own resources!
+          Find and share helpful community resources — from tools and tutoring
+          to clothing drives and more. Sign in to post and manage your own
+          resources!
         </p>
         {!user ? (
           <button

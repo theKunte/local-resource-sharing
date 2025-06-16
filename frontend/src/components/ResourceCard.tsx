@@ -13,10 +13,22 @@ interface ResourceCardProps {
   description: string;
   image?: string;
   onDelete?: (id: number) => void;
-  onEdit?: (resource: { id: number; title: string; description: string; image?: string }) => void;
+  onEdit?: (resource: {
+    id: number;
+    title: string;
+    description: string;
+    image?: string;
+  }) => void;
 }
 
-const ResourceCard: React.FC<ResourceCardProps> = ({ id, title, description, image, onDelete, onEdit }) => {
+const ResourceCard: React.FC<ResourceCardProps> = ({
+  id,
+  title,
+  description,
+  image,
+  onDelete,
+  onEdit,
+}) => {
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow p-6 mb-8 relative">
       <div className="absolute top-2 right-2 flex gap-2">
@@ -45,7 +57,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ id, title, description, ima
           src={image}
           alt={title}
           className="max-h-40 rounded-xl border border-gray-200 shadow mb-2 object-contain"
-          style={{ maxWidth: '100%' }}
+          style={{ maxWidth: "100%" }}
         />
       )}
       <p className="text-gray-700 text-base">{description}</p>
