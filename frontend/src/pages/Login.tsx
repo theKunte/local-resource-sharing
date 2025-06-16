@@ -14,6 +14,11 @@ const Login = () => {
     // On success: navigate("/");
   };
 
+  const handleGoogleLogin = () => {
+    // Redirect to backend Google OAuth endpoint (adjust URL as needed)
+    window.location.href = "http://localhost:3001/auth/google";
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100 py-12 px-4">
       <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg">
@@ -24,6 +29,15 @@ const Login = () => {
           <h2 className="text-2xl font-bold text-center text-blue-900 mb-6">
             Login to Local Tool Share
           </h2>
+          {/* Google Login Button */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="w-full flex items-center justify-center gap-2 py-2 mb-4 border border-gray-300 rounded-xl bg-white hover:bg-gray-100 text-gray-700 font-semibold shadow-sm transition"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
+            Sign in with Google
+          </button>
           <div>
             <label htmlFor="email" className="block font-semibold text-blue-800 mb-2">
               Email
