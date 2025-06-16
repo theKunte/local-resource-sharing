@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
 export default function PostResource() {
   const [title, setTitle] = useState("");
@@ -7,6 +8,7 @@ export default function PostResource() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { user, loading } = useFirebaseAuth();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -21,6 +23,10 @@ export default function PostResource() {
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      alert("You must be logged in to post a resource.");
+      return;
+    }
     setSubmitting(true);
 
     let imageData: string | undefined = undefined;
@@ -37,6 +43,7 @@ export default function PostResource() {
       title,
       description,
       image: imageData,
+      user: user.email || user.uid,
     });
 
     setTitle("");

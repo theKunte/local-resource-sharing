@@ -19,10 +19,16 @@ app.get("/", (req, res) => {
   );
 });
 
-// Get all resources from the database
+// Get all resources from the database, with optional user filter
 app.get("/api/resources", async (req, res) => {
   try {
-    const resources = await prisma.resource.findMany();
+    const user = req.query.user as string | undefined;
+    let resources;
+    if (user) {
+      resources = await prisma.resource.findMany({ where: { user } });
+    } else {
+      resources = await prisma.resource.findMany();
+    }
     res.json(resources);
   } catch (error) {
     console.error("Error fetching resources:", error);
@@ -32,16 +38,16 @@ app.get("/api/resources", async (req, res) => {
 
 // Post a new resource to the database
 app.post("/api/resources", async (req, res) => {
-  const { title, description, image } = req.body;
-  if (!title || !description) {
+  const { title, description, image, user } = req.body;
+  if (!title || !description || !user) {
     return res
       .status(400)
-      .json({ error: "Title and description are required." });
+      .json({ error: "Title, description, and user are required." });
   }
 
   try {
     const resource = await prisma.resource.create({
-      data: { title, description, image },
+      data: { title, description, image, user },
     });
     res.status(201).json(resource);
   } catch (error) {
@@ -58,7 +64,9 @@ app.put("/api/resources/:id", async (req, res) => {
     return res.status(400).json({ error: "Invalid resource id" });
   }
   if (!title || !description) {
-    return res.status(400).json({ error: "Title and description are required." });
+    return res
+      .status(400)
+      .json({ error: "Title and description are required." });
   }
   try {
     const updated = await prisma.resource.update({

@@ -1,11 +1,19 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { user, loading, signInWithGoogle, signOutUser } = useFirebaseAuth();
+
+  // Redirect to home if logged in
+  if (user) {
+    navigate("/");
+    return null;
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,10 +22,9 @@ const Login = () => {
     // On success: navigate("/");
   };
 
-  const handleGoogleLogin = () => {
-    // Redirect to backend Google OAuth endpoint (adjust URL as needed)
-    window.location.href = "http://localhost:3001/auth/google";
-  };
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-blue-100 py-12 px-4">
@@ -32,7 +39,7 @@ const Login = () => {
           {/* Google Login Button */}
           <button
             type="button"
-            onClick={handleGoogleLogin}
+            onClick={signInWithGoogle}
             className="w-full flex items-center justify-center gap-2 py-2 mb-4 border border-gray-300 rounded-xl bg-white hover:bg-gray-100 text-gray-700 font-semibold shadow-sm transition"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
