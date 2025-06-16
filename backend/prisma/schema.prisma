@@ -15,4 +15,5 @@ model Resource {
   title       String
   description String
   image       String? // base64 or URL
+  user        String  // email or uid of the posting user
 }

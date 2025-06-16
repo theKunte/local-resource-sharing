@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
 function Header() {
+  const { user, signOutUser } = useFirebaseAuth();
   return (
     <header className="bg-gradient-to-r from-blue-600 to-green-400 text-white shadow">
       <nav className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -28,13 +30,31 @@ function Header() {
             </Link>
           </div>
           <div className="flex-1"></div>
-          <Link
-            to="/login"
-            className="px-8 text-lg font-semibold hover:underline hover:text-green-200 transition"
-            style={{ marginLeft: "auto" }}
-          >
-            Login
-          </Link>
+          {user ? (
+            <>
+              <Link
+                to="/profile"
+                className="px-8 text-lg font-semibold hover:underline hover:text-green-200 transition"
+                style={{ marginLeft: "auto" }}
+              >
+                {user.displayName || user.email}
+              </Link>
+              <button
+                onClick={signOutUser}
+                className="ml-4 px-4 py-1 bg-red-500 hover:bg-red-600 rounded text-white font-semibold transition"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="px-8 text-lg font-semibold hover:underline hover:text-green-200 transition"
+              style={{ marginLeft: "auto" }}
+            >
+              Login
+            </Link>
+          )}
         </div>
       </nav>
     </header>
