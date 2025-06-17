@@ -43,7 +43,7 @@ export default function PostResource() {
       title,
       description,
       image: imageData,
-      user: user.email || user.uid,
+      ownerId: user.uid, // FIX: use ownerId, not user
     });
 
     setTitle("");

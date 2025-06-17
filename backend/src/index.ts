@@ -19,13 +19,15 @@ app.get("/", (req, res) => {
   );
 });
 
-// Get all resources from the database, with optional user filter
+// --- RESOURCES API --- //
+
+// Get all resources from the database, with optional ownerId filter
 app.get("/api/resources", async (req, res) => {
   try {
-    const user = req.query.user as string | undefined;
+    const ownerId = req.query.ownerId as string | undefined;
     let resources;
-    if (user) {
-      resources = await prisma.resource.findMany({ where: { user } });
+    if (ownerId) {
+      resources = await prisma.resource.findMany({ where: { ownerId } });
     } else {
       resources = await prisma.resource.findMany();
     }
@@ -38,16 +40,25 @@ app.get("/api/resources", async (req, res) => {
 
 // Post a new resource to the database
 app.post("/api/resources", async (req, res) => {
-  const { title, description, image, user } = req.body;
-  if (!title || !description || !user) {
-    return res
-      .status(400)
-      .json({ error: "Title, description, and user are required." });
+  const { title, description, ownerId, image } = req.body;
+  if (!title || !ownerId) {
+    return res.status(400).json({ error: "Title and ownerId are required." });
   }
 
   try {
+    // Ensure user exists
+    await prisma.user.upsert({
+      where: { id: ownerId },
+      update: {},
+      create: {
+        id: ownerId,
+        email: req.body.email || ownerId + "@local.firebase", // fallback if no email
+        name: req.body.name || null,
+      },
+    });
+    // Create resource
     const resource = await prisma.resource.create({
-      data: { title, description, image, user },
+      data: { title, description, ownerId, image },
     });
     res.status(201).json(resource);
   } catch (error) {
@@ -58,11 +69,8 @@ app.post("/api/resources", async (req, res) => {
 
 // Update a resource by id
 app.put("/api/resources/:id", async (req, res) => {
-  const id = Number(req.params.id);
-  const { title, description, image } = req.body;
-  if (isNaN(id)) {
-    return res.status(400).json({ error: "Invalid resource id" });
-  }
+  const id = req.params.id;
+  const { title, description } = req.body;
   if (!title || !description) {
     return res
       .status(400)
@@ -71,7 +79,7 @@ app.put("/api/resources/:id", async (req, res) => {
   try {
     const updated = await prisma.resource.update({
       where: { id },
-      data: { title, description, image },
+      data: { title, description },
     });
     res.json(updated);
   } catch (error) {
@@ -82,16 +90,102 @@ app.put("/api/resources/:id", async (req, res) => {
 
 // Delete a resource by id
 app.delete("/api/resources/:id", async (req, res) => {
-  const id = Number(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json({ error: "Invalid resource id" });
-  }
+  const id = req.params.id;
   try {
     await prisma.resource.delete({ where: { id } });
     res.status(204).end();
   } catch (error) {
     console.error("Error deleting resource:", error);
     res.status(404).json({ error: "Resource not found" });
+  }
+});
+
+// --- GROUPS API ---
+// Create a group
+app.post("/api/groups", async (req, res) => {
+  const { name, createdById } = req.body;
+  if (!name || !createdById) {
+    return res
+      .status(400)
+      .json({ error: "Group name and creator are required." });
+  }
+  try {
+    const group = await prisma.group.create({
+      data: {
+        name,
+        createdById,
+        members: {
+          create: { userId: createdById }, // Add creator as first member
+        },
+      },
+    });
+    res.status(201).json(group);
+  } catch (error) {
+    console.error("Error creating group:", error);
+    res.status(500).json({ error: "Failed to create group" });
+  }
+});
+
+// Add a user to a group
+app.post("/api/groups/:groupId/add-member", async (req, res) => {
+  const { groupId } = req.params;
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "User ID required" });
+  try {
+    const member = await prisma.groupMember.create({
+      data: { groupId, userId },
+    });
+    res.status(201).json(member);
+  } catch (error) {
+    console.error("Error adding member:", error);
+    res.status(500).json({ error: "Failed to add member" });
+  }
+});
+
+// List groups for a user
+app.get("/api/groups", async (req, res) => {
+  const userId = req.query.userId as string;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+  try {
+    const groups = await prisma.groupMember.findMany({
+      where: { userId },
+      include: { group: true },
+    });
+    res.json(groups.map((g) => g.group));
+  } catch (error) {
+    console.error("Error fetching groups:", error);
+    res.status(500).json({ error: "Failed to fetch groups" });
+  }
+});
+
+// List resources for a group
+app.get("/api/groups/:groupId/resources", async (req, res) => {
+  const { groupId } = req.params;
+  try {
+    const shared = await prisma.resourceSharing.findMany({
+      where: { groupId },
+      include: { resource: true },
+    });
+    res.json(shared.map((s) => s.resource));
+  } catch (error) {
+    console.error("Error fetching group resources:", error);
+    res.status(500).json({ error: "Failed to fetch group resources" });
+  }
+});
+
+// Share a resource with a group
+app.post("/api/resources/:resourceId/share", async (req, res) => {
+  const { resourceId } = req.params;
+  const { groupId } = req.body;
+  if (!groupId) return res.status(400).json({ error: "groupId required" });
+  try {
+    const sharing = await prisma.resourceSharing.create({
+      data: { resourceId, groupId },
+    });
+    res.status(201).json(sharing);
+  } catch (error) {
+    console.error("Error sharing resource:", error);
+    res.status(500).json({ error: "Failed to share resource" });
   }
 });
 

@@ -10,10 +10,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String?
+  resources     Resource[]     @relation("UserResources")
+  groupMembers  GroupMember[]
+  createdGroups Group[]        @relation("CreatedGroups")
+}
+
+model Group {
+  id          String         @id @default(uuid())
+  name        String
+  createdById String
+  createdBy   User           @relation("CreatedGroups", fields: [createdById], references: [id])
+  members     GroupMember[]
+  resources   ResourceSharing[]
+  avatar      String?        // base64 or URL
+}
+
+model GroupMember {
+  id      String   @id @default(uuid())
+  group   Group    @relation(fields: [groupId], references: [id])
+  groupId String
+  user    User     @relation(fields: [userId], references: [id])
+  userId  String
+}
+
 model Resource {
-  id          Int     @id @default(autoincrement())
+  id          String           @id @default(uuid())
   title       String
   description String
-  image       String? // base64 or URL
-  user        String  // email or uid of the posting user
+  image       String?
+  ownerId     String
+  owner       User             @relation("UserResources", fields: [ownerId], references: [id])
+  sharedWith  ResourceSharing[]
+}
+
+model ResourceSharing {
+  id         String    @id @default(uuid())
+  resource   Resource  @relation(fields: [resourceId], references: [id])
+  resourceId String
+  group      Group     @relation(fields: [groupId], references: [id])
+  groupId    String
 }
