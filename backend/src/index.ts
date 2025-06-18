@@ -21,17 +21,34 @@ app.get("/", (req, res) => {
 
 // --- RESOURCES API --- //
 
-// Get all resources from the database, with optional ownerId filter
+// Get all resources visible to a user: their own, or shared with a group they belong to
 app.get("/api/resources", async (req, res) => {
   try {
-    const ownerId = req.query.ownerId as string | undefined;
-    let resources;
-    if (ownerId) {
-      resources = await prisma.resource.findMany({ where: { ownerId } });
-    } else {
-      resources = await prisma.resource.findMany();
-    }
-    res.json(resources);
+    const userId = req.query.ownerId as string | undefined;
+    if (!userId) return res.status(400).json({ error: "ownerId (userId) required" });
+
+    // Get group IDs the user is a member of
+    const groupMemberships = await prisma.groupMember.findMany({
+      where: { userId },
+      select: { groupId: true },
+    });
+    const groupIds = groupMemberships.map((g) => g.groupId);
+
+    // Get resources owned by the user
+    const ownResources = await prisma.resource.findMany({ where: { ownerId: userId } });
+
+    // Get resources shared with any group the user is a member of
+    const sharedResources = await prisma.resourceSharing.findMany({
+      where: { groupId: { in: groupIds } },
+      include: { resource: true },
+    });
+    const sharedResourceList = sharedResources.map((s) => s.resource);
+
+    // Merge and deduplicate by resource id
+    const allResources = [...ownResources, ...sharedResourceList].filter(
+      (res, idx, arr) => arr.findIndex(r => r.id === res.id) === idx
+    );
+    res.json(allResources);
   } catch (error) {
     console.error("Error fetching resources:", error);
     res.status(500).json({ error: "Internal server error" });
