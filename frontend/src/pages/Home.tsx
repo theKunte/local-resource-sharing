@@ -14,8 +14,8 @@ export default function Home() {
       setLoadingResources(true);
       axios
         .get(
-          `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
-            user.uid
+          `http://localhost:3001/api/resources?user=${encodeURIComponent(
+            user.email || user.uid
           )}`
         )
         .then((res) => setResources(res.data))
