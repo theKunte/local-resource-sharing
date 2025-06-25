@@ -134,7 +134,9 @@ export default function Profile() {
                 src={typeof groupAvatar === "string" ? groupAvatar : undefined}
                 alt="SeattleFriends Avatar"
                 className={
-                  groupAvatar ? "w-full h-full object-cover rounded-full" : "hidden"
+                  groupAvatar
+                    ? "w-full h-full object-cover rounded-full"
+                    : "hidden"
                 }
                 style={{ aspectRatio: "1/1", objectFit: "cover" }}
               />
