@@ -17,15 +17,21 @@ function Header() {
         
         {/* Navigation Links - Only show for authenticated users */}
         {user ? (
-          <div className="flex flex-1 items-center ml-8">
-            <div className="flex flex-row gap-10 items-center flex-1">
-              <Link to="/" className="px-8 text-lg font-semibold transition mr-6 hover:text-emerald-200">
+          <div className="flex flex-1 items-center ml-8">            <div className="flex flex-row gap-6 lg:gap-10 items-center flex-1">
+              <Link to="/" className="px-4 lg:px-8 text-base lg:text-lg font-semibold transition hover:text-emerald-200">
                 Home
-              </Link>              <Link
+              </Link>
+              <Link
                 to="/post"
-                className="px-8 text-lg font-semibold hover:underline hover:text-emerald-200 transition"
+                className="px-4 lg:px-8 text-base lg:text-lg font-semibold hover:underline hover:text-emerald-200 transition"
               >
                 Share Gear
+              </Link>
+              <Link
+                to="/groups"
+                className="px-4 lg:px-8 text-base lg:text-lg font-semibold hover:underline hover:text-emerald-200 transition"
+              >
+                Groups
               </Link>
             </div>
             <div className="flex-1"></div>

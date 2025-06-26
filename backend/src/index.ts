@@ -254,6 +254,145 @@ app.post("/api/resources/:resourceId/share", async (req, res) => {
   }
 });
 
+// Get group members
+app.get("/api/groups/:groupId/members", async (req, res) => {
+  const { groupId } = req.params;
+  try {
+    const members = await prisma.groupMember.findMany({
+      where: { groupId },
+      include: { 
+        user: {
+          select: { id: true, email: true, name: true }
+        }
+      },
+    });
+    res.json(members);
+  } catch (error) {
+    console.error("Error fetching group members:", error);
+    res.status(500).json({ error: "Failed to fetch group members" });
+  }
+});
+
+// Invite user to group (by email)
+app.post("/api/groups/:groupId/invite", async (req, res) => {
+  const { groupId } = req.params;
+  const { email, invitedBy } = req.body;
+  
+  if (!email || !invitedBy) {
+    return res.status(400).json({ error: "Email and invitedBy are required" });
+  }
+
+  try {
+    // Check if user exists with this email
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ error: "User with this email is not registered yet" });
+    }
+
+    // Check if user is already in the group
+    const existingMember = await prisma.groupMember.findFirst({
+      where: { 
+        groupId,
+        userId: existingUser.id
+      }
+    });
+
+    if (existingMember) {
+      return res.status(400).json({ error: "User is already a member of this group" });
+    }
+
+    // Add user to group
+    const member = await prisma.groupMember.create({
+      data: { 
+        groupId, 
+        userId: existingUser.id 
+      },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true }
+        }
+      }
+    });
+
+    res.status(201).json(member);
+  } catch (error) {
+    console.error("Error inviting user to group:", error);
+    res.status(500).json({ error: "Failed to invite user to group" });
+  }
+});
+
+// Remove user from group
+app.delete("/api/groups/:groupId/members/:userId", async (req, res) => {
+  const { groupId, userId } = req.params;
+  
+  try {
+    await prisma.groupMember.deleteMany({
+      where: { 
+        groupId,
+        userId
+      }
+    });
+    res.status(204).end();
+  } catch (error) {
+    console.error("Error removing user from group:", error);
+    res.status(500).json({ error: "Failed to remove user from group" });
+  }
+});
+
+// Update group (for avatar, name, etc.)
+app.put("/api/groups/:groupId", async (req, res) => {
+  const { groupId } = req.params;
+  const { name, avatar, userId } = req.body;
+  
+  try {
+    // Verify user is a member of the group or the creator
+    const membership = await prisma.groupMember.findFirst({
+      where: { 
+        groupId,
+        userId
+      },
+      include: {
+        group: true
+      }
+    });
+    
+    if (!membership) {
+      return res.status(403).json({ error: "You are not a member of this group" });
+    }
+    
+    // Only group creator can update group details (for now)
+    if (membership.group.createdById !== userId) {
+      return res.status(403).json({ error: "Only the group creator can update group details" });
+    }
+    
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (avatar !== undefined) updateData.avatar = avatar; // Allow setting to null/empty
+    
+    const updatedGroup = await prisma.group.update({
+      where: { id: groupId },
+      data: updateData,
+      include: {
+        members: {
+          include: {
+            user: {
+              select: { id: true, email: true, name: true }
+            }
+          }
+        }
+      }
+    });
+    
+    res.json(updatedGroup);
+  } catch (error) {
+    console.error("Error updating group:", error);
+    res.status(500).json({ error: "Failed to update group" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
 });
