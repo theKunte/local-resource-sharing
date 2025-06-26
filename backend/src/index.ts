@@ -21,16 +21,62 @@ app.get("/", (req, res) => {
 
 // --- RESOURCES API --- //
 
-// Get all resources from the database, with optional ownerId filter
+// Get all resources from the database, with group-based visibility
 app.get("/api/resources", async (req, res) => {
   try {
+    const userId = req.query.user as string | undefined;
     const ownerId = req.query.ownerId as string | undefined;
-    let resources;
+    
+    // If ownerId is provided, return only that user's resources (for their profile)
     if (ownerId) {
-      resources = await prisma.resource.findMany({ where: { ownerId } });
-    } else {
-      resources = await prisma.resource.findMany();
+      const resources = await prisma.resource.findMany({ 
+        where: { ownerId },
+        include: {
+          owner: {
+            select: { id: true, email: true, name: true }
+          }
+        }
+      });
+      return res.json(resources);
     }
+    
+    // If no user is specified, return empty array (no public resources)
+    if (!userId) {
+      return res.json([]);
+    }
+
+    // Find all groups the user belongs to
+    const userGroups = await prisma.groupMember.findMany({
+      where: { userId: userId },
+      select: { groupId: true }
+    });
+    
+    const groupIds = userGroups.map(ug => ug.groupId);
+    
+    // Find all resources shared with these groups
+    const resourceSharings = await prisma.resourceSharing.findMany({
+      where: { groupId: { in: groupIds } },
+      include: {
+        resource: {
+          include: {
+            owner: {
+              select: { id: true, email: true, name: true }
+            }
+          }
+        }
+      }
+    });
+    
+    // Extract unique resources and exclude the user's own resources
+    const uniqueResources = new Map();
+    resourceSharings.forEach(sharing => {
+      const resource = sharing.resource;
+      if (resource.ownerId !== userId && !uniqueResources.has(resource.id)) {
+        uniqueResources.set(resource.id, resource);
+      }
+    });
+    
+    const resources = Array.from(uniqueResources.values());
     res.json(resources);
   } catch (error) {
     console.error("Error fetching resources:", error);
@@ -44,10 +90,9 @@ app.post("/api/resources", async (req, res) => {
   if (!title || !ownerId) {
     return res.status(400).json({ error: "Title and ownerId are required." });
   }
-
   try {
     // Ensure user exists
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { id: ownerId },
       update: {},
       create: {
@@ -56,6 +101,26 @@ app.post("/api/resources", async (req, res) => {
         name: req.body.name || null,
       },
     });
+    
+    // Check if user is in any groups, if not create a default group
+    const userGroups = await prisma.groupMember.findMany({
+      where: { userId: ownerId }
+    });
+    
+    if (userGroups.length === 0) {
+      // Create a default "Friends" group for the user
+      const defaultGroup = await prisma.group.create({
+        data: {
+          name: "My Friends",
+          createdById: ownerId,
+          members: {
+            create: { userId: ownerId }
+          }
+        }
+      });
+      console.log(`Created default group for user ${ownerId}:`, defaultGroup.id);
+    }
+    
     // Create resource
     const resource = await prisma.resource.create({
       data: { title, description, ownerId, image },
