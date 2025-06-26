@@ -2,20 +2,19 @@ import { useEffect, useState } from "react";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import ResourceCard from "../components/ResourceCard";
+import GearCard, { Gear } from "../components/GearCard";
 import { cropImageToSquare } from "../utils/cropImageToSquare";
 
 export default function Profile() {
   const { user, loading } = useFirebaseAuth();
-  const [resources, setResources] = useState<any[]>([]);
+  const [gear, setGear] = useState<Gear[]>([]);
   const [groupAvatar, setGroupAvatar] = useState<string | ArrayBuffer | null>(
     null
   );
   const navigate = useNavigate();
-
   useEffect(() => {
     if (!loading && !user) {
-      navigate("/login");
+      navigate("/");
     }
   }, [user, loading, navigate]);
 
@@ -27,7 +26,7 @@ export default function Profile() {
             user.uid
           )}`
         )
-        .then((res) => setResources(res.data));
+        .then((res) => setGear(res.data));
     }
   }, [user]);
 
@@ -36,56 +35,52 @@ export default function Profile() {
     if (!window.confirm("Are you sure you want to delete this resource?"))
       return;
     await axios.delete(`http://localhost:3001/api/resources/${id}`);
-    setResources((prev) => prev.filter((r) => r.id !== id));
-  };
-
-  // Edit resource handler
-  const handleEdit = async (resource: any) => {
-    const newTitle = prompt("Edit title:", resource.title);
+    setGear((prev) => prev.filter((r) => r.id !== id));  };
+  
+  // Edit gear handler
+  const handleEdit = async (gearItem: Gear) => {
+    const newTitle = prompt("Edit title:", gearItem.title);
     if (!newTitle) return;
-    const newDescription = prompt("Edit description:", resource.description);
+    const newDescription = prompt("Edit description:", gearItem.description);
     if (!newDescription) return;
     const updated = await axios.put(
-      `http://localhost:3001/api/resources/${resource.id}`,
+      `http://localhost:3001/api/resources/${gearItem.id}`,
       {
         title: newTitle,
         description: newDescription,
       }
     );
-    setResources((prev) =>
-      prev.map((r) => (r.id === resource.id ? { ...r, ...updated.data } : r))
+    setGear((prev) =>
+      prev.map((r) => (r.id === gearItem.id ? { ...r, ...updated.data } : r))
     );
   };
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (!user) return null;
-
   return (
-    <div className="flex">
+    <div className="flex flex-col lg:flex-row min-h-screen">
       {/* Sidebar */}
-      <aside className="w-56 min-h-screen border-r border-gray-200 p-6 flex flex-col gap-4">
-        <h2 className="text-xl font-bold mb-8">Local-Resource-Share</h2>
-        <nav className="flex flex-col gap-2">
-          <a href="/" className="hover:underline">
+      <aside className="lg:w-56 border-b lg:border-b-0 lg:border-r border-gray-200 p-4 lg:p-6 flex lg:flex-col gap-4 overflow-x-auto lg:overflow-x-visible">        <h2 className="text-lg lg:text-xl font-bold mb-0 lg:mb-8 whitespace-nowrap">GearShare</h2>
+        <nav className="flex lg:flex-col gap-4 lg:gap-2 whitespace-nowrap">
+          <a href="/" className="hover:underline text-sm lg:text-base">
             Home
           </a>
-          <a href="/post" className="hover:underline">
-            Post A Resource
+          <a href="/post" className="hover:underline text-sm lg:text-base">
+            Share Gear
           </a>
-          <a href="/find" className="hover:underline">
-            Find Resource
+          <a href="/find" className="hover:underline text-sm lg:text-base">
+            Browse Gear
           </a>
-          <a href="/groups" className="hover:underline">
+          <a href="/groups" className="hover:underline text-sm lg:text-base">
             Groups
           </a>
         </nav>
       </aside>
       {/* Main Content */}
-      <main className="flex-1 p-10">
-        {/* Profile Header */}
-        <div className="flex flex-col md:flex-row md:items-center gap-8 mb-10">
-          <div className="flex flex-col items-center md:items-start">
-            <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center text-2xl font-bold mb-2 border">
+      <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-full overflow-hidden">        {/* Profile Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 lg:gap-8 mb-6 lg:mb-10">
+          <div className="flex flex-col items-center sm:items-start">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-32 lg:h-32 rounded-full bg-gray-200 flex items-center justify-center text-lg sm:text-xl lg:text-2xl font-bold mb-2 border">
               {user.photoURL ? (
                 <img
                   src={user.photoURL}
@@ -96,38 +91,36 @@ export default function Profile() {
                 <span>Avatar</span>
               )}
             </div>
-            <span className="text-lg font-semibold mt-2">
+            <span className="text-base sm:text-lg font-semibold mt-2 text-center sm:text-left">
               {user.displayName || user.email}
             </span>
-            <span className="text-gray-500 text-sm">Full Name</span>
+            <span className="text-gray-500 text-sm text-center sm:text-left">Full Name</span>
           </div>
-          <div className="flex-1 flex flex-col md:flex-row md:items-center gap-8 justify-between">
-            <div className="flex flex-col gap-2 md:gap-4">
-              <div className="flex gap-8 text-lg">
-                <span>
-                  <span className="font-bold">{resources.length}</span>{" "}
-                  Resources
-                </span>
-                <span>
-                  <span className="font-bold">0</span> Groups
-                </span>
-                <span>
-                  <span className="font-bold">0</span> Shared
-                </span>
-              </div>
-              <button className="text-blue-600 font-semibold hover:underline mt-2 md:mt-0">
-                Edit Profile
-              </button>
+          <div className="flex-1 flex flex-col gap-4 justify-center">
+            <div className="flex justify-center sm:justify-start gap-4 sm:gap-6 lg:gap-8 text-sm sm:text-base lg:text-lg">
+              <span className="text-center">                <span className="font-bold">{gear.length}</span><br className="sm:hidden" />
+                <span className="sm:ml-1">Gear</span>
+              </span>
+              <span className="text-center">
+                <span className="font-bold">0</span><br className="sm:hidden" />
+                <span className="sm:ml-1">Groups</span>
+              </span>
+              <span className="text-center">
+                <span className="font-bold">0</span><br className="sm:hidden" />
+                <span className="sm:ml-1">Shared</span>
+              </span>
             </div>
+            <button className="text-blue-600 font-semibold hover:underline text-center sm:text-left">
+              Edit Profile
+            </button>
           </div>
-        </div>
-        {/* Groups Row and Create Group */}
-        <div className="flex gap-6 mb-8 items-center">
+        </div>        {/* Groups Row and Create Group */}
+        <div className="flex flex-wrap gap-4 sm:gap-6 mb-6 sm:mb-8 justify-center sm:justify-start">
           {/* SeattleFriends group with avatar and upload */}
           <div className="flex flex-col items-center">
             <label
               htmlFor="group-avatar-upload"
-              className="w-16 h-16 rounded-full bg-green-200 mb-2 flex items-center justify-center font-bold text-lg text-green-900 overflow-hidden cursor-pointer border-2 border-green-400 shadow"
+              className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full bg-green-200 mb-2 flex items-center justify-center font-bold text-sm sm:text-base lg:text-lg text-green-900 overflow-hidden cursor-pointer border-2 border-green-400 shadow"
               style={{ boxShadow: "0 0 0 2px #222" }}
             >
               <img
@@ -154,13 +147,13 @@ export default function Profile() {
                 }}
               />
             </label>
-            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
+            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1 text-center max-w-16 sm:max-w-20 break-words">
               SeattleFriends
             </span>
           </div>
           {/* Mock group 2 */}
           <div className="flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-blue-200 mb-2 flex items-center justify-center font-bold text-lg text-blue-900 overflow-hidden border-2 border-blue-400 shadow">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full bg-blue-200 mb-2 flex items-center justify-center font-bold text-sm sm:text-base lg:text-lg text-blue-900 overflow-hidden border-2 border-blue-400 shadow">
               <img
                 src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=facearea&w=128&h=128&q=80"
                 alt="Hiking Buddies"
@@ -168,13 +161,13 @@ export default function Profile() {
                 style={{ aspectRatio: "1/1", objectFit: "cover" }}
               />
             </div>
-            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
+            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1 text-center max-w-16 sm:max-w-20 break-words">
               Hiking Buddies
             </span>
           </div>
           {/* Mock group 3 */}
           <div className="flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-yellow-200 mb-2 flex items-center justify-center font-bold text-lg text-yellow-900 overflow-hidden border-2 border-yellow-400 shadow">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full bg-yellow-200 mb-2 flex items-center justify-center font-bold text-sm sm:text-base lg:text-lg text-yellow-900 overflow-hidden border-2 border-yellow-400 shadow">
               <img
                 src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=128&h=128&q=80"
                 alt="Makers Club"
@@ -182,7 +175,7 @@ export default function Profile() {
                 style={{ aspectRatio: "1/1", objectFit: "cover" }}
               />
             </div>
-            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
+            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1 text-center max-w-16 sm:max-w-20 break-words">
               Makers Club
             </span>
           </div>
@@ -203,34 +196,60 @@ export default function Profile() {
             }}
             title="Create Group"
           >
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl mb-2 border-2 border-gray-400 shadow">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full bg-gray-200 flex items-center justify-center text-lg sm:text-xl lg:text-2xl mb-2 border-2 border-gray-400 shadow">
               +
             </div>
-            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
+            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1 text-center max-w-16 sm:max-w-20 break-words">
               New
             </span>
           </button>
         </div>
-        <hr className="mb-8" />
-        {/* Posted Resources Grid */}
-        <div className="grid grid-cols-3 gap-8">
-          {resources.length === 0 ? (
-            <div className="text-gray-500 col-span-full">
-              You haven't posted any resources yet.
-            </div>
-          ) : (
-            resources.map((res) => (
-              <ResourceCard
-                key={res.id}
-                id={res.id}
-                title={res.title}
-                description={res.description}
-                image={res.image}
-                onDelete={handleDelete}
-                onEdit={handleEdit}
-              />
-            ))
-          )}
+        
+        <hr className="mb-6 sm:mb-8" />
+        
+        {/* Posted Gear Section */}
+        <div className="mb-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 flex items-center">
+            <span className="mr-3">🎒</span>
+            Your Shared Gear
+            {gear.length > 0 && (
+              <span className="ml-3 text-lg font-normal text-gray-500">
+                ({gear.length} item{gear.length !== 1 ? 's' : ''})
+              </span>
+            )}
+          </h2>
+          
+          {/* Gear Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+            {gear.length === 0 ? (
+              <div className="col-span-full">
+                <div className="text-center py-12 px-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                  <span className="text-5xl mb-4 block">📦</span>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No gear shared yet</h3>
+                  <p className="text-gray-500 mb-4">Start sharing your outdoor gear with trusted friends!</p>
+                  <button
+                    onClick={() => window.location.href = '/post'}
+                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
+                  >
+                    <span className="mr-2">🏔️</span>
+                    Share Your First Gear
+                  </button>
+                </div>
+              </div>
+            ) : (
+              gear.map((item) => (
+                <GearCard
+                  key={item.id}
+                  id={item.id}
+                  title={item.title}
+                  description={item.description}
+                  image={item.image}
+                  onDelete={handleDelete}
+                  onEdit={handleEdit}
+                />
+              ))
+            )}
+          </div>
         </div>
       </main>
     </div>

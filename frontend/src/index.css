@@ -124,3 +124,56 @@ a:hover {
     padding-right: 0.5rem !important;
   }
 }
+
+/* Mobile-first responsive utilities */
+@media (max-width: 640px) {
+  /* Reduce card margins on mobile */
+  .card,
+  .bg-white,
+  .rounded-3xl,
+  .rounded-xl {
+    margin: 0.5rem !important;
+  }
+  
+  /* Ensure grid containers don't overflow */
+  .grid {
+    padding: 0;
+    margin: 0;
+    gap: 0.5rem !important;
+  }
+  
+  /* Make sure images don't cause horizontal scroll */
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+}
+
+/* Text utility classes for mobile */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Ensure consistent responsive grid spacing */
+@media (min-width: 640px) {
+  .grid {
+    gap: 1.5rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    gap: 2rem !important;
+  }
+}

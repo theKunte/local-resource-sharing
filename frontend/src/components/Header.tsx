@@ -3,59 +3,52 @@ import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
 function Header() {
   const { user, signOutUser } = useFirebaseAuth();
-  return (
-    <header className="bg-gradient-to-r from-blue-600 to-green-400 text-white shadow">
-      <nav className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        {/* Logo and App Name */}
+  return (    <header className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-lg">
+      <nav className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">        {/* Logo and App Name */}
         <Link
           to="/"
           className="flex items-center gap-2 text-2xl font-extrabold tracking-tight drop-shadow tool-emoji"
         >
-          <span role="img" aria-label="toolbox" className="emoji">
-            🧰
+          <span role="img" aria-label="mountain adventure" className="emoji">
+            �️
           </span>
-          <span className="hidden sm:inline">LocalToolShare</span>
+          <span className="hidden sm:inline">GearShare</span>
         </Link>
-        {/* Navigation Links */}
-        <div className="flex flex-1 items-center ml-8">
-          <div className="flex flex-row gap-10 items-center flex-1">
-            <Link to="/" className="px-8 text-lg font-semibold transition mr-6">
-              Home
-            </Link>
-            <Link
-              to="/post"
-              className="px-8 text-lg font-semibold hover:underline hover:text-green-200 transition"
-            >
-              Post Tool
-            </Link>
-          </div>
-          <div className="flex-1"></div>
-          {user ? (
-            <>
-              <Link
-                to="/profile"
-                className="px-8 text-lg font-semibold hover:underline hover:text-green-200 transition"
-                style={{ marginLeft: "auto" }}
+        
+        {/* Navigation Links - Only show for authenticated users */}
+        {user ? (
+          <div className="flex flex-1 items-center ml-8">
+            <div className="flex flex-row gap-10 items-center flex-1">
+              <Link to="/" className="px-8 text-lg font-semibold transition mr-6 hover:text-emerald-200">
+                Home
+              </Link>              <Link
+                to="/post"
+                className="px-8 text-lg font-semibold hover:underline hover:text-emerald-200 transition"
               >
-                {user.displayName || user.email}
+                Share Gear
               </Link>
-              <button
-                onClick={signOutUser}
-                className="ml-4 px-4 py-1 bg-red-500 hover:bg-red-600 rounded text-white font-semibold transition"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
+            </div>
+            <div className="flex-1"></div>
             <Link
-              to="/login"
-              className="px-8 text-lg font-semibold hover:underline hover:text-green-200 transition"
+              to="/profile"
+              className="px-8 text-lg font-semibold hover:underline hover:text-emerald-200 transition"
               style={{ marginLeft: "auto" }}
             >
-              Login
+              {user.displayName || user.email}
             </Link>
-          )}
-        </div>
+            <button
+              onClick={signOutUser}
+              className="ml-4 px-4 py-1 bg-red-500 hover:bg-red-600 rounded text-white font-semibold transition shadow-md"
+            >
+              Logout
+            </button>
+          </div>        ) : (
+          <div className="flex items-center">
+            <span className="text-sm text-emerald-100">
+              Sign in to share gear
+            </span>
+          </div>
+        )}
       </nav>
     </header>
   );
