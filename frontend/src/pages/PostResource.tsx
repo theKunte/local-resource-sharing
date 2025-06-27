@@ -3,12 +3,22 @@ import axios from "axios";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
 
+interface Group {
+  id: string;
+  name: string;
+  memberCount: number;
+  userRole: string;
+}
+
 export default function PostResource() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+  const [loadingGroups, setLoadingGroups] = useState(false);
   const { user, loading } = useFirebaseAuth();
   const navigate = useNavigate();
 
@@ -17,6 +27,32 @@ export default function PostResource() {
       navigate("/");
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    const loadGroups = async () => {
+      if (!user) return;
+      
+      try {
+        setLoadingGroups(true);
+        const response = await axios.get(`http://localhost:3001/api/groups?userId=${user.uid}`);
+        const userGroups = response.data;
+        setGroups(userGroups);
+        
+        // By default, select all groups
+        const allGroupIds = new Set<string>();
+        userGroups.forEach((group: Group) => {
+          allGroupIds.add(group.id);
+        });
+        setSelectedGroups(allGroupIds);
+      } catch (error) {
+        console.error("Error loading groups:", error);
+      } finally {
+        setLoadingGroups(false);
+      }
+    };
+
+    loadGroups();
+  }, [user]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -58,19 +94,19 @@ export default function PostResource() {
 
       const newResource = resourceResponse.data;
 
-      // Get user's groups and automatically share with all of them
+      // Share the resource with selected groups
       try {
-        const groupsResponse = await axios.get(`http://localhost:3001/api/groups?userId=${user.uid}`);
-        const userGroups = groupsResponse.data;
-
-        // Share the resource with all user's groups
-        for (const group of userGroups) {
+        const selectedGroupIds = Array.from(selectedGroups);
+        
+        for (const groupId of selectedGroupIds) {
           await axios.post(`http://localhost:3001/api/resources/${newResource.id}/share`, {
-            groupId: group.id,
+            groupId,
           });
         }
+        
+        console.log(`Resource shared with ${selectedGroupIds.length} group(s)`);
       } catch (groupError) {
-        console.warn("Could not share with groups (user may not be in any groups yet):", groupError);
+        console.warn("Could not share with groups:", groupError);
         // Don't fail the whole operation if group sharing fails
       }      setTitle("");
       setDescription("");
@@ -248,6 +284,94 @@ export default function PostResource() {
                       id="image-upload"
                     />
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Group Selection Section */}
+            <div className="group">
+              <label className="block mb-3 text-lg font-semibold text-gray-800 flex items-center">
+                <span className="mr-2">👥</span>
+                Share with groups
+                {loadingGroups && (
+                  <span className="ml-2 text-sm font-normal text-gray-500">Loading...</span>
+                )}
+              </label>
+              
+              {groups.length === 0 && !loadingGroups ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                  <p className="text-yellow-800 text-sm">
+                    <span className="mr-1">ℹ️</span>
+                    You're not in any groups yet. Your gear will be private until you join or create a group.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-gray-600">
+                      Select which groups can see this gear
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGroups(new Set(groups.map(g => g.id)))}
+                        className="text-xs text-emerald-600 hover:text-emerald-700 underline"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGroups(new Set())}
+                        className="text-xs text-gray-500 hover:text-gray-700 underline"
+                      >
+                        Select None
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-3 max-h-48 overflow-y-auto">
+                    {groups.map((group) => (
+                      <label
+                        key={group.id}
+                        className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedGroups.has(group.id)}
+                          onChange={(e) => {
+                            const newSelected = new Set(selectedGroups);
+                            if (e.target.checked) {
+                              newSelected.add(group.id);
+                            } else {
+                              newSelected.delete(group.id);
+                            }
+                            setSelectedGroups(newSelected);
+                          }}
+                          className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-gray-900">{group.name}</span>
+                            <span className="text-xs text-gray-500">
+                              {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <span className="text-xs text-emerald-600 capitalize">
+                            Your role: {group.userRole}
+                          </span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  
+                  {selectedGroups.size === 0 && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                      <p className="text-orange-800 text-sm">
+                        <span className="mr-1">⚠️</span>
+                        No groups selected. Your gear will be private and not visible to anyone.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

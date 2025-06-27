@@ -7,6 +7,7 @@ import { cropImageToSquare } from "../utils/cropImageToSquare";
 interface Group {
   id: string;
   name: string;
+  description?: string;
   createdById: string;
   avatar?: string;
   memberCount?: number;
@@ -18,6 +19,13 @@ interface Group {
       name?: string;
     };
   }>;
+  userPermissions?: {
+    canEdit: boolean;
+    canDelete: boolean;
+    canInvite: boolean;
+    canRemoveMembers: boolean;
+    canTransferOwnership: boolean;
+  };
 }
 
 export default function Groups() {
@@ -29,6 +37,11 @@ export default function Groups() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [editGroupName, setEditGroupName] = useState("");
+  const [editGroupDescription, setEditGroupDescription] = useState("");
+  const [updating, setUpdating] = useState(false);
+  const [managingGroup, setManagingGroup] = useState<Group | null>(null);
   
   const { user, loading: authLoading } = useFirebaseAuth();
   const navigate = useNavigate();
@@ -133,17 +146,49 @@ export default function Groups() {
 
     try {
       setInviting(true);
-      await axios.post(`http://localhost:3001/api/groups/${selectedGroup.id}/invite`, {
-        email: inviteEmail.trim(),
+      const response = await axios.post(`http://localhost:3001/api/groups/${selectedGroup.id}/invite`, {
+        email: inviteEmail.trim().toLowerCase(), // Normalize email
         invitedBy: user!.uid,
       });
       
       setInviteEmail("");
-      alert(`Invitation sent to ${inviteEmail}!`);
+      setSelectedGroup(null);
+      
+      // Show success message with the response message if available
+      const successMessage = response.data.message || `Successfully added ${inviteEmail} to the group!`;
+      alert(`✅ ${successMessage}`);
+      
       await loadGroups();
     } catch (error) {
       console.error("Error inviting user:", error);
-      alert("Failed to send invitation. Make sure the email is valid and the user isn't already in the group.");
+      
+      // Show specific error messages based on the response
+      let errorMessage = "Failed to send invitation.";
+      
+      if (axios.isAxiosError(error) && error.response?.data) {
+        if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          switch (error.response.data.error) {
+            case "User not found":
+              errorMessage = `No user found with email "${inviteEmail}". They need to sign up first using Google authentication.`;
+              break;
+            case "Already a member":
+              errorMessage = `"${inviteEmail}" is already a member of this group.`;
+              break;
+            case "Invalid email format":
+              errorMessage = "Please enter a valid email address.";
+              break;
+            case "You are not a member of this group":
+              errorMessage = "You don't have permission to invite users to this group.";
+              break;
+            default:
+              errorMessage = error.response.data.error;
+          }
+        }
+      }
+      
+      alert(`❌ ${errorMessage}`);
     } finally {
       setInviting(false);
     }
@@ -183,6 +228,90 @@ export default function Groups() {
       alert("Failed to update group avatar. Please try again.");
     } finally {
       setUpdatingAvatar(null);
+    }
+  };
+
+  const deleteGroup = async (group: Group) => {
+    if (!confirm(`Are you sure you want to delete "${group.name}"? This action cannot be undone and will remove all shared gear from this group.`)) {
+      return;
+    }
+
+    try {
+      await axios.delete(`http://localhost:3001/api/groups/${group.id}`, {
+        data: { userId: user!.uid }
+      });
+      
+      alert(`✅ Group "${group.name}" has been deleted successfully`);
+      await loadGroups();
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        alert(`❌ ${error.response.data.message}`);
+      } else {
+        alert("❌ Failed to delete group. Please try again.");
+      }
+    }
+  };
+
+  const openEditGroup = (group: Group) => {
+    setEditingGroup(group);
+    setEditGroupName(group.name);
+    setEditGroupDescription(group.description || "");
+  };
+
+  const updateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGroup) return;
+
+    try {
+      setUpdating(true);
+      await axios.put(`http://localhost:3001/api/groups/${editingGroup.id}`, {
+        name: editGroupName.trim(),
+        description: editGroupDescription.trim(),
+        userId: user!.uid
+      });
+
+      setEditingGroup(null);
+      setEditGroupName("");
+      setEditGroupDescription("");
+      alert("✅ Group updated successfully!");
+      await loadGroups();
+    } catch (error) {
+      console.error("Error updating group:", error);
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        alert(`❌ ${error.response.data.message}`);
+      } else {
+        alert("❌ Failed to update group. Please try again.");
+      }
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const removeMember = async (group: Group, memberId: string, memberName: string) => {
+    if (!confirm(`Remove ${memberName} from "${group.name}"?`)) return;
+
+    try {
+      await axios.delete(`http://localhost:3001/api/groups/${group.id}/remove-member`, {
+        data: { 
+          userId: user!.uid, 
+          targetUserId: memberId 
+        }
+      });
+      
+      alert(`✅ ${memberName} has been removed from the group`);
+      await loadGroups();
+      if (managingGroup?.id === group.id) {
+        // Refresh the managing group data
+        setManagingGroup(groups.find(g => g.id === group.id) || null);
+      }
+    } catch (error) {
+      console.error("Error removing member:", error);
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        alert(`❌ ${error.response.data.message}`);
+      } else {
+        alert("❌ Failed to remove member. Please try again.");
+      }
     }
   };
 
@@ -282,7 +411,7 @@ export default function Groups() {
                             }
                           }
                         }}
-                        title={group.createdById === user.uid ? "Right-click to remove avatar" : ""}
+                        title={group.createdById === user.uid ? (group.avatar ? "Click to change avatar, right-click to remove" : "Click to add avatar") : ""}
                       >
                         {updatingAvatar === group.id && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
@@ -344,6 +473,14 @@ export default function Groups() {
                   {/* Actions */}
                   <div className="space-y-2">
                     <button
+                      onClick={() => navigate(`/groups/${group.id}`)}
+                      className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors"
+                    >
+                      <span className="mr-1">👁️</span>
+                      View Group
+                    </button>
+                    
+                    <button
                       onClick={() => setSelectedGroup(group)}
                       className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2 rounded-lg font-medium transition-colors"
                     >
@@ -388,7 +525,7 @@ export default function Groups() {
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    They'll need to sign up with this email to join the group
+                    ⚠️ Important: They must have signed up with this exact email address using Google authentication
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -405,6 +542,60 @@ export default function Groups() {
                       setSelectedGroup(null);
                       setInviteEmail("");
                     }}
+                    className="px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Group Modal */}
+        {editingGroup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Edit Group
+              </h3>
+              <form onSubmit={updateGroup} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Group Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editGroupName}
+                    onChange={(e) => setEditGroupName(e.target.value)}
+                    placeholder="e.g., Seattle Hiking Friends"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={editGroupDescription}
+                    onChange={(e) => setEditGroupDescription(e.target.value)}
+                    placeholder="Optional group description"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={updating}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {updating ? "Updating..." : "Update Group"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingGroup(null)}
                     className="px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
                   >
                     Cancel
