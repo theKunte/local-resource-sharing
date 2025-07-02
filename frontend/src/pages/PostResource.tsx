@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
+import { resizeGearImage } from "../utils/resizeGearImage";
 
 interface Group {
   id: string;
@@ -31,13 +32,15 @@ export default function PostResource() {
   useEffect(() => {
     const loadGroups = async () => {
       if (!user) return;
-      
+
       try {
         setLoadingGroups(true);
-        const response = await axios.get(`http://localhost:3001/api/groups?userId=${user.uid}`);
+        const response = await axios.get(
+          `http://localhost:3001/api/groups?userId=${user.uid}`
+        );
         const userGroups = response.data;
         setGroups(userGroups);
-        
+
         // By default, select all groups
         const allGroupIds = new Set<string>();
         userGroups.forEach((group: Group) => {
@@ -64,7 +67,8 @@ export default function PostResource() {
     } else {
       setImagePreview(null);
     }
-  };  const handleSubmit = async (e: React.FormEvent) => {
+  };
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       alert("You must be logged in to share gear.");
@@ -75,53 +79,58 @@ export default function PostResource() {
     try {
       let imageData: string | undefined = undefined;
       if (image) {
-        imageData = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(image);
-        });      }
+        imageData = await resizeGearImage(image);
+      }
 
       // Create the resource
-      const resourceResponse = await axios.post("http://localhost:3001/api/resources", {
-        title,
-        description,
-        image: imageData,
-        ownerId: user.uid,
-        email: user.email,
-        name: user.displayName,
-      });
+      const resourceResponse = await axios.post(
+        "http://localhost:3001/api/resources",
+        {
+          title,
+          description,
+          image: imageData,
+          ownerId: user.uid,
+          email: user.email,
+          name: user.displayName,
+        }
+      );
 
       const newResource = resourceResponse.data;
 
       // Share the resource with selected groups
       try {
         const selectedGroupIds = Array.from(selectedGroups);
-        
+
         for (const groupId of selectedGroupIds) {
-          await axios.post(`http://localhost:3001/api/resources/${newResource.id}/share`, {
-            groupId,
-          });
+          await axios.post(
+            `http://localhost:3001/api/resources/${newResource.id}/share`,
+            {
+              groupId,
+            }
+          );
         }
-        
+
         console.log(`Resource shared with ${selectedGroupIds.length} group(s)`);
       } catch (groupError) {
         console.warn("Could not share with groups:", groupError);
         // Don't fail the whole operation if group sharing fails
-      }      setTitle("");
+      }
+      setTitle("");
       setDescription("");
       setImage(null);
       setImagePreview(null);
-      
+
       // Better success feedback
       const successMessage = `🎉 Your ${title} has been shared successfully!\n\n✅ Added to your gear collection\n👥 Shared with your trusted groups\n🔒 Only visible to people in your groups\n\nYour network can now discover and request this gear.`;
       alert(successMessage);
-      
+
       // Navigate to profile to see the shared gear
       navigate("/profile");
     } catch (error) {
       console.error("Error sharing gear:", error);
-      alert("Oops! Something went wrong while sharing your gear. Please try again.");
+      alert(
+        "Oops! Something went wrong while sharing your gear. Please try again."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -141,7 +150,8 @@ export default function PostResource() {
             Share Your Adventure Gear
           </h1>
           <p className="text-xl text-emerald-100 max-w-2xl mx-auto">
-            Help fellow adventurers discover amazing gear and build a community of trust
+            Help fellow adventurers discover amazing gear and build a community
+            of trust
           </p>
         </div>
       </div>
@@ -151,12 +161,16 @@ export default function PostResource() {
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-4 text-sm font-medium">
             <div className="flex items-center text-emerald-600">
-              <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">1</div>
+              <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                1
+              </div>
               <span className="ml-2">Gear Details</span>
             </div>
             <div className="w-8 h-0.5 bg-gray-300"></div>
             <div className="flex items-center text-gray-400">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-white text-xs font-bold">2</div>
+              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                2
+              </div>
               <span className="ml-2">Share & Connect</span>
             </div>
           </div>
@@ -171,7 +185,8 @@ export default function PostResource() {
               Tell us about your gear
             </h2>
             <p className="text-emerald-100 mt-2">
-              The more details you share, the more likely someone will want to borrow it!
+              The more details you share, the more likely someone will want to
+              borrow it!
             </p>
           </div>
 
@@ -216,7 +231,9 @@ export default function PostResource() {
                   <span className="mr-1">⭐</span>
                   Detailed descriptions get 3x more requests
                 </p>
-                <span className="text-sm text-gray-500">{description.length}/500</span>
+                <span className="text-sm text-gray-500">
+                  {description.length}/500
+                </span>
               </div>
             </div>
 
@@ -229,7 +246,7 @@ export default function PostResource() {
                   Recommended
                 </span>
               </label>
-              
+
               {!imagePreview ? (
                 <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-emerald-400 transition-colors duration-200 group-hover:border-gray-400">
                   <div className="mb-4">
@@ -294,15 +311,18 @@ export default function PostResource() {
                 <span className="mr-2">👥</span>
                 Share with groups
                 {loadingGroups && (
-                  <span className="ml-2 text-sm font-normal text-gray-500">Loading...</span>
+                  <span className="ml-2 text-sm font-normal text-gray-500">
+                    Loading...
+                  </span>
                 )}
               </label>
-              
+
               {groups.length === 0 && !loadingGroups ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                   <p className="text-yellow-800 text-sm">
                     <span className="mr-1">ℹ️</span>
-                    You're not in any groups yet. Your gear will be private until you join or create a group.
+                    You're not in any groups yet. Your gear will be private
+                    until you join or create a group.
                   </p>
                 </div>
               ) : (
@@ -314,7 +334,9 @@ export default function PostResource() {
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => setSelectedGroups(new Set(groups.map(g => g.id)))}
+                        onClick={() =>
+                          setSelectedGroups(new Set(groups.map((g) => g.id)))
+                        }
                         className="text-xs text-emerald-600 hover:text-emerald-700 underline"
                       >
                         Select All
@@ -328,7 +350,7 @@ export default function PostResource() {
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="grid gap-3 max-h-48 overflow-y-auto">
                     {groups.map((group) => (
                       <label
@@ -351,9 +373,12 @@ export default function PostResource() {
                         />
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <span className="font-medium text-gray-900">{group.name}</span>
+                            <span className="font-medium text-gray-900">
+                              {group.name}
+                            </span>
                             <span className="text-xs text-gray-500">
-                              {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
+                              {group.memberCount} member
+                              {group.memberCount !== 1 ? "s" : ""}
                             </span>
                           </div>
                           <span className="text-xs text-emerald-600 capitalize">
@@ -363,12 +388,13 @@ export default function PostResource() {
                       </label>
                     ))}
                   </div>
-                  
+
                   {selectedGroups.size === 0 && (
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                       <p className="text-orange-800 text-sm">
                         <span className="mr-1">⚠️</span>
-                        No groups selected. Your gear will be private and not visible to anyone.
+                        No groups selected. Your gear will be private and not
+                        visible to anyone.
                       </p>
                     </div>
                   )}
@@ -380,12 +406,16 @@ export default function PostResource() {
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">Ready to share?</h3>
-                  <p className="text-gray-600 text-sm">Your gear will be visible to your trusted network</p>
+                  <h3 className="font-semibold text-gray-800 text-lg">
+                    Ready to share?
+                  </h3>
+                  <p className="text-gray-600 text-sm">
+                    Your gear will be visible to your trusted network
+                  </p>
                 </div>
                 <span className="text-3xl">🤝</span>
               </div>
-              
+
               <button
                 type="submit"
                 className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg"
@@ -393,9 +423,25 @@ export default function PostResource() {
               >
                 {submitting ? (
                   <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Sharing your gear...
                   </span>
@@ -415,9 +461,13 @@ export default function PostResource() {
           <div className="flex items-start">
             <span className="text-2xl mr-3">🛡️</span>
             <div>
-              <h3 className="font-semibold text-blue-800 mb-2">Trust & Safety</h3>
+              <h3 className="font-semibold text-blue-800 mb-2">
+                Trust & Safety
+              </h3>
               <p className="text-blue-700 text-sm leading-relaxed">
-                Your gear is only visible to people in your trusted groups. We recommend starting with close friends and expanding your network gradually as you build confidence in the community.
+                Your gear is only visible to people in your trusted groups. We
+                recommend starting with close friends and expanding your network
+                gradually as you build confidence in the community.
               </p>
             </div>
           </div>

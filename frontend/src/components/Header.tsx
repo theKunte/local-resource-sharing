@@ -3,8 +3,11 @@ import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
 function Header() {
   const { user, signOutUser } = useFirebaseAuth();
-  return (    <header className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-lg">
-      <nav className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">        {/* Logo and App Name */}
+  return (
+    <header className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-lg">
+      <nav className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        {" "}
+        {/* Logo and App Name */}
         <Link
           to="/"
           className="flex items-center gap-2 text-2xl font-extrabold tracking-tight drop-shadow tool-emoji"
@@ -14,11 +17,15 @@ function Header() {
           </span>
           <span className="hidden sm:inline">GearShare</span>
         </Link>
-        
         {/* Navigation Links - Only show for authenticated users */}
         {user ? (
-          <div className="flex flex-1 items-center ml-8">            <div className="flex flex-row gap-6 lg:gap-10 items-center flex-1">
-              <Link to="/" className="px-4 lg:px-8 text-base lg:text-lg font-semibold transition hover:text-emerald-200">
+          <div className="flex flex-1 items-center ml-8">
+            {" "}
+            <div className="flex flex-row gap-6 lg:gap-10 items-center flex-1">
+              <Link
+                to="/"
+                className="px-4 lg:px-8 text-base lg:text-lg font-semibold transition hover:text-emerald-200"
+              >
                 Home
               </Link>
               <Link
@@ -48,7 +55,8 @@ function Header() {
             >
               Logout
             </button>
-          </div>        ) : (
+          </div>
+        ) : (
           <div className="flex items-center">
             <span className="text-sm text-emerald-100">
               Sign in to share gear

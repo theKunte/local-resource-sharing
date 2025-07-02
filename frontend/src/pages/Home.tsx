@@ -39,6 +39,11 @@ export default function Home() {
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   // Landing page for non-authenticated users
+  const handleRequestBorrow = (gearId: string) => {
+    // TODO: Implement borrow request functionality
+    alert(`Request to borrow gear ${gearId} sent! (Feature coming soon)`);
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
@@ -251,6 +256,8 @@ export default function Home() {
                 title={item.title}
                 description={item.description}
                 image={item.image}
+                isAvailable={true}
+                showActions={false}
               />
             ))}
           </div>
@@ -300,6 +307,9 @@ export default function Home() {
                 title={item.title}
                 description={item.description}
                 image={item.image}
+                isAvailable={true}
+                showActions={false}
+                onRequestBorrow={handleRequestBorrow}
               />
             ))}
           </div>
