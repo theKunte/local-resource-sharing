@@ -42,7 +42,7 @@ export default function Groups() {
   const [editGroupDescription, setEditGroupDescription] = useState("");
   const [updating, setUpdating] = useState(false);
   const [managingGroup, setManagingGroup] = useState<Group | null>(null);
-  
+
   const { user, loading: authLoading } = useFirebaseAuth();
   const navigate = useNavigate();
 
@@ -50,29 +50,37 @@ export default function Groups() {
     if (!authLoading && !user) {
       navigate("/");
     }
-  }, [user, authLoading, navigate]);  useEffect(() => {
+  }, [user, authLoading, navigate]);
+  useEffect(() => {
     const loadGroups = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:3001/api/groups?userId=${user!.uid}`);
-        
+        const response = await axios.get(
+          `http://localhost:3001/api/groups?userId=${user!.uid}`
+        );
+
         // Get detailed info for each group including members
         const groupsWithDetails = await Promise.all(
           response.data.map(async (group: Group) => {
             try {
-              const membersResponse = await axios.get(`http://localhost:3001/api/groups/${group.id}/members`);
+              const membersResponse = await axios.get(
+                `http://localhost:3001/api/groups/${group.id}/members`
+              );
               return {
                 ...group,
                 members: membersResponse.data,
-                memberCount: membersResponse.data.length
+                memberCount: membersResponse.data.length,
               };
             } catch (error) {
-              console.error(`Error loading members for group ${group.id}:`, error);
+              console.error(
+                `Error loading members for group ${group.id}:`,
+                error
+              );
               return { ...group, members: [], memberCount: 0 };
             }
           })
         );
-        
+
         setGroups(groupsWithDetails);
       } catch (error) {
         console.error("Error loading groups:", error);
@@ -89,25 +97,32 @@ export default function Groups() {
   const loadGroups = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:3001/api/groups?userId=${user!.uid}`);
-      
+      const response = await axios.get(
+        `http://localhost:3001/api/groups?userId=${user!.uid}`
+      );
+
       // Get detailed info for each group including members
       const groupsWithDetails = await Promise.all(
         response.data.map(async (group: Group) => {
           try {
-            const membersResponse = await axios.get(`http://localhost:3001/api/groups/${group.id}/members`);
+            const membersResponse = await axios.get(
+              `http://localhost:3001/api/groups/${group.id}/members`
+            );
             return {
               ...group,
               members: membersResponse.data,
-              memberCount: membersResponse.data.length
+              memberCount: membersResponse.data.length,
             };
           } catch (error) {
-            console.error(`Error loading members for group ${group.id}:`, error);
+            console.error(
+              `Error loading members for group ${group.id}:`,
+              error
+            );
             return { ...group, members: [], memberCount: 0 };
           }
         })
       );
-      
+
       setGroups(groupsWithDetails);
     } catch (error) {
       console.error("Error loading groups:", error);
@@ -127,7 +142,7 @@ export default function Groups() {
         name: newGroupName.trim(),
         createdById: user!.uid,
       });
-      
+
       setNewGroupName("");
       setShowCreateForm(false);
       await loadGroups();
@@ -146,25 +161,30 @@ export default function Groups() {
 
     try {
       setInviting(true);
-      const response = await axios.post(`http://localhost:3001/api/groups/${selectedGroup.id}/invite`, {
-        email: inviteEmail.trim().toLowerCase(), // Normalize email
-        invitedBy: user!.uid,
-      });
-      
+      const response = await axios.post(
+        `http://localhost:3001/api/groups/${selectedGroup.id}/invite`,
+        {
+          email: inviteEmail.trim().toLowerCase(), // Normalize email
+          invitedBy: user!.uid,
+        }
+      );
+
       setInviteEmail("");
       setSelectedGroup(null);
-      
+
       // Show success message with the response message if available
-      const successMessage = response.data.message || `Successfully added ${inviteEmail} to the group!`;
+      const successMessage =
+        response.data.message ||
+        `Successfully added ${inviteEmail} to the group!`;
       alert(`✅ ${successMessage}`);
-      
+
       await loadGroups();
     } catch (error) {
       console.error("Error inviting user:", error);
-      
+
       // Show specific error messages based on the response
       let errorMessage = "Failed to send invitation.";
-      
+
       if (axios.isAxiosError(error) && error.response?.data) {
         if (error.response.data.message) {
           errorMessage = error.response.data.message;
@@ -180,14 +200,15 @@ export default function Groups() {
               errorMessage = "Please enter a valid email address.";
               break;
             case "You are not a member of this group":
-              errorMessage = "You don't have permission to invite users to this group.";
+              errorMessage =
+                "You don't have permission to invite users to this group.";
               break;
             default:
               errorMessage = error.response.data.error;
           }
         }
       }
-      
+
       alert(`❌ ${errorMessage}`);
     } finally {
       setInviting(false);
@@ -198,7 +219,9 @@ export default function Groups() {
     if (!confirm(`Are you sure you want to leave "${groupName}"?`)) return;
 
     try {
-      await axios.delete(`http://localhost:3001/api/groups/${groupId}/members/${user!.uid}`);
+      await axios.delete(
+        `http://localhost:3001/api/groups/${groupId}/members/${user!.uid}`
+      );
       await loadGroups();
       alert(`You've left "${groupName}"`);
     } catch (error) {
@@ -208,19 +231,22 @@ export default function Groups() {
   };
   const [updatingAvatar, setUpdatingAvatar] = useState<string | null>(null);
 
-  const updateGroupAvatar = async (groupId: string, avatarFile: File | null) => {
+  const updateGroupAvatar = async (
+    groupId: string,
+    avatarFile: File | null
+  ) => {
     try {
       setUpdatingAvatar(groupId);
       let avatar = null;
       if (avatarFile) {
         avatar = await cropImageToSquare(avatarFile, 128);
       }
-      
+
       await axios.put(`http://localhost:3001/api/groups/${groupId}`, {
         avatar,
-        userId: user!.uid
+        userId: user!.uid,
       });
-      
+
       // Reload groups to reflect the change
       await loadGroups();
     } catch (error) {
@@ -232,15 +258,19 @@ export default function Groups() {
   };
 
   const deleteGroup = async (group: Group) => {
-    if (!confirm(`Are you sure you want to delete "${group.name}"? This action cannot be undone and will remove all shared gear from this group.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${group.name}"? This action cannot be undone and will remove all shared gear from this group.`
+      )
+    ) {
       return;
     }
 
     try {
       await axios.delete(`http://localhost:3001/api/groups/${group.id}`, {
-        data: { userId: user!.uid }
+        data: { userId: user!.uid },
       });
-      
+
       alert(`✅ Group "${group.name}" has been deleted successfully`);
       await loadGroups();
     } catch (error) {
@@ -268,7 +298,7 @@ export default function Groups() {
       await axios.put(`http://localhost:3001/api/groups/${editingGroup.id}`, {
         name: editGroupName.trim(),
         description: editGroupDescription.trim(),
-        userId: user!.uid
+        userId: user!.uid,
       });
 
       setEditingGroup(null);
@@ -288,22 +318,29 @@ export default function Groups() {
     }
   };
 
-  const removeMember = async (group: Group, memberId: string, memberName: string) => {
+  const removeMember = async (
+    group: Group,
+    memberId: string,
+    memberName: string
+  ) => {
     if (!confirm(`Remove ${memberName} from "${group.name}"?`)) return;
 
     try {
-      await axios.delete(`http://localhost:3001/api/groups/${group.id}/remove-member`, {
-        data: { 
-          userId: user!.uid, 
-          targetUserId: memberId 
+      await axios.delete(
+        `http://localhost:3001/api/groups/${group.id}/remove-member`,
+        {
+          data: {
+            userId: user!.uid,
+            targetUserId: memberId,
+          },
         }
-      });
-      
+      );
+
       alert(`✅ ${memberName} has been removed from the group`);
       await loadGroups();
       if (managingGroup?.id === group.id) {
         // Refresh the managing group data
-        setManagingGroup(groups.find(g => g.id === group.id) || null);
+        setManagingGroup(groups.find((g) => g.id === group.id) || null);
       }
     } catch (error) {
       console.error("Error removing member:", error);
@@ -336,9 +373,7 @@ export default function Groups() {
           <div className="mb-4">
             <span className="text-5xl">👥</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Your Groups
-          </h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Your Groups</h1>
           <p className="text-xl text-emerald-100 max-w-2xl mx-auto">
             Manage your trusted circles and share gear safely with friends
           </p>
@@ -360,7 +395,9 @@ export default function Groups() {
         {/* Create Group Form */}
         {showCreateForm && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Create a New Group</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              Create a New Group
+            </h3>
             <form onSubmit={createGroup} className="flex gap-4">
               <input
                 type="text"
@@ -392,17 +429,31 @@ export default function Groups() {
         {groups.length === 0 ? (
           <div className="text-center py-12 px-6 bg-white rounded-xl border-2 border-dashed border-gray-200">
             <span className="text-5xl mb-4 block">👥</span>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No groups yet</h3>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              No groups yet
+            </h3>
             <p className="text-gray-500 mb-4">
-              Create your first group to start sharing gear with trusted friends!
+              Create your first group to start sharing gear with trusted
+              friends!
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">            {groups.map((group) => (
-              <div key={group.id} className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {" "}
+            {groups.map((group) => (
+              <div
+                key={group.id}
+                className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
+              >
                 <div className="p-6">
-                  <div className="flex items-center mb-4">                    <div className="relative mr-4">                      <div 
-                        className={`w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden cursor-pointer relative ${updatingAvatar === group.id ? 'opacity-50' : ''}`}
+                  <div className="flex items-center mb-4">
+                    {" "}
+                    <div className="relative mr-4">
+                      {" "}
+                      <div
+                        className={`w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden cursor-pointer relative ${
+                          updatingAvatar === group.id ? "opacity-50" : ""
+                        }`}
                         onContextMenu={(e) => {
                           if (group.createdById === user.uid && group.avatar) {
                             e.preventDefault();
@@ -411,7 +462,13 @@ export default function Groups() {
                             }
                           }
                         }}
-                        title={group.createdById === user.uid ? (group.avatar ? "Click to change avatar, right-click to remove" : "Click to add avatar") : ""}
+                        title={
+                          group.createdById === user.uid
+                            ? group.avatar
+                              ? "Click to change avatar, right-click to remove"
+                              : "Click to add avatar"
+                            : ""
+                        }
                       >
                         {updatingAvatar === group.id && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
@@ -427,8 +484,15 @@ export default function Groups() {
                         ) : (
                           <span>{group.name.charAt(0).toUpperCase()}</span>
                         )}
-                      </div>                      {group.createdById === user.uid && (
-                        <label className={`absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-700 rounded-full flex items-center justify-center cursor-pointer transition-colors shadow-lg ${updatingAvatar === group.id ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      </div>{" "}
+                      {group.createdById === user.uid && (
+                        <label
+                          className={`absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-700 rounded-full flex items-center justify-center cursor-pointer transition-colors shadow-lg ${
+                            updatingAvatar === group.id
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                        >
                           <span className="text-white text-xs">📷</span>
                           <input
                             type="file"
@@ -446,17 +510,27 @@ export default function Groups() {
                       )}
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">{group.name}</h3>
-                      <p className="text-gray-500 text-sm">{group.memberCount} member{group.memberCount !== 1 ? 's' : ''}</p>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {group.name}
+                      </h3>
+                      <p className="text-gray-500 text-sm">
+                        {group.memberCount} member
+                        {group.memberCount !== 1 ? "s" : ""}
+                      </p>
                     </div>
                   </div>
 
                   {/* Members List */}
                   <div className="mb-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Members:</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                      Members:
+                    </h4>
                     <div className="space-y-1">
                       {group.members?.slice(0, 3).map((member) => (
-                        <div key={member.id} className="text-sm text-gray-600 flex items-center">
+                        <div
+                          key={member.id}
+                          className="text-sm text-gray-600 flex items-center"
+                        >
                           <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
                           {member.user.name || member.user.email}
                           {member.user.id === user.uid && " (You)"}
@@ -479,7 +553,7 @@ export default function Groups() {
                       <span className="mr-1">👁️</span>
                       View Group
                     </button>
-                    
+
                     <button
                       onClick={() => setSelectedGroup(group)}
                       className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2 rounded-lg font-medium transition-colors"
@@ -487,7 +561,7 @@ export default function Groups() {
                       <span className="mr-1">✉️</span>
                       Invite Friends
                     </button>
-                    
+
                     {group.createdById !== user.uid && (
                       <button
                         onClick={() => leaveGroup(group.id, group.name)}
@@ -525,7 +599,8 @@ export default function Groups() {
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    ⚠️ Important: They must have signed up with this exact email address using Google authentication
+                    ⚠️ Important: They must have signed up with this exact email
+                    address using Google authentication
                   </p>
                 </div>
                 <div className="flex gap-3">

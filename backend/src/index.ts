@@ -131,9 +131,7 @@ app.post("/api/resources", async (req, res) => {
           groupId: defaultGroup.id,
           userId: ownerId,
         },
-        data: {
-          role: "owner",
-        } as any,
+        data: {},
       });
 
       console.log(
@@ -247,7 +245,8 @@ app.get("/api/groups", async (req, res) => {
   try {
     const memberships = await prisma.groupMember.findMany({
       where: { userId },
-      include: {
+      select: {
+        role: true,
         group: {
           include: {
             members: {
@@ -264,12 +263,9 @@ app.get("/api/groups", async (req, res) => {
 
     // Add user's role to each group and format the response
     const groupsWithRole = memberships.map((membership) => {
-      // Access role using direct property (should work after migration)
-      const userRole = (membership as any).role || "member";
-
       return {
         ...membership.group,
-        userRole,
+        userRole: membership.role,
         memberCount: membership.group.members.length,
       };
     });
@@ -448,7 +444,8 @@ app.put("/api/groups/:groupId", async (req, res) => {
         groupId,
         userId,
       },
-      include: {
+      select: {
+        role: true,
         group: {
           select: {
             id: true,
@@ -467,8 +464,7 @@ app.put("/api/groups/:groupId", async (req, res) => {
     }
 
     // Check if user has edit permissions (owner or admin)
-    const memberRole = (membership as any).role;
-    const canEdit = memberRole === "owner" || memberRole === "admin";
+    const canEdit = membership.role === "owner" || membership.role === "admin";
     if (!canEdit) {
       return res
         .status(403)
@@ -526,6 +522,10 @@ app.delete("/api/groups/:groupId", async (req, res) => {
         groupId,
         userId,
       },
+      select: {
+        id: true,
+        role: true,
+      },
     });
 
     if (!userMembership) {
@@ -534,8 +534,7 @@ app.delete("/api/groups/:groupId", async (req, res) => {
         .json({ error: "You are not a member of this group" });
     }
 
-    const userRole = (userMembership as any).role;
-    if (userRole !== "owner") {
+    if (userMembership.role !== "owner") {
       return res
         .status(403)
         .json({ error: "Only the group owner can delete this group" });
@@ -593,6 +592,10 @@ app.put("/api/groups/:groupId/transfer-ownership", async (req, res) => {
         groupId,
         userId: currentOwnerId,
       },
+      select: {
+        id: true,
+        role: true,
+      },
     });
 
     if (!currentOwnerMembership) {
@@ -601,8 +604,7 @@ app.put("/api/groups/:groupId/transfer-ownership", async (req, res) => {
         .json({ error: "You are not a member of this group" });
     }
 
-    const currentUserRole = (currentOwnerMembership as any).role;
-    if (currentUserRole !== "owner") {
+    if (currentOwnerMembership.role !== "owner") {
       return res
         .status(403)
         .json({ error: "Only the group owner can transfer ownership" });
@@ -843,6 +845,10 @@ app.put("/api/groups/:groupId/members/:userId/role", async (req, res) => {
         groupId,
         userId: requesterId,
       },
+      select: {
+        id: true,
+        role: true,
+      },
     });
 
     if (!requesterMembership) {
@@ -852,8 +858,7 @@ app.put("/api/groups/:groupId/members/:userId/role", async (req, res) => {
     }
 
     // Only owners can assign/remove admin roles
-    const requesterRole = (requesterMembership as any).role;
-    if (requesterRole !== "owner") {
+    if (requesterMembership.role !== "owner") {
       return res
         .status(403)
         .json({ error: "Only group owners can assign admin rights" });
@@ -865,6 +870,10 @@ app.put("/api/groups/:groupId/members/:userId/role", async (req, res) => {
         groupId,
         userId: targetUserId,
       },
+      select: {
+        id: true,
+        role: true,
+      },
     });
 
     if (!targetMembership) {
@@ -874,8 +883,7 @@ app.put("/api/groups/:groupId/members/:userId/role", async (req, res) => {
     }
 
     // Don't allow changing owner's role
-    const targetRole = (targetMembership as any).role;
-    if (targetRole === "owner") {
+    if (targetMembership.role === "owner") {
       return res.status(403).json({ error: "Cannot change the owner's role" });
     }
 
@@ -1021,6 +1029,210 @@ app.put("/api/auth/fix-user-email", async (req, res) => {
   } catch (error) {
     console.error("Error updating user email:", error);
     res.status(500).json({ error: "Failed to update user email" });
+  }
+});
+
+// Get groups that a resource is shared with
+app.get("/api/resources/:resourceId/groups", async (req, res) => {
+  const { resourceId } = req.params;
+  const userId = req.query.userId as string;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required" });
+  }
+
+  try {
+    // Verify user owns this resource
+    const resource = await prisma.resource.findUnique({
+      where: { id: resourceId },
+      select: { ownerId: true },
+    });
+
+    if (!resource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    if (resource.ownerId !== userId) {
+      return res.status(403).json({ error: "You don't own this resource" });
+    }
+
+    // Get groups this resource is shared with
+    const sharedGroups = await prisma.resourceSharing.findMany({
+      where: { resourceId },
+      include: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+          },
+        },
+      },
+    });
+
+    // Add member count for each group
+    const groupsWithCounts = await Promise.all(
+      sharedGroups.map(async (sharing) => {
+        const memberCount = await prisma.groupMember.count({
+          where: { groupId: sharing.groupId },
+        });
+
+        return {
+          ...sharing.group,
+          memberCount,
+        };
+      })
+    );
+
+    res.json(groupsWithCounts);
+  } catch (error) {
+    console.error("Error fetching resource groups:", error);
+    res.status(500).json({ error: "Failed to fetch resource groups" });
+  }
+});
+
+// Add resource to a group
+app.post("/api/resources/:resourceId/groups/:groupId", async (req, res) => {
+  const { resourceId, groupId } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required" });
+  }
+
+  try {
+    // Verify user owns this resource
+    const resource = await prisma.resource.findUnique({
+      where: { id: resourceId },
+      select: { ownerId: true },
+    });
+
+    if (!resource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    if (resource.ownerId !== userId) {
+      return res.status(403).json({ error: "You don't own this resource" });
+    }
+
+    // Verify user is a member of the group
+    const membership = await prisma.groupMember.findFirst({
+      where: {
+        userId,
+        groupId,
+      },
+    });
+
+    if (!membership) {
+      return res
+        .status(403)
+        .json({ error: "You're not a member of this group" });
+    }
+
+    // Check if resource is already shared with this group
+    const existingSharing = await prisma.resourceSharing.findFirst({
+      where: {
+        resourceId,
+        groupId,
+      },
+    });
+
+    if (existingSharing) {
+      return res
+        .status(400)
+        .json({ error: "Resource is already shared with this group" });
+    }
+
+    // Create the sharing relationship
+    await prisma.resourceSharing.create({
+      data: {
+        resourceId,
+        groupId,
+      },
+    });
+
+    res.json({ success: true, message: "Resource added to group" });
+  } catch (error) {
+    console.error("Error adding resource to group:", error);
+    res.status(500).json({ error: "Failed to add resource to group" });
+  }
+});
+
+// Remove resource from a group
+app.delete("/api/resources/:resourceId/groups/:groupId", async (req, res) => {
+  const { resourceId, groupId } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required" });
+  }
+
+  try {
+    // Verify user owns this resource
+    const resource = await prisma.resource.findUnique({
+      where: { id: resourceId },
+      select: { ownerId: true },
+    });
+
+    if (!resource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    if (resource.ownerId !== userId) {
+      return res.status(403).json({ error: "You don't own this resource" });
+    }
+
+    // Remove the sharing relationship
+    await prisma.resourceSharing.deleteMany({
+      where: {
+        resourceId,
+        groupId,
+      },
+    });
+
+    res.json({ success: true, message: "Resource removed from group" });
+  } catch (error) {
+    console.error("Error removing resource from group:", error);
+    res.status(500).json({ error: "Failed to remove resource from group" });
+  }
+});
+
+// Get user's groups (for sharing existing resources)
+app.get("/api/users/:userId/groups", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const memberships = await prisma.groupMember.findMany({
+      where: { userId },
+      include: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+          },
+        },
+      },
+    });
+
+    // Add memberCount by counting members
+    const groupsWithCounts = await Promise.all(
+      memberships.map(async (membership) => {
+        const memberCount = await prisma.groupMember.count({
+          where: { groupId: membership.groupId },
+        });
+
+        return {
+          ...membership.group,
+          memberCount,
+        };
+      })
+    );
+
+    res.json(groupsWithCounts);
+  } catch (error) {
+    console.error("Error fetching user groups:", error);
+    res.status(500).json({ error: "Failed to fetch user groups" });
   }
 });
 

@@ -19,7 +19,7 @@ export function useFirebaseAuth() {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         name: firebaseUser.displayName,
-        photoURL: firebaseUser.photoURL
+        photoURL: firebaseUser.photoURL,
       });
       console.log("User registered in backend:", firebaseUser.email);
     } catch (error) {

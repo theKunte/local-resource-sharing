@@ -50,7 +50,84 @@ export default function Profile() {
           )}`
         )
         .then((res) => {
-          setGear(res.data);
+          const actualGear = res.data;
+
+          // Add some sample gear for demonstration if the user has less than 8 items
+          const sampleGear: Gear[] = [
+            {
+              id: "sample-1",
+              title: "North Face Backpack 65L",
+              description:
+                "Large capacity hiking backpack perfect for multi-day adventures. Features multiple compartments and rain cover.",
+              image:
+                "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=300&fit=crop",
+            },
+            {
+              id: "sample-2",
+              title: "Coleman 4-Person Tent",
+              description:
+                "Spacious family camping tent with easy setup. Waterproof and includes vestibule for gear storage.",
+              image:
+                "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400&h=300&fit=crop",
+            },
+            {
+              id: "sample-3",
+              title: "Patagonia Down Jacket",
+              description:
+                "Lightweight insulated jacket perfect for cold weather hiking and camping. Compressible and warm.",
+              image:
+                "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=300&fit=crop",
+            },
+            {
+              id: "sample-4",
+              title: "MSR Camping Stove",
+              description:
+                "Reliable single-burner camping stove with fuel efficiency. Great for backpacking trips.",
+              image:
+                "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop",
+            },
+            {
+              id: "sample-5",
+              title: "Black Diamond Headlamp",
+              description:
+                "Bright LED headlamp with multiple lighting modes. Perfect for night hiking and camping.",
+              image:
+                "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=400&h=300&fit=crop",
+            },
+            {
+              id: "sample-6",
+              title: "Sleeping Bag -10°C",
+              description:
+                "Winter-rated sleeping bag suitable for cold weather camping. Mummy style with compression sack.",
+              image:
+                "https://images.unsplash.com/photo-1520637836862-4d197d17c87a?w=400&h=300&fit=crop",
+            },
+            {
+              id: "sample-7",
+              title: "Climbing Harness & Gear",
+              description:
+                "Complete climbing set including harness, carabiners, and belay device. Perfect for rock climbing.",
+              image:
+                "https://images.unsplash.com/photo-1522163723043-478d6d804525?w=400&h=300&fit=crop",
+            },
+            {
+              id: "sample-8",
+              title: "Portable Water Filter",
+              description:
+                "Lightweight water purification system for backcountry adventures. Filters up to 1000 liters.",
+              image:
+                "https://images.unsplash.com/photo-1548036952-6479d7bd6b36?w=400&h=300&fit=crop",
+            },
+          ];
+
+          // Combine actual gear with sample gear (remove duplicates if needed)
+          const combinedGear = [...actualGear];
+          const remainingSlots = Math.max(0, 8 - actualGear.length);
+          if (remainingSlots > 0) {
+            combinedGear.push(...sampleGear.slice(0, remainingSlots));
+          }
+
+          setGear(combinedGear);
         });
 
       // Load user's groups with member details
@@ -123,6 +200,63 @@ export default function Profile() {
                 error
               );
             }
+          }
+
+          // Add some sample shared gear for demonstration if no actual shared gear is found
+          const sampleSharedGear: Gear[] = [
+            {
+              id: "shared-1",
+              title: "REI Co-op Camping Chair",
+              description:
+                "Comfortable folding camping chair perfect for outdoor adventures. Lightweight and portable.",
+              image:
+                "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop",
+            },
+            {
+              id: "shared-2",
+              title: "Jetboil Flash Cooking System",
+              description:
+                "Fast and efficient camping stove system. Perfect for quick meals on the trail.",
+              image:
+                "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop",
+            },
+            {
+              id: "shared-3",
+              title: "Osprey Hiking Daypack",
+              description:
+                "Comfortable daypack for hiking with hydration system. Great for day trips.",
+              image:
+                "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=300&fit=crop",
+            },
+            {
+              id: "shared-4",
+              title: "Patagonia Rain Jacket",
+              description:
+                "Waterproof and breathable rain jacket. Essential for unpredictable weather.",
+              image:
+                "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=300&fit=crop",
+            },
+            {
+              id: "shared-5",
+              title: "Goal Zero Solar Panel",
+              description:
+                "Portable solar charging panel for keeping devices powered in the wilderness.",
+              image:
+                "https://images.unsplash.com/photo-1548036952-6479d7bd6b36?w=400&h=300&fit=crop",
+            },
+            {
+              id: "shared-6",
+              title: "Therm-a-Rest Sleeping Pad",
+              description:
+                "Lightweight and comfortable sleeping pad for backpacking trips.",
+              image:
+                "https://images.unsplash.com/photo-1520637836862-4d197d17c87a?w=400&h=300&fit=crop",
+            },
+          ];
+
+          // If no shared gear found, add sample gear for demonstration
+          if (allSharedGear.length === 0) {
+            allSharedGear.push(...sampleSharedGear);
           }
 
           setSharedGear(allSharedGear);
