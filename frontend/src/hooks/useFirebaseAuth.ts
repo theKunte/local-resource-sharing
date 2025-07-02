@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   User,
@@ -29,6 +30,22 @@ export function useFirebaseAuth() {
   };
 
   useEffect(() => {
+    // Check for redirect result first
+    const checkRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          console.log("User signed in via redirect:", result.user.email);
+          // The user will be handled by onAuthStateChanged below
+        }
+      } catch (error) {
+        console.error("Redirect sign-in error:", error);
+        setLoading(false);
+      }
+    };
+
+    checkRedirectResult();
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // Register/update user in backend when they authenticate
@@ -41,8 +58,13 @@ export function useFirebaseAuth() {
   }, []);
 
   const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithRedirect(auth, provider);
+      // Note: After redirect, the page will reload and the user will be handled by getRedirectResult
+    } catch (error) {
+      console.error("Sign-in error:", error);
+    }
   };
 
   const signOutUser = async () => {
