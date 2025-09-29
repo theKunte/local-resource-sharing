@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
-import { resizeGearImage } from "../utils/resizeGearImage";
+import { cropImageToSquare } from "../utils/cropImageToSquare";
 
 interface Group {
   id: string;
@@ -79,7 +79,7 @@ export default function PostResource() {
     try {
       let imageData: string | undefined = undefined;
       if (image) {
-        imageData = await resizeGearImage(image);
+        imageData = await cropImageToSquare(image, 200);
       }
 
       // Create the resource

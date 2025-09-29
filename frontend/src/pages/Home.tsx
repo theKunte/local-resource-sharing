@@ -248,7 +248,7 @@ export default function Home() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
             {myGear.map((item) => (
               <GearCard
                 key={item.id}
@@ -267,6 +267,8 @@ export default function Home() {
       <section className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
+            <span className="mr-3">🤝</span>
+            <span className="mr-3">🤝</span>
             <span className="mr-3">🤝</span>
             Community Gear
             {communityGear.length > 0 && (
@@ -299,7 +301,7 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
             {communityGear.map((item) => (
               <GearCard
                 key={item.id}
