@@ -17,6 +17,9 @@ dist-ssr
 frontend/.env
 backend/.env
 
+# Ignore local SQLite dev DB (binary, causes merge conflicts)
+backend/prisma/prisma/dev.db
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
