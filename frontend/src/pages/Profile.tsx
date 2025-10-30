@@ -3,14 +3,15 @@ import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import ResourceCard from "../components/ResourceCard";
-import { cropImageToSquare } from "../utils/cropImageToSquare";
+// removed cropImageToSquare (no longer used)
 
 export default function Profile() {
   const { user, loading } = useFirebaseAuth();
   const [resources, setResources] = useState<any[]>([]);
-  const [groupAvatar, setGroupAvatar] = useState<string | ArrayBuffer | null>(
-    null
-  );
+  const [groups, setGroups] = useState<any[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [creatingGroup, setCreatingGroup] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,6 +31,28 @@ export default function Profile() {
         .then((res) => setResources(res.data));
     }
   }, [user]);
+
+  // Fetch groups the user belongs to
+  useEffect(() => {
+    if (!user) return;
+    loadGroups();
+  }, [user]);
+
+  // helper to load groups (used after creating a new group)
+  const loadGroups = async () => {
+    if (!user) return;
+    try {
+      const res = await axios.get(
+        `http://localhost:3001/api/groups?userId=${encodeURIComponent(
+          user.uid
+        )}`
+      );
+      setGroups(res.data);
+    } catch (err) {
+      console.error("Failed to fetch groups:", err);
+      setGroups([]);
+    }
+  };
 
   // Delete resource handler
   const handleDelete = async (id: string) => {
@@ -57,29 +80,41 @@ export default function Profile() {
     );
   };
 
+  // helper to shorten long group names for display
+  const truncate = (s: string | undefined, n = 18) => {
+    if (!s) return "";
+    return s.length > n ? s.slice(0, n - 1) + "…" : s;
+  };
+
+  // Create group via modal form
+  const createGroup = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newGroupName || !user) return;
+    try {
+      setCreatingGroup(true);
+      const res = await axios.post("http://localhost:3001/api/groups", {
+        name: newGroupName.trim(),
+        createdById: user.uid,
+      });
+      await loadGroups();
+      setShowCreateModal(false);
+      setNewGroupName("");
+      alert(`Group '${res.data.name}' created!`);
+    } catch (err) {
+      console.error("Failed to create group:", err);
+      alert("Failed to create group.");
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (!user) return null;
 
   return (
     <div className="flex">
       {/* Sidebar */}
-      <aside className="w-56 min-h-screen border-r border-gray-200 p-6 flex flex-col gap-4">
-        <h2 className="text-xl font-bold mb-8">Local-Resource-Share</h2>
-        <nav className="flex flex-col gap-2">
-          <a href="/" className="hover:underline">
-            Home
-          </a>
-          <a href="/post" className="hover:underline">
-            Post A Resource
-          </a>
-          <a href="/find" className="hover:underline">
-            Find Resource
-          </a>
-          <a href="/groups" className="hover:underline">
-            Groups
-          </a>
-        </nav>
-      </aside>
+
       {/* Main Content */}
       <main className="flex-1 p-10">
         {/* Profile Header */}
@@ -96,6 +131,9 @@ export default function Profile() {
                 <span>Avatar</span>
               )}
             </div>
+            <button className="text-blue-600 font-semibold hover:underline mt-2 md:mt-0">
+              Edit Profile
+            </button>
             <span className="text-lg font-semibold mt-2">
               {user.displayName || user.email}
             </span>
@@ -109,111 +147,203 @@ export default function Profile() {
                   Resources
                 </span>
                 <span>
-                  <span className="font-bold">0</span> Groups
+                  <span className="font-bold">{groups.length}</span> Groups
                 </span>
                 <span>
                   <span className="font-bold">0</span> Shared
                 </span>
               </div>
-              <button className="text-blue-600 font-semibold hover:underline mt-2 md:mt-0">
-                Edit Profile
-              </button>
             </div>
           </div>
         </div>
         {/* Groups Row and Create Group */}
-        <div className="flex gap-6 mb-8 items-center">
-          {/* SeattleFriends group with avatar and upload */}
-          <div className="flex flex-col items-center">
-            <label
-              htmlFor="group-avatar-upload"
-              className="w-16 h-16 rounded-full bg-green-200 mb-2 flex items-center justify-center font-bold text-lg text-green-900 overflow-hidden cursor-pointer border-2 border-green-400 shadow"
-              style={{ boxShadow: "0 0 0 2px #222" }}
-            >
-              <img
-                src={typeof groupAvatar === "string" ? groupAvatar : undefined}
-                alt="SeattleFriends Avatar"
-                className={
-                  groupAvatar
-                    ? "w-full h-full object-cover rounded-full"
-                    : "hidden"
-                }
-                style={{ aspectRatio: "1/1", objectFit: "cover" }}
-              />
-              {!groupAvatar && <span>SF</span>}
-              <input
-                id="group-avatar-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const cropped = await cropImageToSquare(file, 128); // Match static avatar size
-                  setGroupAvatar(cropped);
-                }}
-              />
-            </label>
-            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
-              SeattleFriends
-            </span>
-          </div>
-          {/* Mock group 2 */}
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-blue-200 mb-2 flex items-center justify-center font-bold text-lg text-blue-900 overflow-hidden border-2 border-blue-400 shadow">
-              <img
-                src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=facearea&w=128&h=128&q=80"
-                alt="Hiking Buddies"
-                className="w-full h-full object-cover rounded-full"
-                style={{ aspectRatio: "1/1", objectFit: "cover" }}
-              />
+        {/* Groups Row: horizontal scroll on small screens, grid on md+ */}
+        <div className="mb-8">
+          {/* Small screens: horizontal scroll */}
+          <div className="flex gap-6 items-center overflow-x-auto py-2 md:hidden">
+            {groups.length === 0 ? (
+              <div className="text-gray-500">
+                You are not a member of any groups yet.
+              </div>
+            ) : (
+              groups.map((g) => (
+                <div
+                  key={g.id}
+                  className="flex flex-col items-center min-w-[72px]"
+                >
+                  <div
+                    className="w-16 h-16 rounded-full bg-gray-200 mb-2 flex items-center justify-center font-bold text-lg overflow-hidden border-2 shadow cursor-pointer hover:scale-105 transition-transform"
+                    onClick={() => navigate(`/groups/${g.id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ")
+                        navigate(`/groups/${g.id}`);
+                    }}
+                    title={`Open ${g.name}`}
+                  >
+                    {g.avatar ? (
+                      <img
+                        src={g.avatar}
+                        alt={`${g.name} Avatar`}
+                        className="w-full h-full object-cover rounded-full"
+                        style={{ aspectRatio: "1/1", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <span>
+                        {g.name
+                          .split(" ")
+                          .map((s: string) => s[0])
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
+                    {truncate(g.name)}
+                  </span>
+                </div>
+              ))
+            )}
+
+            {/* Create button in the scroll area */}
+            <div className="flex flex-col items-center ml-4">
+              <button
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-2xl mb-2 border-2 border-emerald-600 shadow text-white"
+                onClick={() => setShowCreateModal(true)}
+                title="Create Group"
+              >
+                +
+              </button>
+              <span className="text-xs text-white font-bold tracking-widest uppercase mt-1">
+                New
+              </span>
             </div>
-            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
-              Hiking Buddies
-            </span>
           </div>
-          {/* Mock group 3 */}
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-yellow-200 mb-2 flex items-center justify-center font-bold text-lg text-yellow-900 overflow-hidden border-2 border-yellow-400 shadow">
-              <img
-                src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=128&h=128&q=80"
-                alt="Makers Club"
-                className="w-full h-full object-cover rounded-full"
-                style={{ aspectRatio: "1/1", objectFit: "cover" }}
-              />
+
+          {/* Medium+ screens: grid */}
+          <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            {groups.length === 0 ? (
+              <div className="text-gray-500 col-span-full">
+                You are not a member of any groups yet.
+              </div>
+            ) : (
+              groups.map((g) => (
+                <div key={g.id} className="flex flex-col items-center">
+                  <div
+                    className="w-20 h-20 rounded-full bg-gray-200 mb-2 flex items-center justify-center font-bold text-lg overflow-hidden border-2 shadow cursor-pointer hover:scale-105 transition-transform"
+                    onClick={() => navigate(`/groups/${g.id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ")
+                        navigate(`/groups/${g.id}`);
+                    }}
+                    title={`Open ${g.name}`}
+                  >
+                    {g.avatar ? (
+                      <img
+                        src={g.avatar}
+                        alt={`${g.name} Avatar`}
+                        className="w-full h-full object-cover rounded-full"
+                        style={{ aspectRatio: "1/1", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <span>
+                        {g.name
+                          .split(" ")
+                          .map((s: string) => s[0])
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
+                    {truncate(g.name)}
+                  </span>
+                </div>
+              ))
+            )}
+
+            {/* Create button in the grid */}
+            <div className="flex flex-col items-center">
+              <button
+                className="w-20 h-20 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-2xl mb-2 border-2 border-emerald-600 shadow text-white"
+                onClick={() => setShowCreateModal(true)}
+                title="Create Group"
+              >
+                +
+              </button>
+              <span className="text-xs text-white font-bold tracking-widest uppercase mt-1">
+                New
+              </span>
             </div>
-            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
-              Makers Club
-            </span>
           </div>
-          {/* Create Group Button */}
-          <button
-            className="flex flex-col items-center focus:outline-none"
-            onClick={() => {
-              const name = prompt("Enter group name:");
-              if (!name || !user) return;
-              fetch("http://localhost:3001/api/groups", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, createdById: user.uid }),
-              })
-                .then((res) => res.json())
-                .then((group) => alert(`Group '${group.name}' created!`))
-                .catch(() => alert("Failed to create group."));
-            }}
-            title="Create Group"
-          >
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl mb-2 border-2 border-gray-400 shadow">
-              +
-            </div>
-            <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
-              New
-            </span>
-          </button>
         </div>
-        <hr className="mb-8" />
+        <hr className="mb-6" />
+
+        {/* Create Group Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6">
+            {/* backdrop layer grays out the page */}
+            <div className="absolute inset-0 bg-black/60 " />
+            {/* outer decorative ring (above backdrop) */}
+            <div className="relative z-10 rounded-xl p-2 bg-gradient-to-br from-emerald-100/40 to-white/60">
+              {/* white panel centered */}
+              <div className="bg-white rounded-x p-6 w-full max-w-md">
+                <div className="text-center mb-4">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-600 text-white text-xl font-bold mb-3">
+                    👥
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Create a New Group
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Give your group a name and invite friends later.
+                  </p>
+                </div>
+                <form onSubmit={createGroup} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Group Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      placeholder="e.g., Seattle Hiking Friends"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      disabled={creatingGroup}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {creatingGroup ? "Creating..." : "Create Group"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateModal(false);
+                        setNewGroupName("");
+                      }}
+                      className="px-4 py-3 bg-gray-300 hover:bg-gray-350 text-gray-800 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Posted Resources Grid */}
-        <div className="grid grid-cols-3 gap-8">
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
           {resources.length === 0 ? (
             <div className="text-gray-500 col-span-full">
               You haven't posted any resources yet.
