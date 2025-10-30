@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import GearCard from "../components/GearCard";
+import ManageGroupsModal from "../components/ManageGroupsModal";
+import AddGearToGroupModal from "../components/AddGearToGroupModal";
 
 interface User {
   id: string;
@@ -59,6 +61,9 @@ export default function GroupDetail() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [manageResourceId, setManageResourceId] = useState<string | null>(null);
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [showAddGearModal, setShowAddGearModal] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -166,6 +171,64 @@ export default function GroupDetail() {
     }
   };
 
+  // Delete a shared resource from the group (only owner can)
+  const handleDeleteResource = async (resourceId: string) => {
+    if (!confirm("Are you sure you want to delete this item?")) return;
+    try {
+      await axios.delete(`http://localhost:3001/api/resources/${resourceId}`, {
+        data: { userId: user?.uid },
+      });
+      alert("Resource deleted");
+      fetchGroupDetails();
+      try {
+        window.dispatchEvent(
+          new CustomEvent("resource:deleted", { detail: { id: resourceId } })
+        );
+      } catch (e) {
+        /* ignore */
+      }
+    } catch (error: unknown) {
+      console.error("Error deleting resource:", error);
+      alert("Failed to delete resource");
+    }
+  };
+
+  // Edit a shared resource (simple prompt-based flow)
+  const handleEditResource = async (resource: {
+    id: string;
+    title: string;
+    description: string;
+    image?: string;
+  }) => {
+    const newTitle = prompt("Edit title:", resource.title);
+    if (!newTitle) return;
+    const newDescription = prompt("Edit description:", resource.description);
+    if (!newDescription) return;
+    try {
+      const resp = await axios.put(
+        `http://localhost:3001/api/resources/${resource.id}`,
+        {
+          title: newTitle,
+          description: newDescription,
+        }
+      );
+      alert("Resource updated");
+      fetchGroupDetails();
+      try {
+        window.dispatchEvent(
+          new CustomEvent("resource:updated", {
+            detail: { resource: resp.data },
+          })
+        );
+      } catch (e) {
+        /* ignore */
+      }
+    } catch (error: unknown) {
+      console.error("Error updating resource:", error);
+      alert("Failed to update resource");
+    }
+  };
+
   const handleUpdateRole = async (
     memberId: string,
     newRole: string,
@@ -229,6 +292,19 @@ export default function GroupDetail() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
           <p className="mt-4 text-slate-600">Loading group details...</p>
         </div>
+        {/* Manage groups modal for resources */}
+        {manageResourceId && (
+          <ManageGroupsModal
+            open={showManageModal}
+            userId={user?.uid!}
+            resourceId={manageResourceId}
+            onClose={() => {
+              setShowManageModal(false);
+              setManageResourceId(null);
+            }}
+            onSaved={() => fetchGroupDetails()}
+          />
+        )}
       </div>
     );
   }
@@ -457,12 +533,20 @@ export default function GroupDetail() {
                 <h2 className="text-lg font-semibold text-slate-900">
                   Shared Gear ({group.sharedResourcesCount})
                 </h2>
-                <Link
-                  to="/post"
-                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
-                >
-                  Share New Gear
-                </Link>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowAddGearModal(true)}
+                    className="bg-sky-600 text-white px-3 py-2 rounded-lg hover:bg-sky-700 transition-colors text-sm"
+                  >
+                    Add Gear
+                  </button>
+                  <Link
+                    to="/post"
+                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+                  >
+                    Share New Gear
+                  </Link>
+                </div>
               </div>
 
               {group.resources.length === 0 ? (
@@ -493,6 +577,25 @@ export default function GroupDetail() {
                         title={resource.title}
                         description={resource.description}
                         image={resource.image}
+                        showActions={resource.ownerId === user?.uid}
+                        onDelete={
+                          resource.ownerId === user?.uid
+                            ? handleDeleteResource
+                            : undefined
+                        }
+                        onEdit={
+                          resource.ownerId === user?.uid
+                            ? handleEditResource
+                            : undefined
+                        }
+                        onManageGroups={
+                          resource.ownerId === user?.uid
+                            ? () => {
+                                setManageResourceId(resource.id);
+                                setShowManageModal(true);
+                              }
+                            : undefined
+                        }
                       />
                       {/* Owner info overlay */}
                       <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-xs text-slate-600">
@@ -507,6 +610,18 @@ export default function GroupDetail() {
             </div>
           </div>
         </div>
+        {showAddGearModal && group && (
+          <AddGearToGroupModal
+            open={showAddGearModal}
+            groupId={group.id}
+            userId={user!.uid}
+            onClose={() => setShowAddGearModal(false)}
+            onSaved={() => {
+              fetchGroupDetails();
+              setShowAddGearModal(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );

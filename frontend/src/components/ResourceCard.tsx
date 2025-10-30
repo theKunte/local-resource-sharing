@@ -22,6 +22,12 @@ interface GearCardProps {
   }) => void;
   onRequestBorrow?: (gearId: string) => void;
   showActions?: boolean;
+  onManageGroups?: (gear: {
+    id: string;
+    title: string;
+    description: string;
+    image?: string;
+  }) => void;
 }
 
 const GearCard: React.FC<GearCardProps> = ({
@@ -34,6 +40,7 @@ const GearCard: React.FC<GearCardProps> = ({
   onEdit,
   onRequestBorrow,
   showActions = false,
+  onManageGroups,
 }) => {
   return (
     <div className="w-full">
@@ -66,6 +73,29 @@ const GearCard: React.FC<GearCardProps> = ({
                         strokeLinejoin="round"
                         strokeWidth={2}
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                )}
+                {onManageGroups && (
+                  <button
+                    onClick={() =>
+                      onManageGroups({ id, title, description, image })
+                    }
+                    className="bg-white/90 hover:bg-white text-gray-600 hover:text-sky-600 rounded-full p-1.5 shadow-sm transition-all duration-200"
+                    title="Manage groups"
+                  >
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 12h8m-8 6h16"
                       />
                     </svg>
                   </button>

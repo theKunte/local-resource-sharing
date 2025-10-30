@@ -3,6 +3,7 @@ import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import ResourceCard from "../components/ResourceCard";
+import ManageGroupsModal from "../components/ManageGroupsModal";
 // removed cropImageToSquare (no longer used)
 
 export default function Profile() {
@@ -13,6 +14,8 @@ export default function Profile() {
   const [newGroupName, setNewGroupName] = useState("");
   const [creatingGroup, setCreatingGroup] = useState(false);
   const navigate = useNavigate();
+  const [manageResourceId, setManageResourceId] = useState<string | null>(null);
+  const [showManageModal, setShowManageModal] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -58,8 +61,18 @@ export default function Profile() {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this resource?"))
       return;
-    await axios.delete(`http://localhost:3001/api/resources/${id}`);
+    await axios.delete(`http://localhost:3001/api/resources/${id}`, {
+      data: { userId: user?.uid },
+    });
     setResources((prev) => prev.filter((r) => r.id !== id));
+    // notify other pages that a resource was deleted
+    try {
+      window.dispatchEvent(
+        new CustomEvent("resource:deleted", { detail: { id } })
+      );
+    } catch (e) {
+      // ignore if events aren't supported
+    }
   };
 
   // Edit resource handler
@@ -78,6 +91,16 @@ export default function Profile() {
     setResources((prev) =>
       prev.map((r) => (r.id === resource.id ? { ...r, ...updated.data } : r))
     );
+    // notify other pages that a resource was updated
+    try {
+      window.dispatchEvent(
+        new CustomEvent("resource:updated", {
+          detail: { resource: updated.data },
+        })
+      );
+    } catch (e) {
+      // ignore
+    }
   };
 
   // helper to shorten long group names for display
@@ -342,6 +365,29 @@ export default function Profile() {
             </div>
           </div>
         )}
+        {/* Manage groups modal for resources */}
+        {manageResourceId && (
+          <ManageGroupsModal
+            open={showManageModal}
+            userId={user.uid}
+            resourceId={manageResourceId}
+            onClose={() => {
+              setShowManageModal(false);
+              setManageResourceId(null);
+            }}
+            onSaved={() => {
+              // Optionally refresh resources list after changing group membership
+              axios
+                .get(
+                  `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
+                    user.uid
+                  )}`
+                )
+                .then((res) => setResources(res.data))
+                .catch(() => {});
+            }}
+          />
+        )}
         {/* Posted Resources Grid */}
         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
           {resources.length === 0 ? (
@@ -358,6 +404,11 @@ export default function Profile() {
                 image={res.image}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
+                showActions={true}
+                onManageGroups={() => {
+                  setManageResourceId(res.id);
+                  setShowManageModal(true);
+                }}
               />
             ))
           )}
