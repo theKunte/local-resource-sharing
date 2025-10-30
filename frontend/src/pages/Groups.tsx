@@ -41,7 +41,6 @@ export default function Groups() {
   const [editGroupName, setEditGroupName] = useState("");
   const [editGroupDescription, setEditGroupDescription] = useState("");
   const [updating, setUpdating] = useState(false);
-  const [managingGroup, setManagingGroup] = useState<Group | null>(null);
 
   const { user, loading: authLoading } = useFirebaseAuth();
   const navigate = useNavigate();
@@ -257,38 +256,6 @@ export default function Groups() {
     }
   };
 
-  const deleteGroup = async (group: Group) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${group.name}"? This action cannot be undone and will remove all shared gear from this group.`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await axios.delete(`http://localhost:3001/api/groups/${group.id}`, {
-        data: { userId: user!.uid },
-      });
-
-      alert(`✅ Group "${group.name}" has been deleted successfully`);
-      await loadGroups();
-    } catch (error) {
-      console.error("Error deleting group:", error);
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        alert(`❌ ${error.response.data.message}`);
-      } else {
-        alert("❌ Failed to delete group. Please try again.");
-      }
-    }
-  };
-
-  const openEditGroup = (group: Group) => {
-    setEditingGroup(group);
-    setEditGroupName(group.name);
-    setEditGroupDescription(group.description || "");
-  };
-
   const updateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingGroup) return;
@@ -318,38 +285,10 @@ export default function Groups() {
     }
   };
 
-  const removeMember = async (
-    group: Group,
-    memberId: string,
-    memberName: string
-  ) => {
-    if (!confirm(`Remove ${memberName} from "${group.name}"?`)) return;
-
-    try {
-      await axios.delete(
-        `http://localhost:3001/api/groups/${group.id}/remove-member`,
-        {
-          data: {
-            userId: user!.uid,
-            targetUserId: memberId,
-          },
-        }
-      );
-
-      alert(`✅ ${memberName} has been removed from the group`);
-      await loadGroups();
-      if (managingGroup?.id === group.id) {
-        // Refresh the managing group data
-        setManagingGroup(groups.find((g) => g.id === group.id) || null);
-      }
-    } catch (error) {
-      console.error("Error removing member:", error);
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        alert(`❌ ${error.response.data.message}`);
-      } else {
-        alert("❌ Failed to remove member. Please try again.");
-      }
-    }
+  // helper to shorten long group names for display
+  const truncate = (s: string | undefined, n = 28) => {
+    if (!s) return "";
+    return s.length > n ? s.slice(0, n - 1) + "…" : s;
   };
 
   if (authLoading || loading) {
@@ -438,12 +377,12 @@ export default function Groups() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {" "}
             {groups.map((group) => (
               <div
                 key={group.id}
-                className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
+                className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-4"
               >
                 <div className="p-6">
                   <div className="flex items-center mb-4">
@@ -454,6 +393,7 @@ export default function Groups() {
                         className={`w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden cursor-pointer relative ${
                           updatingAvatar === group.id ? "opacity-50" : ""
                         }`}
+                        onClick={() => navigate(`/groups/${group.id}`)}
                         onContextMenu={(e) => {
                           if (group.createdById === user.uid && group.avatar) {
                             e.preventDefault();
@@ -462,13 +402,14 @@ export default function Groups() {
                             }
                           }
                         }}
-                        title={
-                          group.createdById === user.uid
-                            ? group.avatar
-                              ? "Click to change avatar, right-click to remove"
-                              : "Click to add avatar"
-                            : ""
-                        }
+                        title={`Open ${group.name}`}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            navigate(`/groups/${group.id}`);
+                          }
+                        }}
                       >
                         {updatingAvatar === group.id && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
@@ -511,7 +452,7 @@ export default function Groups() {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">
-                        {group.name}
+                        {truncate(group.name)}
                       </h3>
                       <p className="text-gray-500 text-sm">
                         {group.memberCount} member

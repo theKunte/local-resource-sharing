@@ -36,20 +36,15 @@ const GearCard: React.FC<GearCardProps> = ({
   showActions = false,
 }) => {
   return (
-    <div className="">
-      {" "}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col mb-8">
+    <div className="w-full">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col">
         {/* Image Section */}
         {image && (
-          <div
-            className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden mb-4 rounded-lg"
-            style={{ minHeight: 0, minWidth: 0 }}
-          >
+          <div className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden rounded-lg">
             <img
               src={image}
               alt={title}
-              className="object-cover w-full h-full max-w-[200px] max-h-[200px] rounded-lg shadow-sm"
-              style={{ aspectRatio: "1 / 1" }}
+              className="object-cover w-full h-full rounded-lg shadow-sm"
             />
             {/* Edit/Delete overlay for owner */}
             {showActions && (
