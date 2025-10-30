@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import GearCard, { Gear } from "../components/GearCard";
+import ManageGroupsModal from "../components/ManageGroupsModal";
 import { Link } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
@@ -10,6 +11,9 @@ export default function Home() {
   const [communityGear, setCommunityGear] = useState<Gear[]>([]);
   const [loadingMyGear, setLoadingMyGear] = useState(false);
   const [loadingCommunityGear, setLoadingCommunityGear] = useState(false);
+  const [manageResourceId, setManageResourceId] = useState<string | null>(null);
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -36,6 +40,98 @@ export default function Home() {
         .finally(() => setLoadingCommunityGear(false));
     }
   }, [user]);
+
+  // Delete a resource (only owner can)
+  const handleDeleteResource = async (resourceId: string) => {
+    if (!confirm("Are you sure you want to delete this item?")) return;
+    try {
+      await axios.delete(`http://localhost:3001/api/resources/${resourceId}`, {
+        data: { userId: user?.uid },
+      });
+      // remove from lists
+      setMyGear((prev) => prev.filter((g) => g.id !== resourceId));
+      setCommunityGear((prev) => prev.filter((g) => g.id !== resourceId));
+      try {
+        window.dispatchEvent(
+          new CustomEvent("resource:deleted", { detail: { id: resourceId } })
+        );
+      } catch (e) {
+        /* ignore */
+      }
+      setStatusMessage("Resource deleted");
+      setTimeout(() => setStatusMessage(null), 3500);
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      setStatusMessage("Failed to delete resource");
+      setTimeout(() => setStatusMessage(null), 3500);
+    }
+  };
+
+  // Edit a resource (simple prompt-based flow)
+  const handleEditResource = async (resource: Gear) => {
+    const newTitle = prompt("Edit title:", resource.title);
+    if (!newTitle) return;
+    const newDescription = prompt("Edit description:", resource.description);
+    if (!newDescription) return;
+    try {
+      const resp = await axios.put(
+        `http://localhost:3001/api/resources/${resource.id}`,
+        {
+          title: newTitle,
+          description: newDescription,
+        }
+      );
+      // update local lists
+      setMyGear((prev) =>
+        prev.map((g) => (g.id === resp.data.id ? resp.data : g))
+      );
+      setCommunityGear((prev) =>
+        prev.map((g) => (g.id === resp.data.id ? resp.data : g))
+      );
+      try {
+        window.dispatchEvent(
+          new CustomEvent("resource:updated", {
+            detail: { resource: resp.data },
+          })
+        );
+      } catch (e) {
+        /* ignore */
+      }
+      setStatusMessage("Resource updated");
+      setTimeout(() => setStatusMessage(null), 3500);
+    } catch (error) {
+      console.error("Error updating resource:", error);
+      setStatusMessage("Failed to update resource");
+      setTimeout(() => setStatusMessage(null), 3500);
+    }
+  };
+
+  // Listen for resource change events (delete/update) coming from other pages
+  useEffect(() => {
+    const onDeleted = (e: Event) => {
+      const ce = e as CustomEvent<{ id: string }>;
+      const id = ce?.detail?.id;
+      if (!id) return;
+      setMyGear((prev) => prev.filter((g) => g.id !== id));
+      setCommunityGear((prev) => prev.filter((g) => g.id !== id));
+    };
+
+    const onUpdated = (e: Event) => {
+      const ce = e as CustomEvent<{ resource: Gear }>;
+      const r = ce?.detail?.resource;
+      if (!r) return;
+      setMyGear((prev) => prev.map((g) => (g.id === r.id ? r : g)));
+      setCommunityGear((prev) => prev.map((g) => (g.id === r.id ? r : g)));
+    };
+
+    window.addEventListener("resource:deleted", onDeleted);
+    window.addEventListener("resource:updated", onUpdated);
+
+    return () => {
+      window.removeEventListener("resource:deleted", onDeleted);
+      window.removeEventListener("resource:updated", onUpdated);
+    };
+  }, []);
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   // Landing page for non-authenticated users
@@ -79,10 +175,8 @@ export default function Home() {
               you sign in with Google.
             </p>
           </div>
-          {/* Features Section */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-12 lg:mb-16">
             <div className="text-center p-6 bg-white rounded-xl shadow-md">
-              <div className="text-3xl sm:text-4xl mb-4">⛺</div>
               <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-800">
                 Share Camping Gear
               </h3>
@@ -186,6 +280,21 @@ export default function Home() {
   // Authenticated user dashboard
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
+      {/* Inline status/toast banner */}
+      {statusMessage && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="flex items-center gap-3 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg">
+            <span className="text-sm font-medium">{statusMessage}</span>
+            <button
+              onClick={() => setStatusMessage(null)}
+              className="ml-3 text-white/80 hover:text-white text-sm"
+              aria-label="Dismiss status"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       {/* Welcome Section */}
       <section className="mb-10 text-center">
         <div className="flex flex-col items-center gap-4">
@@ -257,7 +366,13 @@ export default function Home() {
                 description={item.description}
                 image={item.image}
                 isAvailable={true}
-                showActions={false}
+                showActions={true}
+                onDelete={handleDeleteResource}
+                onEdit={handleEditResource}
+                onManageGroups={() => {
+                  setManageResourceId(item.id);
+                  setShowManageModal(true);
+                }}
               />
             ))}
           </div>
@@ -317,6 +432,45 @@ export default function Home() {
           </div>
         )}
       </section>
+      {/* Manage groups modal for items */}
+      {manageResourceId && (
+        <ManageGroupsModal
+          open={showManageModal}
+          userId={user!.uid}
+          resourceId={manageResourceId}
+          onClose={() => {
+            setShowManageModal(false);
+            setManageResourceId(null);
+          }}
+          onSaved={async () => {
+            // reload lists
+            if (!user) return;
+            setLoadingMyGear(true);
+            setLoadingCommunityGear(true);
+            try {
+              const [myRes, communityRes] = await Promise.all([
+                axios.get(
+                  `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
+                    user.uid
+                  )}`
+                ),
+                axios.get(
+                  `http://localhost:3001/api/resources?user=${encodeURIComponent(
+                    user.uid
+                  )}`
+                ),
+              ]);
+              setMyGear(myRes.data);
+              setCommunityGear(communityRes.data);
+            } catch (e) {
+              console.error(e);
+            } finally {
+              setLoadingMyGear(false);
+              setLoadingCommunityGear(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -175,12 +175,44 @@ app.put("/api/resources/:id", async (req, res) => {
 // Delete a resource by id
 app.delete("/api/resources/:id", async (req, res) => {
   const id = req.params.id;
+  const { userId } = req.body as { userId?: string };
   try {
+    // DEBUG: log request details to help diagnose unexpected responses
+    console.log(
+      "[DEBUG] DELETE /api/resources/:id called - id=",
+      id,
+      "userId=",
+      userId
+    );
+    console.log("[DEBUG] request method:", req.method);
+    console.log("[DEBUG] request headers:", req.headers);
+    console.log("[DEBUG] request body:", req.body);
+
+    // Verify resource exists
+    const resource = await prisma.resource.findUnique({
+      where: { id },
+      select: { ownerId: true },
+    });
+    if (!resource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    // If caller provided a userId, enforce ownership check
+    if (userId && resource.ownerId !== userId) {
+      return res
+        .status(403)
+        .json({ error: "You don't have permission to delete this resource" });
+    }
+
+    // Remove any sharing records first to avoid foreign key constraint errors
+    await prisma.resourceSharing.deleteMany({ where: { resourceId: id } });
+
     await prisma.resource.delete({ where: { id } });
     res.status(204).end();
   } catch (error) {
     console.error("Error deleting resource:", error);
-    res.status(404).json({ error: "Resource not found" });
+    // If it's a foreign key or other DB error, return 500 so client can see server failure
+    res.status(500).json({ error: "Failed to delete resource" });
   }
 });
 
