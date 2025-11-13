@@ -4,6 +4,7 @@ import PostResource from "./pages/PostResource";
 import Header from "./components/Header";
 import Profile from "./pages/Profile";
 import Groups from "./pages/Groups";
+import Requests from "./pages/Requests";
 import GroupDetail from "./pages/GroupDetail";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/groups/:groupId" element={<GroupDetail />} />
+        <Route path="/requests" element={<Requests />} />
       </Routes>
     </BrowserRouter>
   );
