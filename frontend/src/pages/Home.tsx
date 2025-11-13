@@ -55,8 +55,8 @@ export default function Home() {
         window.dispatchEvent(
           new CustomEvent("resource:deleted", { detail: { id: resourceId } })
         );
-      } catch (e) {
-        /* ignore */
+      } catch (_err) {
+        console.debug("[Home] dispatch resource:deleted failed", _err);
       }
       setStatusMessage("Resource deleted");
       setTimeout(() => setStatusMessage(null), 3500);
@@ -94,8 +94,8 @@ export default function Home() {
             detail: { resource: resp.data },
           })
         );
-      } catch (e) {
-        /* ignore */
+      } catch (_err) {
+        console.debug("[Home] dispatch resource:updated failed", _err);
       }
       setStatusMessage("Resource updated");
       setTimeout(() => setStatusMessage(null), 3500);
@@ -433,10 +433,10 @@ export default function Home() {
         )}
       </section>
       {/* Manage groups modal for items */}
-      {manageResourceId && (
+      {manageResourceId && user && (
         <ManageGroupsModal
           open={showManageModal}
-          userId={user!.uid}
+          userId={user.uid}
           resourceId={manageResourceId}
           onClose={() => {
             setShowManageModal(false);
@@ -462,8 +462,8 @@ export default function Home() {
               ]);
               setMyGear(myRes.data);
               setCommunityGear(communityRes.data);
-            } catch (e) {
-              console.error(e);
+            } catch (_err) {
+              console.error(_err);
             } finally {
               setLoadingMyGear(false);
               setLoadingCommunityGear(false);

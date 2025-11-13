@@ -8,6 +8,10 @@ interface Group {
   memberCount?: number;
 }
 
+interface SimpleGroupId {
+  id: string;
+}
+
 interface Props {
   open: boolean;
   userId: string;
@@ -70,7 +74,8 @@ export default function ManageGroupsModal({
         `/api/resources/${encodeURIComponent(resourceId)}/groups`,
         { params: { userId } }
       );
-      const currentlyShared: string[] = sharedResp.data.map((g: any) => g.id);
+      const sharedData = sharedResp.data as SimpleGroupId[];
+      const currentlyShared: string[] = sharedData.map((g) => g.id);
       const toAdd = Array.from(current).filter(
         (id) => !currentlyShared.includes(id)
       );
@@ -100,7 +105,9 @@ export default function ManageGroupsModal({
             detail: { resource: { id: resourceId } },
           })
         );
-      } catch (e) {}
+      } catch (_err) {
+        console.debug("[ManageGroupsModal] dispatch failed", _err);
+      }
 
       if (onSaved) onSaved();
       onClose();
