@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -6,10 +6,23 @@ import ResourceCard from "../components/ResourceCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
 // removed cropImageToSquare (no longer used)
 
+interface ResourceItem {
+  id: string;
+  title: string;
+  description: string;
+  image?: string | null;
+}
+
+interface GroupItem {
+  id: string;
+  name: string;
+  avatar?: string | null;
+}
+
 export default function Profile() {
   const { user, loading } = useFirebaseAuth();
-  const [resources, setResources] = useState<any[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
+  const [resources, setResources] = useState<ResourceItem[]>([]);
+  const [groups, setGroups] = useState<GroupItem[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -35,14 +48,8 @@ export default function Profile() {
     }
   }, [user]);
 
-  // Fetch groups the user belongs to
-  useEffect(() => {
-    if (!user) return;
-    loadGroups();
-  }, [user]);
-
   // helper to load groups (used after creating a new group)
-  const loadGroups = async () => {
+  const loadGroups = useCallback(async () => {
     if (!user) return;
     try {
       const res = await axios.get(
@@ -55,7 +62,13 @@ export default function Profile() {
       console.error("Failed to fetch groups:", err);
       setGroups([]);
     }
-  };
+  }, [user]);
+
+  // Fetch groups the user belongs to
+  useEffect(() => {
+    if (!user) return;
+    loadGroups();
+  }, [user, loadGroups]);
 
   // Delete resource handler
   const handleDelete = async (id: string) => {
@@ -70,13 +83,13 @@ export default function Profile() {
       window.dispatchEvent(
         new CustomEvent("resource:deleted", { detail: { id } })
       );
-    } catch (e) {
-      // ignore if events aren't supported
+    } catch (_err) {
+      console.debug("[Profile] dispatch resource:deleted failed", _err);
     }
   };
 
   // Edit resource handler
-  const handleEdit = async (resource: any) => {
+  const handleEdit = async (resource: ResourceItem) => {
     const newTitle = prompt("Edit title:", resource.title);
     if (!newTitle) return;
     const newDescription = prompt("Edit description:", resource.description);
@@ -98,8 +111,8 @@ export default function Profile() {
           detail: { resource: updated.data },
         })
       );
-    } catch (e) {
-      // ignore
+    } catch (_err) {
+      console.debug("[Profile] dispatch resource:updated failed", _err);
     }
   };
 
@@ -384,7 +397,9 @@ export default function Profile() {
                   )}`
                 )
                 .then((res) => setResources(res.data))
-                .catch(() => {});
+                .catch((_err) => {
+                  console.debug("[Profile] refresh resources failed", _err);
+                });
             }}
           />
         )}
@@ -401,7 +416,7 @@ export default function Profile() {
                 id={res.id}
                 title={res.title}
                 description={res.description}
-                image={res.image}
+                image={res.image ?? undefined}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
                 showActions={true}

@@ -51,7 +51,9 @@ export function useFirebaseAuth() {
       console.error("Sign-in error:", error);
       try {
         alert("Google sign-in failed. Check console for details.");
-      } catch (e) {}
+      } catch (_err) {
+        console.debug("[useFirebaseAuth] alert failed", _err);
+      }
       return false;
     }
   };

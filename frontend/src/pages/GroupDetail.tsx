@@ -184,8 +184,8 @@ export default function GroupDetail() {
         window.dispatchEvent(
           new CustomEvent("resource:deleted", { detail: { id: resourceId } })
         );
-      } catch (e) {
-        /* ignore */
+      } catch (_err) {
+        console.debug("[GroupDetail] dispatch resource:deleted failed", _err);
       }
     } catch (error: unknown) {
       console.error("Error deleting resource:", error);
@@ -220,8 +220,8 @@ export default function GroupDetail() {
             detail: { resource: resp.data },
           })
         );
-      } catch (e) {
-        /* ignore */
+      } catch (_err) {
+        console.debug("[GroupDetail] dispatch resource:updated failed", _err);
       }
     } catch (error: unknown) {
       console.error("Error updating resource:", error);
@@ -293,10 +293,10 @@ export default function GroupDetail() {
           <p className="mt-4 text-slate-600">Loading group details...</p>
         </div>
         {/* Manage groups modal for resources */}
-        {manageResourceId && (
+        {manageResourceId && user && (
           <ManageGroupsModal
             open={showManageModal}
-            userId={user?.uid!}
+            userId={user.uid}
             resourceId={manageResourceId}
             onClose={() => {
               setShowManageModal(false);
@@ -610,11 +610,11 @@ export default function GroupDetail() {
             </div>
           </div>
         </div>
-        {showAddGearModal && group && (
+        {showAddGearModal && group && user && (
           <AddGearToGroupModal
             open={showAddGearModal}
             groupId={group.id}
-            userId={user!.uid}
+            userId={user.uid}
             onClose={() => setShowAddGearModal(false)}
             onSaved={() => {
               fetchGroupDetails();

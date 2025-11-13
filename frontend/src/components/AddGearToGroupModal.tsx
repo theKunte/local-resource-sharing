@@ -8,6 +8,10 @@ interface Gear {
   image?: string;
 }
 
+interface SharedResourceRow {
+  id: string;
+}
+
 interface Props {
   open: boolean;
   groupId: string;
@@ -52,9 +56,8 @@ export default function AddGearToGroupModal({
           resShared.data.length
         );
         setMyGear(resMy.data || []);
-        const sharedList: string[] = (resShared.data || []).map(
-          (r: any) => r.id
-        );
+        const sharedData = (resShared.data || []) as SharedResourceRow[];
+        const sharedList: string[] = sharedData.map((r) => r.id);
         setSharedIds(new Set(sharedList));
       } catch (err) {
         console.error("Failed to load gear or shared resources", err);
@@ -88,7 +91,9 @@ export default function AddGearToGroupModal({
             detail: { resource: { id: resourceId } },
           })
         );
-      } catch (e) {}
+      } catch (_err) {
+        console.debug("[AddGearToGroupModal] dispatch failed", _err);
+      }
     } catch (err) {
       console.error("Failed to add gear to group", err);
       alert("Failed to add gear to group. Please try again.");
