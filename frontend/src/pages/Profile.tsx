@@ -155,26 +155,7 @@ export default function Profile() {
       <main className="flex-1 p-10">
         {/* Profile Header */}
         <div className="flex flex-col md:flex-row md:items-center gap-8 mb-10">
-          <div className="flex flex-col items-center md:items-start">
-            <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center text-2xl font-bold mb-2 border">
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt="avatar"
-                  className="w-full h-full object-cover rounded-full"
-                />
-              ) : (
-                <span>Avatar</span>
-              )}
-            </div>
-            <button className="text-blue-600 font-semibold hover:underline mt-2 md:mt-0">
-              Edit Profile
-            </button>
-            <span className="text-lg font-semibold mt-2">
-              {user.displayName || user.email}
-            </span>
-            <span className="text-gray-500 text-sm">Full Name</span>
-          </div>
+          <div className="flex flex-col items-center md:items-start"></div>
           <div className="flex-1 flex flex-col md:flex-row md:items-center gap-8 justify-between">
             <div className="flex flex-col gap-2 md:gap-4">
               <div className="flex gap-8 text-lg">
