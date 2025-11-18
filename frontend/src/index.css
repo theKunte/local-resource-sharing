@@ -10,8 +10,9 @@ body,
   min-height: 100%;
   width: 100%;
   padding: 0;
+  margin: 0;
   font-family: "Fredoka", "Inter", system-ui, sans-serif;
-  background: linear-gradient(135deg, #fdf6e3 0%, #e0f2fe 100%);
+  background: linear-gradient(135deg, #fffbf7 0%, #f1e5e8 100%);
 }
 
 /* Header navigation row fix */
@@ -22,7 +23,7 @@ body,
   flex-wrap: nowrap;
 }
 .header-nav-right {
-  margin-left: 2rem;
+  margin-left: 3rem;
 }
 
 /* Add a playful shadow and rounded corners to cards and sections */
@@ -32,7 +33,7 @@ body,
 .rounded-xl {
   /* margin: 2rem; */ /* Removed to prevent overflow */
   border-radius: 0.5rem !important;
-  box-shadow: 0 4px 24px 0 rgba(54, 228, 118, 0.1),
+  box-shadow: 0 4px 24px 0 rgba(114, 167, 134, 0.1),
     0 1.5px 6px 0 rgba(161, 82, 157, 0.08);
   transition: box-shadow 0.2s, transform 0.2s;
   /* Optionally add padding for inner spacing */
@@ -41,7 +42,7 @@ body,
 .card:hover,
 .bg-white:hover {
   box-shadow: 0 8px 32px 0 rgba(34, 197, 94, 0.18),
-    0 3px 12px 0 rgba(59, 130, 246, 0.16);
+    0 3px 12px 0 rgba(95, 114, 145, 0.16);
   transform: translateY(-2px) scale(1.02);
 }
 
@@ -51,8 +52,8 @@ h2,
 h3 {
   font-family: "Fredoka", "Inter", system-ui, sans-serif;
   letter-spacing: 0.01em;
-  color: #224183;
-  text-shadow: 0 2px 8px #bae6fd44;
+  color: #0a0204;
+  text-shadow: 0 2px 8px #dae6ec44;
   text-align: center; /* Center all main headings */
 }
 
@@ -61,7 +62,7 @@ button,
 .btn,
 .bg-blue-500 {
   border-radius: 0.5rem !important;
-  background: linear-gradient(90deg, #38bdf8 0%, #34d399 100%);
+  background: linear-gradient(90deg, #248a8a 0%, #6ccfe0 100%);
   color: #fff !important;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -71,7 +72,7 @@ button,
 button:hover,
 .btn:hover,
 .bg-blue-600:hover {
-  background: linear-gradient(90deg, #34d399 0%, #38bdf8 100%);
+  background: linear-gradient(90deg, #1b1d7a 0%, #38bdf8 100%);
   box-shadow: 0 4px 16px 0 #34d39955;
   transform: scale(1.03);
 }
@@ -120,8 +121,8 @@ a:hover {
   .max-w-5xl,
   .max-w-3xl,
   .max-w-md {
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
+    padding-left: 0.8rem !important;
+    padding-right: 0.8rem !important;
   }
 }
 
