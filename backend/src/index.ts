@@ -1570,6 +1570,352 @@ app.get("/api/borrow-requests", async (req, res) => {
   }
 });
 
+// Accept a borrow request (owner only)
+app.post("/api/borrow-requests/:id/accept", async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  try {
+    // Get the borrow request
+    const borrowRequest = await prisma.borrowRequest.findUnique({
+      where: { id },
+      include: {
+        resource: true,
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        owner: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    if (!borrowRequest) {
+      return res.status(404).json({ error: "Borrow request not found" });
+    }
+
+    // Verify user is the owner
+    if (borrowRequest.ownerId !== userId) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        message: "Only the resource owner can accept borrow requests",
+      });
+    }
+
+    // Check if request is already processed
+    if (borrowRequest.status !== "PENDING") {
+      return res.status(400).json({
+        error: "Invalid request status",
+        message: `This request has already been ${borrowRequest.status.toLowerCase()}`,
+      });
+    }
+
+    // Check for active loans during the requested period
+    const overlappingLoans = await prisma.loan.findMany({
+      where: {
+        resourceId: borrowRequest.resourceId,
+        status: "ACTIVE",
+        OR: [
+          {
+            AND: [
+              { startDate: { lte: borrowRequest.endDate } },
+              { startDate: { gte: borrowRequest.startDate } },
+            ],
+          },
+          {
+            AND: [
+              { endDate: { lte: borrowRequest.endDate } },
+              { endDate: { gte: borrowRequest.startDate } },
+            ],
+          },
+          {
+            AND: [
+              { startDate: { lte: borrowRequest.startDate } },
+              { endDate: { gte: borrowRequest.endDate } },
+            ],
+          },
+        ],
+      },
+    });
+
+    if (overlappingLoans.length > 0) {
+      return res.status(409).json({
+        error: "Resource unavailable",
+        message:
+          "This resource is already borrowed during the requested time period",
+      });
+    }
+
+    // Perform transaction: create loan, update request, update resource, decline overlapping requests
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the loan
+      const loan = await tx.loan.create({
+        data: {
+          requestId: borrowRequest.id,
+          resourceId: borrowRequest.resourceId,
+          borrowerId: borrowRequest.borrowerId,
+          lenderId: borrowRequest.ownerId,
+          startDate: borrowRequest.startDate,
+          endDate: borrowRequest.endDate,
+          status: "ACTIVE",
+        },
+        include: {
+          borrower: {
+            select: { id: true, email: true, name: true },
+          },
+          lender: {
+            select: { id: true, email: true, name: true },
+          },
+          resource: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              image: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      // Update the borrow request status
+      const updatedRequest = await tx.borrowRequest.update({
+        where: { id },
+        data: { status: "APPROVED" },
+        include: {
+          resource: true,
+          borrower: {
+            select: { id: true, email: true, name: true },
+          },
+          owner: {
+            select: { id: true, email: true, name: true },
+          },
+        },
+      });
+
+      // Update resource status to BORROWED
+      await tx.resource.update({
+        where: { id: borrowRequest.resourceId },
+        data: {
+          status: "BORROWED",
+          currentLoanId: loan.id,
+        },
+      });
+
+      // Auto-decline overlapping pending requests
+      const declinedRequests = await tx.borrowRequest.updateMany({
+        where: {
+          resourceId: borrowRequest.resourceId,
+          id: { not: borrowRequest.id },
+          status: "PENDING",
+          OR: [
+            {
+              AND: [
+                { startDate: { lte: borrowRequest.endDate } },
+                { startDate: { gte: borrowRequest.startDate } },
+              ],
+            },
+            {
+              AND: [
+                { endDate: { lte: borrowRequest.endDate } },
+                { endDate: { gte: borrowRequest.startDate } },
+              ],
+            },
+            {
+              AND: [
+                { startDate: { lte: borrowRequest.startDate } },
+                { endDate: { gte: borrowRequest.endDate } },
+              ],
+            },
+          ],
+        },
+        data: { status: "REJECTED" },
+      });
+
+      return { loan, updatedRequest, declinedCount: declinedRequests.count };
+    });
+
+    res.json({
+      success: true,
+      message: "Borrow request accepted successfully",
+      borrowRequest: result.updatedRequest,
+      loan: result.loan,
+      autoDeclinedRequests: result.declinedCount,
+    });
+  } catch (error) {
+    console.error("Error accepting borrow request:", error);
+    res.status(500).json({ error: "Failed to accept borrow request" });
+  }
+});
+
+// Decline a borrow request (owner only)
+app.post("/api/borrow-requests/:id/decline", async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  try {
+    // Get the borrow request
+    const borrowRequest = await prisma.borrowRequest.findUnique({
+      where: { id },
+      include: {
+        resource: true,
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        owner: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    if (!borrowRequest) {
+      return res.status(404).json({ error: "Borrow request not found" });
+    }
+
+    // Verify user is the owner
+    if (borrowRequest.ownerId !== userId) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        message: "Only the resource owner can decline borrow requests",
+      });
+    }
+
+    // Check if request is already processed
+    if (borrowRequest.status !== "PENDING") {
+      return res.status(400).json({
+        error: "Invalid request status",
+        message: `This request has already been ${borrowRequest.status.toLowerCase()}`,
+      });
+    }
+
+    // Update the request status
+    const updatedRequest = await prisma.borrowRequest.update({
+      where: { id },
+      data: { status: "REJECTED" },
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+            status: true,
+          },
+        },
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        owner: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Borrow request declined",
+      borrowRequest: updatedRequest,
+    });
+  } catch (error) {
+    console.error("Error declining borrow request:", error);
+    res.status(500).json({ error: "Failed to decline borrow request" });
+  }
+});
+
+// Cancel a borrow request (borrower only)
+app.post("/api/borrow-requests/:id/cancel", async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  try {
+    // Get the borrow request
+    const borrowRequest = await prisma.borrowRequest.findUnique({
+      where: { id },
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+            status: true,
+          },
+        },
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        owner: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    if (!borrowRequest) {
+      return res.status(404).json({ error: "Borrow request not found" });
+    }
+
+    // Verify user is the borrower
+    if (borrowRequest.borrowerId !== userId) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        message: "Only the borrower can cancel their own request",
+      });
+    }
+
+    // Check if request can be cancelled
+    if (borrowRequest.status !== "PENDING") {
+      return res.status(400).json({
+        error: "Invalid request status",
+        message: `Cannot cancel a request that has been ${borrowRequest.status.toLowerCase()}`,
+      });
+    }
+
+    // Update the request status
+    const updatedRequest = await prisma.borrowRequest.update({
+      where: { id },
+      data: { status: "CANCELLED" },
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+            status: true,
+          },
+        },
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        owner: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Borrow request cancelled",
+      borrowRequest: updatedRequest,
+    });
+  } catch (error) {
+    console.error("Error cancelling borrow request:", error);
+    res.status(500).json({ error: "Failed to cancel borrow request" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
 });
