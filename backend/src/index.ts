@@ -1916,6 +1916,215 @@ app.post("/api/borrow-requests/:id/cancel", async (req, res) => {
   }
 });
 
+// --- LOAN LIFECYCLE API --- //
+
+// Request return of a loan (borrower only)
+app.post("/api/loans/:id/request-return", async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  try {
+    // Get the loan
+    const loan = await prisma.loan.findUnique({
+      where: { id },
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+            status: true,
+          },
+        },
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        lender: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    if (!loan) {
+      return res.status(404).json({ error: "Loan not found" });
+    }
+
+    // Verify user is the borrower
+    if (loan.borrowerId !== userId) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        message: "Only the borrower can request to return this loan",
+      });
+    }
+
+    // Check if loan is active
+    if (loan.status !== "ACTIVE") {
+      return res.status(400).json({
+        error: "Invalid loan status",
+        message: `This loan is already ${loan.status.toLowerCase()}`,
+      });
+    }
+
+    // Update loan status to indicate return is being requested
+    // We'll use the returnedDate field to track when return was requested
+    const updatedLoan = await prisma.loan.update({
+      where: { id },
+      data: {
+        returnedDate: new Date(),
+      },
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+            status: true,
+          },
+        },
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        lender: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Return requested successfully. Awaiting owner confirmation.",
+      loan: updatedLoan,
+    });
+  } catch (error) {
+    console.error("Error requesting loan return:", error);
+    res.status(500).json({ error: "Failed to request loan return" });
+  }
+});
+
+// Confirm return of a loan (lender/owner only)
+app.post("/api/loans/:id/confirm-return", async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  try {
+    // Get the loan
+    const loan = await prisma.loan.findUnique({
+      where: { id },
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+            status: true,
+            currentLoanId: true,
+          },
+        },
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        lender: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    if (!loan) {
+      return res.status(404).json({ error: "Loan not found" });
+    }
+
+    // Verify user is the lender/owner
+    if (loan.lenderId !== userId) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        message: "Only the resource owner can confirm the return",
+      });
+    }
+
+    // Check if loan is active
+    if (loan.status !== "ACTIVE") {
+      return res.status(400).json({
+        error: "Invalid loan status",
+        message: `This loan is already ${loan.status.toLowerCase()}`,
+      });
+    }
+
+    // Check if return was requested (returnedDate should be set)
+    if (!loan.returnedDate) {
+      return res.status(400).json({
+        error: "Return not requested",
+        message:
+          "The borrower must request return before the owner can confirm it",
+      });
+    }
+
+    // Perform transaction: update loan status, update resource status, clear currentLoanId
+    const result = await prisma.$transaction(async (tx) => {
+      // Update loan status to RETURNED
+      const updatedLoan = await tx.loan.update({
+        where: { id },
+        data: {
+          status: "RETURNED",
+        },
+        include: {
+          resource: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              image: true,
+              status: true,
+            },
+          },
+          borrower: {
+            select: { id: true, email: true, name: true },
+          },
+          lender: {
+            select: { id: true, email: true, name: true },
+          },
+        },
+      });
+
+      // Update resource: set status to AVAILABLE and clear currentLoanId
+      const updatedResource = await tx.resource.update({
+        where: { id: loan.resourceId },
+        data: {
+          status: "AVAILABLE",
+          currentLoanId: null,
+        },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+        },
+      });
+
+      return { loan: updatedLoan, resource: updatedResource };
+    });
+
+    res.json({
+      success: true,
+      message: "Return confirmed successfully. Resource is now available.",
+      loan: result.loan,
+      resource: result.resource,
+    });
+  } catch (error) {
+    console.error("Error confirming loan return:", error);
+    res.status(500).json({ error: "Failed to confirm loan return" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
 });
