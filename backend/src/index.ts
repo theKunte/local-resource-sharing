@@ -35,6 +35,18 @@ app.get("/api/resources", async (req, res) => {
           owner: {
             select: { id: true, email: true, name: true },
           },
+          currentLoan: {
+            select: {
+              id: true,
+              status: true,
+              startDate: true,
+              endDate: true,
+              returnedDate: true,
+              borrower: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
         },
       });
       return res.json(resources);
@@ -53,14 +65,31 @@ app.get("/api/resources", async (req, res) => {
 
     const groupIds = userGroups.map((ug) => ug.groupId);
 
-    // Find all resources shared with these groups
+    // Find all resources shared with these groups (only AVAILABLE ones)
     const resourceSharings = await prisma.resourceSharing.findMany({
-      where: { groupId: { in: groupIds } },
+      where: {
+        groupId: { in: groupIds },
+        resource: {
+          status: "AVAILABLE",
+        },
+      },
       include: {
         resource: {
           include: {
             owner: {
               select: { id: true, email: true, name: true },
+            },
+            currentLoan: {
+              select: {
+                id: true,
+                status: true,
+                startDate: true,
+                endDate: true,
+                returnedDate: true,
+                borrower: {
+                  select: { id: true, name: true, email: true },
+                },
+              },
             },
           },
         },
