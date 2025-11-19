@@ -45,9 +45,12 @@ function Header() {
   }, [mobileOpen]);
 
   return (
-    <header className="bg-[#2C557C] text-white shadow-lg sticky top-0 z-50">
+    <header className="bg-[#2C557C] h-50 text-white shadow-lg sticky top-0 z-50 ">
       <nav className="w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
+        <div
+          className="flex items-center justify-between"
+          // style={{ minHeight: "5rem" }}
+        >
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2 group">
