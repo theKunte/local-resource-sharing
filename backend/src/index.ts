@@ -1268,6 +1268,308 @@ app.get("/api/users/:userId/groups", async (req, res) => {
   }
 });
 
+// --- BORROW REQUESTS API --- //
+
+// Create a borrow request
+app.post("/api/borrow-requests", async (req, res) => {
+  const { resourceId, borrowerId, groupId, message, startDate, endDate } =
+    req.body;
+
+  // Validate required fields
+  if (!resourceId || !borrowerId || !groupId || !startDate || !endDate) {
+    return res.status(400).json({
+      error: "Missing required fields",
+      required: ["resourceId", "borrowerId", "groupId", "startDate", "endDate"],
+    });
+  }
+
+  try {
+    // Parse and validate dates
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const now = new Date();
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ error: "Invalid date format" });
+    }
+
+    if (start < now) {
+      return res
+        .status(400)
+        .json({ error: "Start date cannot be in the past" });
+    }
+
+    if (end <= start) {
+      return res
+        .status(400)
+        .json({ error: "End date must be after start date" });
+    }
+
+    // Get resource with owner information
+    const resource = await prisma.resource.findUnique({
+      where: { id: resourceId },
+      include: {
+        owner: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    if (!resource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    // Check if requesting user is the owner
+    if (resource.ownerId === borrowerId) {
+      return res
+        .status(400)
+        .json({ error: "You cannot borrow your own resource" });
+    }
+
+    // Verify resource is shared with the specified group
+    const resourceSharing = await prisma.resourceSharing.findFirst({
+      where: {
+        resourceId,
+        groupId,
+      },
+    });
+
+    if (!resourceSharing) {
+      return res.status(403).json({
+        error: "Resource not shared with this group",
+        message: "This resource is not available in the specified group",
+      });
+    }
+
+    // Verify requesting user is a member of the group
+    const groupMember = await prisma.groupMember.findFirst({
+      where: {
+        userId: borrowerId,
+        groupId,
+      },
+    });
+
+    if (!groupMember) {
+      return res.status(403).json({
+        error: "Not a group member",
+        message: "You must be a member of this group to request this resource",
+      });
+    }
+
+    // Check for overlapping active loans
+    const overlappingLoans = await prisma.loan.findMany({
+      where: {
+        resourceId,
+        status: "ACTIVE",
+        OR: [
+          {
+            // Existing loan starts during requested period
+            AND: [{ startDate: { lte: end } }, { startDate: { gte: start } }],
+          },
+          {
+            // Existing loan ends during requested period
+            AND: [{ endDate: { lte: end } }, { endDate: { gte: start } }],
+          },
+          {
+            // Existing loan spans entire requested period
+            AND: [{ startDate: { lte: start } }, { endDate: { gte: end } }],
+          },
+        ],
+      },
+    });
+
+    if (overlappingLoans.length > 0) {
+      return res.status(409).json({
+        error: "Resource unavailable",
+        message:
+          "This resource is already borrowed during the requested time period",
+        conflictingLoans: overlappingLoans.map((loan) => ({
+          startDate: loan.startDate,
+          endDate: loan.endDate,
+        })),
+      });
+    }
+
+    // Check for pending or approved requests for the same period
+    const overlappingRequests = await prisma.borrowRequest.findMany({
+      where: {
+        resourceId,
+        status: { in: ["PENDING", "APPROVED"] },
+        OR: [
+          {
+            AND: [{ startDate: { lte: end } }, { startDate: { gte: start } }],
+          },
+          {
+            AND: [{ endDate: { lte: end } }, { endDate: { gte: start } }],
+          },
+          {
+            AND: [{ startDate: { lte: start } }, { endDate: { gte: end } }],
+          },
+        ],
+      },
+    });
+
+    if (overlappingRequests.length > 0) {
+      return res.status(409).json({
+        error: "Request conflict",
+        message:
+          "There is already a pending or approved request for this resource during the requested time period",
+      });
+    }
+
+    // Create the borrow request
+    const borrowRequest = await prisma.borrowRequest.create({
+      data: {
+        resourceId,
+        borrowerId,
+        ownerId: resource.ownerId,
+        message: message || null,
+        startDate: start,
+        endDate: end,
+        status: "PENDING",
+      },
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+          },
+        },
+        borrower: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+        owner: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      borrowRequest,
+      message: "Borrow request created successfully",
+    });
+  } catch (error) {
+    console.error("Error creating borrow request:", error);
+    res.status(500).json({ error: "Failed to create borrow request" });
+  }
+});
+
+// Get borrow requests for owner or borrower
+app.get("/api/borrow-requests", async (req, res) => {
+  const userId = req.query.userId as string | undefined;
+  const role = req.query.role as "owner" | "borrower" | undefined;
+  const status = req.query.status as string | undefined;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  if (!role || (role !== "owner" && role !== "borrower")) {
+    return res.status(400).json({
+      error: "role is required and must be 'owner' or 'borrower'",
+    });
+  }
+
+  try {
+    // Build the where clause based on role
+    const whereClause: any = {
+      [role === "owner" ? "ownerId" : "borrowerId"]: userId,
+    };
+
+    // Add status filter if provided
+    if (status) {
+      whereClause.status = status.toUpperCase();
+    }
+
+    const borrowRequests = await prisma.borrowRequest.findMany({
+      where: whereClause,
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+            status: true,
+          },
+        },
+        borrower: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+        owner: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Get group information for each request
+    const requestsWithGroups = await Promise.all(
+      borrowRequests.map(async (request) => {
+        // Find which group this resource is shared with for this borrower
+        const userGroups = await prisma.groupMember.findMany({
+          where: { userId: request.borrowerId },
+          select: { groupId: true },
+        });
+
+        const groupIds = userGroups.map((ug) => ug.groupId);
+
+        const sharedGroup = await prisma.resourceSharing.findFirst({
+          where: {
+            resourceId: request.resourceId,
+            groupId: { in: groupIds },
+          },
+          include: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                avatar: true,
+              },
+            },
+          },
+        });
+
+        return {
+          ...request,
+          group: sharedGroup?.group || null,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      requests: requestsWithGroups,
+      count: requestsWithGroups.length,
+    });
+  } catch (error) {
+    console.error("Error fetching borrow requests:", error);
+    res.status(500).json({ error: "Failed to fetch borrow requests" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
 });
