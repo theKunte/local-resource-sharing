@@ -65,13 +65,10 @@ app.get("/api/resources", async (req, res) => {
 
     const groupIds = userGroups.map((ug) => ug.groupId);
 
-    // Find all resources shared with these groups (only AVAILABLE ones)
+    // Find all resources shared with these groups (including borrowed ones to show status)
     const resourceSharings = await prisma.resourceSharing.findMany({
       where: {
         groupId: { in: groupIds },
-        resource: {
-          status: "AVAILABLE",
-        },
       },
       include: {
         resource: {
@@ -193,6 +190,15 @@ app.put("/api/resources/:id", async (req, res) => {
     const updated = await prisma.resource.update({
       where: { id },
       data: { title, description },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        image: true,
+        ownerId: true,
+        status: true,
+        currentLoanId: true,
+      },
     });
     res.json(updated);
   } catch (error) {
@@ -1304,11 +1310,11 @@ app.post("/api/borrow-requests", async (req, res) => {
   const { resourceId, borrowerId, groupId, message, startDate, endDate } =
     req.body;
 
-  // Validate required fields
-  if (!resourceId || !borrowerId || !groupId || !startDate || !endDate) {
+  // Validate required fields (groupId is now optional)
+  if (!resourceId || !borrowerId || !startDate || !endDate) {
     return res.status(400).json({
       error: "Missing required fields",
-      required: ["resourceId", "borrowerId", "groupId", "startDate", "endDate"],
+      required: ["resourceId", "borrowerId", "startDate", "endDate"],
     });
   }
 
@@ -1355,34 +1361,64 @@ app.post("/api/borrow-requests", async (req, res) => {
         .json({ error: "You cannot borrow your own resource" });
     }
 
-    // Verify resource is shared with the specified group
-    const resourceSharing = await prisma.resourceSharing.findFirst({
-      where: {
-        resourceId,
-        groupId,
-      },
-    });
-
-    if (!resourceSharing) {
-      return res.status(403).json({
-        error: "Resource not shared with this group",
-        message: "This resource is not available in the specified group",
+    // If groupId not provided, find a suitable group
+    let finalGroupId = groupId;
+    if (!finalGroupId) {
+      // Find groups where: 1) resource is shared, 2) borrower is a member
+      const suitableGroup = await prisma.resourceSharing.findFirst({
+        where: {
+          resourceId,
+          group: {
+            members: {
+              some: {
+                userId: borrowerId,
+              },
+            },
+          },
+        },
+        select: { groupId: true },
       });
-    }
 
-    // Verify requesting user is a member of the group
-    const groupMember = await prisma.groupMember.findFirst({
-      where: {
-        userId: borrowerId,
-        groupId,
-      },
-    });
+      if (!suitableGroup) {
+        return res.status(403).json({
+          error: "No suitable group found",
+          message:
+            "You must be a member of a group where this resource is shared",
+        });
+      }
 
-    if (!groupMember) {
-      return res.status(403).json({
-        error: "Not a group member",
-        message: "You must be a member of this group to request this resource",
+      finalGroupId = suitableGroup.groupId;
+    } else {
+      // If groupId provided, verify resource is shared with the specified group
+      const resourceSharing = await prisma.resourceSharing.findFirst({
+        where: {
+          resourceId,
+          groupId: finalGroupId,
+        },
       });
+
+      if (!resourceSharing) {
+        return res.status(403).json({
+          error: "Resource not shared with this group",
+          message: "This resource is not available in the specified group",
+        });
+      }
+
+      // Verify requesting user is a member of the group
+      const groupMember = await prisma.groupMember.findFirst({
+        where: {
+          userId: borrowerId,
+          groupId: finalGroupId,
+        },
+      });
+
+      if (!groupMember) {
+        return res.status(403).json({
+          error: "Not a group member",
+          message:
+            "You must be a member of this group to request this resource",
+        });
+      }
     }
 
     // Check for overlapping active loans
@@ -1446,7 +1482,7 @@ app.post("/api/borrow-requests", async (req, res) => {
       });
     }
 
-    // Create the borrow request
+    // Create the borrow request (using finalGroupId for validation but not storing it)
     const borrowRequest = await prisma.borrowRequest.create({
       data: {
         resourceId,
@@ -1545,6 +1581,15 @@ app.get("/api/borrow-requests", async (req, res) => {
             id: true,
             email: true,
             name: true,
+          },
+        },
+        loan: {
+          select: {
+            id: true,
+            status: true,
+            startDate: true,
+            endDate: true,
+            returnedDate: true,
           },
         },
       },
@@ -1945,6 +1990,165 @@ app.post("/api/borrow-requests/:id/cancel", async (req, res) => {
   }
 });
 
+// Update a borrow request (borrower can update their pending requests)
+app.put("/api/borrow-requests/:id", async (req, res) => {
+  const { id } = req.params;
+  const { userId, startDate, endDate, message } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  try {
+    // Get the borrow request
+    const borrowRequest = await prisma.borrowRequest.findUnique({
+      where: { id },
+    });
+
+    if (!borrowRequest) {
+      return res.status(404).json({ error: "Borrow request not found" });
+    }
+
+    // Verify user is the borrower or owner
+    if (
+      borrowRequest.borrowerId !== userId &&
+      borrowRequest.ownerId !== userId
+    ) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        message: "Only the borrower or owner can update this request",
+      });
+    }
+
+    // Check if request can be updated (only pending requests)
+    if (borrowRequest.status !== "PENDING") {
+      return res.status(400).json({
+        error: "Invalid request status",
+        message: "Only pending requests can be updated",
+      });
+    }
+
+    // Validate dates if provided
+    const updateData: any = {};
+
+    if (startDate) {
+      const start = new Date(startDate);
+      if (isNaN(start.getTime())) {
+        return res.status(400).json({ error: "Invalid start date format" });
+      }
+      updateData.startDate = start;
+    }
+
+    if (endDate) {
+      const end = new Date(endDate);
+      if (isNaN(end.getTime())) {
+        return res.status(400).json({ error: "Invalid end date format" });
+      }
+      updateData.endDate = end;
+    }
+
+    // Validate date logic if both are provided or being updated
+    const finalStartDate = updateData.startDate || borrowRequest.startDate;
+    const finalEndDate = updateData.endDate || borrowRequest.endDate;
+
+    if (finalEndDate <= finalStartDate) {
+      return res.status(400).json({
+        error: "End date must be after start date",
+      });
+    }
+
+    if (message !== undefined) {
+      updateData.message = message || null;
+    }
+
+    // Update the request
+    const updatedRequest = await prisma.borrowRequest.update({
+      where: { id },
+      data: updateData,
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+            status: true,
+          },
+        },
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        owner: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Borrow request updated",
+      borrowRequest: updatedRequest,
+    });
+  } catch (error) {
+    console.error("Error updating borrow request:", error);
+    res.status(500).json({ error: "Failed to update borrow request" });
+  }
+});
+
+// Delete a borrow request (borrower or owner can delete old/rejected/cancelled requests)
+app.delete("/api/borrow-requests/:id", async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  try {
+    // Get the borrow request
+    const borrowRequest = await prisma.borrowRequest.findUnique({
+      where: { id },
+    });
+
+    if (!borrowRequest) {
+      return res.status(404).json({ error: "Borrow request not found" });
+    }
+
+    // Verify user is the borrower or owner
+    if (
+      borrowRequest.borrowerId !== userId &&
+      borrowRequest.ownerId !== userId
+    ) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        message: "Only the borrower or owner can delete this request",
+      });
+    }
+
+    // Check if request can be deleted (not APPROVED or active)
+    if (borrowRequest.status === "APPROVED") {
+      return res.status(400).json({
+        error: "Cannot delete approved request",
+        message:
+          "Approved requests cannot be deleted. Cancel the loan instead.",
+      });
+    }
+
+    // Delete the request
+    await prisma.borrowRequest.delete({
+      where: { id },
+    });
+
+    res.json({
+      success: true,
+      message: "Borrow request deleted",
+    });
+  } catch (error) {
+    console.error("Error deleting borrow request:", error);
+    res.status(500).json({ error: "Failed to delete borrow request" });
+  }
+});
+
 // --- LOAN LIFECYCLE API --- //
 
 // Request return of a loan (borrower only)
@@ -2033,6 +2237,197 @@ app.post("/api/loans/:id/request-return", async (req, res) => {
   } catch (error) {
     console.error("Error requesting loan return:", error);
     res.status(500).json({ error: "Failed to request loan return" });
+  }
+});
+
+// Confirm return of a loan (lender/owner only)
+app.post("/api/loans/:id/confirm-return", async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  try {
+    // Get the loan
+    const loan = await prisma.loan.findUnique({
+      where: { id },
+      include: {
+        resource: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image: true,
+            status: true,
+            currentLoanId: true,
+          },
+        },
+        borrower: {
+          select: { id: true, email: true, name: true },
+        },
+        lender: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    });
+
+    if (!loan) {
+      return res.status(404).json({ error: "Loan not found" });
+    }
+
+    // Verify user is the lender/owner
+    if (loan.lenderId !== userId) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        message: "Only the resource owner can confirm the return",
+      });
+    }
+
+    // Check if loan is active
+    if (loan.status !== "ACTIVE") {
+      return res.status(400).json({
+        error: "Invalid loan status",
+        message: `This loan is already ${loan.status.toLowerCase()}`,
+      });
+    }
+
+    // Check if return was requested (returnedDate should be set)
+    if (!loan.returnedDate) {
+      return res.status(400).json({
+        error: "Return not requested",
+        message: "The borrower must request a return first",
+      });
+    }
+
+    // Perform transaction: update loan status, update resource status, clear currentLoanId
+    const result = await prisma.$transaction(async (tx) => {
+      // Update loan: set status to RETURNED (returnedDate already set)
+      const updatedLoan = await tx.loan.update({
+        where: { id },
+        data: {
+          status: "RETURNED",
+        },
+        include: {
+          borrower: {
+            select: { id: true, email: true, name: true },
+          },
+          lender: {
+            select: { id: true, email: true, name: true },
+          },
+        },
+      });
+
+      // Update resource: set status to AVAILABLE and clear currentLoanId
+      await tx.resource.update({
+        where: { id: loan.resourceId },
+        data: {
+          status: "AVAILABLE",
+          currentLoanId: null,
+        },
+      });
+
+      return { loan: updatedLoan };
+    });
+
+    res.json({
+      success: true,
+      message: "Return confirmed successfully",
+      loan: result.loan,
+    });
+  } catch (error) {
+    console.error("Error confirming return:", error);
+    res.status(500).json({ error: "Failed to confirm return" });
+  }
+});
+
+// Mark item as returned by owner (direct return without borrower request)
+app.post("/api/borrow-requests/:id/mark-returned", async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "userId is required" });
+  }
+
+  try {
+    // Get the borrow request with its loan
+    const borrowRequest = await prisma.borrowRequest.findUnique({
+      where: { id },
+      include: {
+        loan: true,
+        resource: true,
+      },
+    });
+
+    if (!borrowRequest) {
+      return res.status(404).json({ error: "Borrow request not found" });
+    }
+
+    // Verify user is the owner
+    if (borrowRequest.ownerId !== userId) {
+      return res.status(403).json({
+        error: "Unauthorized",
+        message: "Only the resource owner can mark items as returned",
+      });
+    }
+
+    // Check if request is approved and has an active loan
+    if (borrowRequest.status !== "APPROVED" || !borrowRequest.loan) {
+      return res.status(400).json({
+        error: "Invalid request status",
+        message:
+          "Only approved requests with active loans can be marked as returned",
+      });
+    }
+
+    if (borrowRequest.loan.status !== "ACTIVE") {
+      return res.status(400).json({
+        error: "Loan already completed",
+        message: "This loan has already been returned",
+      });
+    }
+
+    // Perform transaction: update loan status, update resource status, clear currentLoanId
+    const result = await prisma.$transaction(async (tx) => {
+      // Update loan: set status to RETURNED and set returnedDate
+      const updatedLoan = await tx.loan.update({
+        where: { id: borrowRequest.loan!.id },
+        data: {
+          status: "RETURNED",
+          returnedDate: new Date(),
+        },
+        include: {
+          borrower: {
+            select: { id: true, email: true, name: true },
+          },
+          lender: {
+            select: { id: true, email: true, name: true },
+          },
+        },
+      });
+
+      // Update resource: set status to AVAILABLE and clear currentLoanId
+      await tx.resource.update({
+        where: { id: borrowRequest.resourceId },
+        data: {
+          status: "AVAILABLE",
+          currentLoanId: null,
+        },
+      });
+
+      return { loan: updatedLoan };
+    });
+
+    res.json({
+      success: true,
+      message: "Item marked as returned successfully",
+      loan: result.loan,
+    });
+  } catch (error) {
+    console.error("Error marking item as returned:", error);
+    res.status(500).json({ error: "Failed to mark item as returned" });
   }
 });
 

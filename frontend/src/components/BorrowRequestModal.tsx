@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 
 interface BorrowRequestModalProps {
@@ -7,6 +8,7 @@ interface BorrowRequestModalProps {
   resourceId: string;
   resourceTitle: string;
   userId: string;
+  groupId?: string; // Optional groupId
 }
 
 const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
@@ -15,6 +17,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
   resourceId,
   resourceTitle,
   userId,
+  groupId,
 }) => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -26,18 +29,39 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     endDate?: string;
   }>({});
 
-  if (!isOpen) return null;
+  console.log(
+    "BorrowRequestModal render - isOpen:",
+    isOpen,
+    "resourceTitle:",
+    resourceTitle
+  );
+
+  const handleClose = () => {
+    setStartDate("");
+    setEndDate("");
+    setMessage("");
+    setError(null);
+    setValidationErrors({});
+    onClose();
+  };
+
+  if (!isOpen) {
+    console.log("BorrowRequestModal: returning null because isOpen is false");
+    return null;
+  }
+
+  console.log("BorrowRequestModal: rendering modal JSX");
 
   const validateDates = (): boolean => {
     const errors: { startDate?: string; endDate?: string } = {};
-    
+
     if (!startDate) {
       errors.startDate = "Start date is required";
     } else {
       const start = new Date(startDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (start < today) {
         errors.startDate = "Start date cannot be in the past";
       }
@@ -48,7 +72,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     } else if (startDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
-      
+
       if (end <= start) {
         errors.endDate = "End date must be after start date";
       }
@@ -72,6 +96,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
       await axios.post("http://localhost:3001/api/borrow-requests", {
         resourceId,
         borrowerId: userId,
+        groupId: groupId || undefined, // Include groupId if provided
         startDate,
         endDate,
         message: message.trim() || undefined,
@@ -82,14 +107,17 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
       setEndDate("");
       setMessage("");
       setValidationErrors({});
-      
+
       // Close modal and show success
       onClose();
       alert("Borrow request sent successfully!");
     } catch (err: any) {
       console.error("Error creating borrow request:", err);
-      
-      if (err.response?.data?.error) {
+
+      // Show backend error/message for all errors including 409
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else {
         setError("Failed to send borrow request. Please try again.");
@@ -99,21 +127,33 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     }
   };
 
-  const handleClose = () => {
-    setStartDate("");
-    setEndDate("");
-    setMessage("");
-    setError(null);
-    setValidationErrors({});
-    onClose();
-  };
-
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = new Date().toISOString().split("T")[0];
 
+  console.log("BorrowRequestModal: about to return JSX");
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{
+        zIndex: 99999,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -171,7 +211,10 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
-                setValidationErrors((prev) => ({ ...prev, startDate: undefined }));
+                setValidationErrors((prev) => ({
+                  ...prev,
+                  startDate: undefined,
+                }));
               }}
               min={today}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
@@ -202,7 +245,10 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
               value={endDate}
               onChange={(e) => {
                 setEndDate(e.target.value);
-                setValidationErrors((prev) => ({ ...prev, endDate: undefined }));
+                setValidationErrors((prev) => ({
+                  ...prev,
+                  endDate: undefined,
+                }));
               }}
               min={startDate || today}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
