@@ -195,21 +195,36 @@ const GearCard: React.FC<GearCardProps> = ({
         </h3>
 
         {/* Availability Status */}
-        <div className="mb-3">
-          <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-              isAvailable
-                ? "bg-emerald-100 text-emerald-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
+        <div className="mb-3 space-y-2">
+          {isBorrowed ? (
+            <>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                <span className="w-2 h-2 rounded-full mr-2 bg-red-400"></span>
+                Borrowed
+              </span>
+              {currentLoan?.endDate && (
+                <div className="text-xs text-gray-600">
+                  <span className="font-medium">Return by:</span>{" "}
+                  {formatDate(currentLoan.endDate)}
+                </div>
+              )}
+            </>
+          ) : (
             <span
-              className={`w-2 h-2 rounded-full mr-2 ${
-                isAvailable ? "bg-emerald-400" : "bg-red-400"
+              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                isAvailable
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-red-100 text-red-800"
               }`}
-            ></span>
-            {isAvailable ? "Available" : "Unavailable"}
-          </span>
+            >
+              <span
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  isAvailable ? "bg-emerald-400" : "bg-red-400"
+                }`}
+              ></span>
+              {isAvailable ? "Available" : "Unavailable"}
+            </span>
+          )}
         </div>
 
         {/* Description */}
@@ -221,9 +236,10 @@ const GearCard: React.FC<GearCardProps> = ({
 
         {/* Action Buttons */}
         <div className="flex gap-2 mt-auto">
-          {!showActions && effectivelyAvailable && onRequestBorrow ? (
+          {!showActions && onRequestBorrow && (
             <button
               onClick={(e) => {
+                if (isBorrowed) return;
                 console.log("[GearCard] ===== BUTTON CLICKED =====");
                 console.log("[GearCard] Event:", e);
                 console.log("[GearCard] Resource ID:", id);
@@ -242,11 +258,16 @@ const GearCard: React.FC<GearCardProps> = ({
                   );
                 }
               }}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              disabled={!!isBorrowed}
+              className={`flex-1 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 ${
+                isBorrowed
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              }`}
             >
-              Request to Borrow
+              {isBorrowed ? "Currently Borrowed" : "Request to Borrow"}
             </button>
-          ) : null}
+          )}
 
           {showActions && (
             <div className="flex gap-2 w-full">
