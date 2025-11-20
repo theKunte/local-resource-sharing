@@ -5,6 +5,7 @@ import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import GearCard from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
 import AddGearToGroupModal from "../components/AddGearToGroupModal";
+import BorrowRequestModal from "../components/BorrowRequestModal";
 
 interface User {
   id: string;
@@ -64,6 +65,11 @@ export default function GroupDetail() {
   const [manageResourceId, setManageResourceId] = useState<string | null>(null);
   const [showManageModal, setShowManageModal] = useState(false);
   const [showAddGearModal, setShowAddGearModal] = useState(false);
+  const [borrowModalOpen, setBorrowModalOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -226,6 +232,26 @@ export default function GroupDetail() {
     } catch (error: unknown) {
       console.error("Error updating resource:", error);
       alert("Failed to update resource");
+    }
+  };
+
+  // Handle request to borrow
+  const handleRequestBorrow = (gearId: string) => {
+    console.log(
+      "[GroupDetail] handleRequestBorrow called with gearId:",
+      gearId
+    );
+    const resource = group?.resources.find((r) => r.resource.id === gearId);
+    if (resource) {
+      console.log("[GroupDetail] Found resource:", resource.resource.title);
+      setSelectedResource({
+        id: resource.resource.id,
+        title: resource.resource.title,
+      });
+      setBorrowModalOpen(true);
+      console.log("[GroupDetail] Opening borrow modal");
+    } else {
+      console.error("[GroupDetail] Resource not found for id:", gearId);
     }
   };
 
@@ -596,6 +622,11 @@ export default function GroupDetail() {
                               }
                             : undefined
                         }
+                        onRequestBorrow={
+                          resource.ownerId !== user?.uid
+                            ? handleRequestBorrow
+                            : undefined
+                        }
                       />
                       {/* Owner info overlay */}
                       <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-xs text-slate-600">
@@ -620,6 +651,19 @@ export default function GroupDetail() {
               fetchGroupDetails();
               setShowAddGearModal(false);
             }}
+          />
+        )}
+        {selectedResource && user && groupId && (
+          <BorrowRequestModal
+            isOpen={borrowModalOpen}
+            onClose={() => {
+              setBorrowModalOpen(false);
+              setSelectedResource(null);
+            }}
+            resourceId={selectedResource.id}
+            resourceTitle={selectedResource.title}
+            userId={user.uid}
+            groupId={groupId}
           />
         )}
       </div>
