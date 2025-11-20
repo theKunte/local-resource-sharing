@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import GearCard, { Gear } from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
+import BorrowRequestModal from "../components/BorrowRequestModal";
 import { Link } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
@@ -14,6 +15,8 @@ export default function Home() {
   const [manageResourceId, setManageResourceId] = useState<string | null>(null);
   const [showManageModal, setShowManageModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [borrowModalOpen, setBorrowModalOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<{ id: string; title: string } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -136,8 +139,11 @@ export default function Home() {
   if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   const handleRequestBorrow = (gearId: string) => {
-    // TODO: Implement borrow request functionality
-    alert(`Request to borrow gear ${gearId} sent! (Feature coming soon)`);
+    const resource = communityGear.find(g => g.id === gearId);
+    if (resource) {
+      setSelectedResource({ id: resource.id, title: resource.title });
+      setBorrowModalOpen(true);
+    }
   };
 
   if (!user) {
@@ -295,6 +301,20 @@ export default function Home() {
           </div>
         )}
       </section>
+      {/* Borrow request modal */}
+      {selectedResource && user && (
+        <BorrowRequestModal
+          isOpen={borrowModalOpen}
+          onClose={() => {
+            setBorrowModalOpen(false);
+            setSelectedResource(null);
+          }}
+          resourceId={selectedResource.id}
+          resourceTitle={selectedResource.title}
+          userId={user.uid}
+        />
+      )}
+
       {/* Manage groups modal for items */}
       {manageResourceId && user && (
         <ManageGroupsModal
