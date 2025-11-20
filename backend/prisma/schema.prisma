@@ -10,49 +10,114 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums for borrowing system
+enum ResourceStatus {
+  AVAILABLE
+  BORROWED
+  UNAVAILABLE
+}
+
+enum BorrowRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+}
+
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  name          String?
-  resources     Resource[]     @relation("UserResources")
-  groupMembers  GroupMember[]
-  createdGroups Group[]        @relation("CreatedGroups")
+  id               String          @id @default(uuid())
+  email            String          @unique
+  name             String?
+  resources        Resource[]      @relation("UserResources")
+  groupMembers     GroupMember[]
+  createdGroups    Group[]         @relation("CreatedGroups")
+  borrowRequests   BorrowRequest[] @relation("BorrowerRequests")
+  receivedRequests BorrowRequest[] @relation("OwnerRequests")
+  loansAsBorrower  Loan[]          @relation("BorrowerLoans")
+  loansAsLender    Loan[]          @relation("LenderLoans")
 }
 
 model Group {
-  id          String         @id @default(uuid())
+  id          String            @id @default(uuid())
   name        String
-  description String?        // Optional group description
+  description String? // Optional group description
   createdById String
-  createdBy   User           @relation("CreatedGroups", fields: [createdById], references: [id])
+  createdBy   User              @relation("CreatedGroups", fields: [createdById], references: [id])
   members     GroupMember[]
   resources   ResourceSharing[]
-  avatar      String?        // base64 or URL
+  avatar      String? // base64 or URL
 }
 
 model GroupMember {
-  id      String   @id @default(uuid())
-  group   Group    @relation(fields: [groupId], references: [id])
+  id      String @id @default(uuid())
+  group   Group  @relation(fields: [groupId], references: [id])
   groupId String
-  user    User     @relation(fields: [userId], references: [id])
+  user    User   @relation(fields: [userId], references: [id])
   userId  String
-  role    String   @default("member") // "owner", "admin", "member"
+  role    String @default("member") // "owner", "admin", "member"
 }
 
 model Resource {
-  id          String           @id @default(uuid())
-  title       String
-  description String
-  image       String?
-  ownerId     String
-  owner       User             @relation("UserResources", fields: [ownerId], references: [id])
-  sharedWith  ResourceSharing[]
+  id             String            @id @default(uuid())
+  title          String
+  description    String
+  image          String?
+  ownerId        String
+  status         ResourceStatus    @default(AVAILABLE)
+  currentLoanId  String?           @unique
+  owner          User              @relation("UserResources", fields: [ownerId], references: [id])
+  sharedWith     ResourceSharing[]
+  borrowRequests BorrowRequest[]
+  loans          Loan[]
+  currentLoan    Loan?             @relation("CurrentLoan", fields: [currentLoanId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model ResourceSharing {
-  id         String    @id @default(uuid())
-  resource   Resource  @relation(fields: [resourceId], references: [id])
+  id         String   @id @default(uuid())
+  resource   Resource @relation(fields: [resourceId], references: [id])
   resourceId String
-  group      Group     @relation(fields: [groupId], references: [id])
+  group      Group    @relation(fields: [groupId], references: [id])
   groupId    String
+}
+
+model BorrowRequest {
+  id         String              @id @default(uuid())
+  resourceId String
+  resource   Resource            @relation(fields: [resourceId], references: [id])
+  borrowerId String
+  borrower   User                @relation("BorrowerRequests", fields: [borrowerId], references: [id])
+  ownerId    String
+  owner      User                @relation("OwnerRequests", fields: [ownerId], references: [id])
+  status     BorrowRequestStatus @default(PENDING)
+  message    String?
+  startDate  DateTime
+  endDate    DateTime
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  loan       Loan?
+}
+
+model Loan {
+  id              String        @id @default(uuid())
+  requestId       String        @unique
+  request         BorrowRequest @relation(fields: [requestId], references: [id])
+  resourceId      String
+  resource        Resource      @relation(fields: [resourceId], references: [id])
+  borrowerId      String
+  borrower        User          @relation("BorrowerLoans", fields: [borrowerId], references: [id])
+  lenderId        String
+  lender          User          @relation("LenderLoans", fields: [lenderId], references: [id])
+  status          LoanStatus    @default(ACTIVE)
+  startDate       DateTime
+  endDate         DateTime
+  returnedDate    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  currentResource Resource?     @relation("CurrentLoan")
 }

@@ -13,6 +13,13 @@ export function useFirebaseAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  console.log(
+    "useFirebaseAuth: current state - user:",
+    user?.email || "null",
+    "loading:",
+    loading
+  );
+
   const registerUserInBackend = async (firebaseUser: User) => {
     try {
       await axios.post("http://localhost:3001/api/auth/register", {
@@ -29,14 +36,29 @@ export function useFirebaseAuth() {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Register/update user in backend when they authenticate
-        await registerUserInBackend(firebaseUser);
+    console.log("useFirebaseAuth: setting up auth listener");
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (firebaseUser) => {
+        console.log(
+          "useFirebaseAuth: auth state changed, user:",
+          firebaseUser?.email || "null"
+        );
+        if (firebaseUser) {
+          // Register/update user in backend when they authenticate
+          await registerUserInBackend(firebaseUser);
+        }
+        setUser(firebaseUser);
+        setLoading(false);
+        console.log(
+          "useFirebaseAuth: finished updating state, loading set to false"
+        );
+      },
+      (error) => {
+        console.error("Firebase auth state change error:", error);
+        setLoading(false);
       }
-      setUser(firebaseUser);
-      setLoading(false);
-    });
+    );
     return unsubscribe;
   }, []);
 

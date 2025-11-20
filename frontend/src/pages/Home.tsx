@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import GearCard, { Gear } from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
+import BorrowRequestModal from "../components/BorrowRequestModal";
+import RequestDashboard from "../components/RequestDashboard";
 import { Link } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
@@ -14,6 +16,11 @@ export default function Home() {
   const [manageResourceId, setManageResourceId] = useState<string | null>(null);
   const [showManageModal, setShowManageModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [borrowModalOpen, setBorrowModalOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -136,8 +143,34 @@ export default function Home() {
   if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   const handleRequestBorrow = (gearId: string) => {
-    // TODO: Implement borrow request functionality
-    alert(`Request to borrow gear ${gearId} sent! (Feature coming soon)`);
+    console.log("[Home] ===== BORROW REQUEST INITIATED =====");
+    console.log("[Home] gearId:", gearId);
+    console.log("[Home] communityGear array:", communityGear);
+    console.log("[Home] Current borrowModalOpen state:", borrowModalOpen);
+    console.log("[Home] Current selectedResource state:", selectedResource);
+
+    const resource = communityGear.find((g) => g.id === gearId);
+    console.log("[Home] Found resource:", resource);
+
+    if (resource) {
+      const newSelection = { id: resource.id, title: resource.title };
+      console.log("[Home] Setting selectedResource to:", newSelection);
+      setSelectedResource(newSelection);
+
+      console.log("[Home] Setting borrowModalOpen to true");
+      setBorrowModalOpen(true);
+
+      console.log("[Home] ===== STATE UPDATES TRIGGERED =====");
+    } else {
+      console.error(
+        "[Home] !!!!! ERROR: Resource not found in communityGear !!!!!"
+      );
+      console.error("[Home] Looking for ID:", gearId);
+      console.error(
+        "[Home] Available IDs:",
+        communityGear.map((g) => g.id)
+      );
+    }
   };
 
   if (!user) {
@@ -146,7 +179,6 @@ export default function Home() {
     );
   }
 
-  // Authenticated user dashboard
   // Authenticated user dashboard
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
@@ -228,6 +260,8 @@ export default function Home() {
                 title={item.title}
                 description={item.description}
                 image={item.image}
+                status={item.status}
+                currentLoan={item.currentLoan}
                 isAvailable={true}
                 showActions={true}
                 onDelete={handleDeleteResource}
@@ -287,6 +321,8 @@ export default function Home() {
                 title={item.title}
                 description={item.description}
                 image={item.image}
+                status={item.status}
+                currentLoan={item.currentLoan}
                 isAvailable={true}
                 showActions={false}
                 onRequestBorrow={handleRequestBorrow}
@@ -295,6 +331,39 @@ export default function Home() {
           </div>
         )}
       </section>
+      {/* Borrow Requests Section */}
+      <section className="-mt-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
+          <span className="mr-3">📋</span>
+          Borrow Requests
+        </h2>
+        <p className="text-gray-600 mt-2">
+          Manage incoming requests and track your pending requests
+        </p>
+        {user?.uid && <RequestDashboard userId={user.uid} />}
+      </section>
+      {/* Borrow request modal */}
+      {(() => {
+        console.log("[Home] ===== MODAL RENDER CHECK =====");
+        console.log("[Home] selectedResource:", selectedResource);
+        console.log("[Home] user:", user?.email || "null");
+        console.log("[Home] borrowModalOpen:", borrowModalOpen);
+        console.log("[Home] Will render modal:", !!(selectedResource && user));
+        return null;
+      })()}
+      {selectedResource && user && (
+        <BorrowRequestModal
+          isOpen={borrowModalOpen}
+          onClose={() => {
+            console.log("[Home] Closing modal");
+            setBorrowModalOpen(false);
+            setSelectedResource(null);
+          }}
+          resourceId={selectedResource.id}
+          resourceTitle={selectedResource.title}
+          userId={user.uid}
+        />
+      )}
       {/* Manage groups modal for items */}
       {manageResourceId && user && (
         <ManageGroupsModal
