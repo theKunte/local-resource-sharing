@@ -210,8 +210,64 @@ export default function Home() {
           </div>
         </div>
       </section>{" "}
-      {/* Your Gear Section */}
+      {/* Community Gear Section */}
       <section className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl sm:text-3xl font-bold text-gray-900 flex items-center">
+            <span className="mr-3">🤝</span>
+            <span className="mr-3">🤝</span>
+            <span className="mr-3">🤝</span>
+            Community Gear
+            {communityGear.length > 0 && (
+              <span className="ml-3 text-lg font-normal text-gray-500">
+                ({communityGear.length} item
+                {communityGear.length !== 1 ? "s" : ""})
+              </span>
+            )}
+          </h2>
+        </div>
+
+        {loadingCommunityGear ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+            <p className="text-gray-500 mt-2">Loading community gear...</p>
+          </div>
+        ) : communityGear.length === 0 ? (
+          <div className="text-center py-12 px-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-200">
+            <span className="text-5xl mb-4 block">👥</span>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              No community gear available
+            </h3>
+            <p className="text-gray-500 mb-4">
+              Join groups or invite friends to start discovering gear from your
+              trusted network!
+            </p>
+            <p className="text-sm text-gray-400">
+              Gear is only visible to people within your trusted groups for
+              safety and privacy.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
+            {communityGear.map((item) => (
+              <GearCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                description={item.description}
+                image={item.image}
+                status={item.status}
+                currentLoan={item.currentLoan}
+                isAvailable={true}
+                showActions={false}
+                onRequestBorrow={handleRequestBorrow}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+      {/* Your Gear Section */}
+      <section className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
             <span className="mr-3">🎒</span>
@@ -270,62 +326,6 @@ export default function Home() {
                   setManageResourceId(item.id);
                   setShowManageModal(true);
                 }}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-      {/* Community Gear Section */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
-            <span className="mr-3">🤝</span>
-            <span className="mr-3">🤝</span>
-            <span className="mr-3">🤝</span>
-            Community Gear
-            {communityGear.length > 0 && (
-              <span className="ml-3 text-lg font-normal text-gray-500">
-                ({communityGear.length} item
-                {communityGear.length !== 1 ? "s" : ""})
-              </span>
-            )}
-          </h2>
-        </div>
-
-        {loadingCommunityGear ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-            <p className="text-gray-500 mt-2">Loading community gear...</p>
-          </div>
-        ) : communityGear.length === 0 ? (
-          <div className="text-center py-12 px-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-200">
-            <span className="text-5xl mb-4 block">👥</span>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              No community gear available
-            </h3>
-            <p className="text-gray-500 mb-4">
-              Join groups or invite friends to start discovering gear from your
-              trusted network!
-            </p>
-            <p className="text-sm text-gray-400">
-              Gear is only visible to people within your trusted groups for
-              safety and privacy.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
-            {communityGear.map((item) => (
-              <GearCard
-                key={item.id}
-                id={item.id}
-                title={item.title}
-                description={item.description}
-                image={item.image}
-                status={item.status}
-                currentLoan={item.currentLoan}
-                isAvailable={true}
-                showActions={false}
-                onRequestBorrow={handleRequestBorrow}
               />
             ))}
           </div>
