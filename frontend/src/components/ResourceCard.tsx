@@ -13,6 +13,19 @@ interface GearCardProps {
   description: string;
   image?: string;
   isAvailable?: boolean;
+  status?: string;
+  currentLoan?: {
+    id: string;
+    status: string;
+    startDate: string;
+    endDate: string;
+    returnedDate?: string;
+    borrower: {
+      id: string;
+      name?: string;
+      email: string;
+    };
+  };
   onDelete?: (id: string) => void;
   onEdit?: (gear: {
     id: string;
@@ -36,23 +49,48 @@ const GearCard: React.FC<GearCardProps> = ({
   description,
   image,
   isAvailable = true,
+  status,
+  currentLoan,
   onDelete,
   onEdit,
   onRequestBorrow,
   showActions = false,
   onManageGroups,
 }) => {
+  const isBorrowed = status === "BORROWED" && currentLoan;
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   return (
     <div className="w-full">
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col">
+      <div
+        className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col ${
+          isBorrowed ? "border-gray-300 opacity-75" : "border-gray-200"
+        }`}
+      >
         {/* Image Section */}
         {image && (
           <div className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden rounded-lg">
             <img
               src={image}
               alt={title}
-              className="object-cover w-full h-full rounded-lg shadow-sm"
+              className={`object-cover w-full h-full rounded-lg shadow-sm ${
+                isBorrowed ? "grayscale" : ""
+              }`}
             />
+            {isBorrowed && (
+              <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+                <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                  Currently Borrowed
+                </span>
+              </div>
+            )}
             {/* Edit/Delete overlay for owner */}
             {showActions && (
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 hover:opacity-100 transition-opacity duration-200">
@@ -134,21 +172,36 @@ const GearCard: React.FC<GearCardProps> = ({
           </h3>
 
           {/* Availability Status */}
-          <div className="mb-3">
-            <span
-              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                isAvailable
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-red-100 text-red-800"
-              }`}
-            >
+          <div className="mb-3 space-y-2">
+            {isBorrowed ? (
+              <>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  <span className="w-2 h-2 rounded-full mr-2 bg-red-400"></span>
+                  Borrowed
+                </span>
+                {currentLoan?.endDate && (
+                  <div className="text-xs text-gray-600">
+                    <span className="font-medium">Return by:</span>{" "}
+                    {formatDate(currentLoan.endDate)}
+                  </div>
+                )}
+              </>
+            ) : (
               <span
-                className={`w-2 h-2 rounded-full mr-2 ${
-                  isAvailable ? "bg-emerald-400" : "bg-red-400"
+                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                  isAvailable
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-red-100 text-red-800"
                 }`}
-              ></span>
-              {isAvailable ? "Available" : "Unavailable"}
-            </span>
+              >
+                <span
+                  className={`w-2 h-2 rounded-full mr-2 ${
+                    isAvailable ? "bg-emerald-400" : "bg-red-400"
+                  }`}
+                ></span>
+                {isAvailable ? "Available" : "Unavailable"}
+              </span>
+            )}
           </div>
 
           {/* Description */}
@@ -160,12 +213,17 @@ const GearCard: React.FC<GearCardProps> = ({
 
           {/* Action Buttons */}
           <div className="flex gap-2 mt-auto">
-            {!showActions && isAvailable && onRequestBorrow && (
+            {!showActions && onRequestBorrow && (
               <button
-                onClick={() => onRequestBorrow(id)}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                onClick={() => !isBorrowed && onRequestBorrow(id)}
+                disabled={!!isBorrowed}
+                className={`flex-1 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 ${
+                  isBorrowed
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                }`}
               >
-                Request to Borrow
+                {isBorrowed ? "Currently Borrowed" : "Request to Borrow"}
               </button>
             )}
 
