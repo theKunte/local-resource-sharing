@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import GearCard, { Gear } from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
+import BorrowRequestModal from "../components/BorrowRequestModal";
+import RequestDashboard from "../components/RequestDashboard";
 import { Link } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
@@ -14,6 +16,11 @@ export default function Home() {
   const [manageResourceId, setManageResourceId] = useState<string | null>(null);
   const [showManageModal, setShowManageModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [borrowModalOpen, setBorrowModalOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -136,8 +143,34 @@ export default function Home() {
   if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   const handleRequestBorrow = (gearId: string) => {
-    // TODO: Implement borrow request functionality
-    alert(`Request to borrow gear ${gearId} sent! (Feature coming soon)`);
+    console.log("[Home] ===== BORROW REQUEST INITIATED =====");
+    console.log("[Home] gearId:", gearId);
+    console.log("[Home] communityGear array:", communityGear);
+    console.log("[Home] Current borrowModalOpen state:", borrowModalOpen);
+    console.log("[Home] Current selectedResource state:", selectedResource);
+
+    const resource = communityGear.find((g) => g.id === gearId);
+    console.log("[Home] Found resource:", resource);
+
+    if (resource) {
+      const newSelection = { id: resource.id, title: resource.title };
+      console.log("[Home] Setting selectedResource to:", newSelection);
+      setSelectedResource(newSelection);
+
+      console.log("[Home] Setting borrowModalOpen to true");
+      setBorrowModalOpen(true);
+
+      console.log("[Home] ===== STATE UPDATES TRIGGERED =====");
+    } else {
+      console.error(
+        "[Home] !!!!! ERROR: Resource not found in communityGear !!!!!"
+      );
+      console.error("[Home] Looking for ID:", gearId);
+      console.error(
+        "[Home] Available IDs:",
+        communityGear.map((g) => g.id)
+      );
+    }
   };
 
   if (!user) {
@@ -146,7 +179,6 @@ export default function Home() {
     );
   }
 
-  // Authenticated user dashboard
   // Authenticated user dashboard
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
@@ -178,8 +210,64 @@ export default function Home() {
           </div>
         </div>
       </section>{" "}
-      {/* Your Gear Section */}
+      {/* Community Gear Section */}
       <section className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl sm:text-3xl font-bold text-gray-900 flex items-center">
+            <span className="mr-3">🤝</span>
+            <span className="mr-3">🤝</span>
+            <span className="mr-3">🤝</span>
+            Community Gear
+            {communityGear.length > 0 && (
+              <span className="ml-3 text-lg font-normal text-gray-500">
+                ({communityGear.length} item
+                {communityGear.length !== 1 ? "s" : ""})
+              </span>
+            )}
+          </h2>
+        </div>
+
+        {loadingCommunityGear ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+            <p className="text-gray-500 mt-2">Loading community gear...</p>
+          </div>
+        ) : communityGear.length === 0 ? (
+          <div className="text-center py-12 px-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-200">
+            <span className="text-5xl mb-4 block">👥</span>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              No community gear available
+            </h3>
+            <p className="text-gray-500 mb-4">
+              Join groups or invite friends to start discovering gear from your
+              trusted network!
+            </p>
+            <p className="text-sm text-gray-400">
+              Gear is only visible to people within your trusted groups for
+              safety and privacy.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
+            {communityGear.map((item) => (
+              <GearCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                description={item.description}
+                image={item.image}
+                status={item.status}
+                currentLoan={item.currentLoan}
+                isAvailable={true}
+                showActions={false}
+                onRequestBorrow={handleRequestBorrow}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+      {/* Your Gear Section */}
+      <section className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
             <span className="mr-3">🎒</span>
@@ -228,6 +316,8 @@ export default function Home() {
                 title={item.title}
                 description={item.description}
                 image={item.image}
+                status={item.status}
+                currentLoan={item.currentLoan}
                 isAvailable={true}
                 showActions={true}
                 onDelete={handleDeleteResource}
@@ -241,60 +331,39 @@ export default function Home() {
           </div>
         )}
       </section>
-      {/* Community Gear Section */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
-            <span className="mr-3">🤝</span>
-            <span className="mr-3">🤝</span>
-            <span className="mr-3">🤝</span>
-            Community Gear
-            {communityGear.length > 0 && (
-              <span className="ml-3 text-lg font-normal text-gray-500">
-                ({communityGear.length} item
-                {communityGear.length !== 1 ? "s" : ""})
-              </span>
-            )}
-          </h2>
-        </div>
-
-        {loadingCommunityGear ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-            <p className="text-gray-500 mt-2">Loading community gear...</p>
-          </div>
-        ) : communityGear.length === 0 ? (
-          <div className="text-center py-12 px-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-200">
-            <span className="text-5xl mb-4 block">👥</span>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              No community gear available
-            </h3>
-            <p className="text-gray-500 mb-4">
-              Join groups or invite friends to start discovering gear from your
-              trusted network!
-            </p>
-            <p className="text-sm text-gray-400">
-              Gear is only visible to people within your trusted groups for
-              safety and privacy.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
-            {communityGear.map((item) => (
-              <GearCard
-                key={item.id}
-                id={item.id}
-                title={item.title}
-                description={item.description}
-                image={item.image}
-                isAvailable={true}
-                showActions={false}
-                onRequestBorrow={handleRequestBorrow}
-              />
-            ))}
-          </div>
-        )}
+      {/* Borrow Requests Section */}
+      <section className="-mt-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
+          <span className="mr-3">📋</span>
+          Borrow Requests
+        </h2>
+        <p className="text-gray-600 mt-2">
+          Manage incoming requests and track your pending requests
+        </p>
+        {user?.uid && <RequestDashboard userId={user.uid} />}
       </section>
+      {/* Borrow request modal */}
+      {(() => {
+        console.log("[Home] ===== MODAL RENDER CHECK =====");
+        console.log("[Home] selectedResource:", selectedResource);
+        console.log("[Home] user:", user?.email || "null");
+        console.log("[Home] borrowModalOpen:", borrowModalOpen);
+        console.log("[Home] Will render modal:", !!(selectedResource && user));
+        return null;
+      })()}
+      {selectedResource && user && (
+        <BorrowRequestModal
+          isOpen={borrowModalOpen}
+          onClose={() => {
+            console.log("[Home] Closing modal");
+            setBorrowModalOpen(false);
+            setSelectedResource(null);
+          }}
+          resourceId={selectedResource.id}
+          resourceTitle={selectedResource.title}
+          userId={user.uid}
+        />
+      )}
       {/* Manage groups modal for items */}
       {manageResourceId && user && (
         <ManageGroupsModal
