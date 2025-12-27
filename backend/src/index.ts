@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import rateLimit from "express-rate-limit";
 import admin from "firebase-admin";
+import helmet from "helmet";
 import {
   validateResourceInput,
   validateGroupInput,
@@ -31,6 +32,9 @@ if (!admin.apps.length) {
     console.error("❌ Firebase Admin initialization error:", error);
   }
 }
+
+// Security headers - protect against common vulnerabilities
+app.use(helmet());
 
 // Restricted CORS - only allow specific origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [

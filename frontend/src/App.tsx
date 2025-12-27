@@ -7,10 +7,15 @@ import Profile from "./pages/Profile";
 import Groups from "./pages/Groups";
 import Requests from "./pages/Requests";
 import GroupDetail from "./pages/GroupDetail";
+import SessionWarning from "./components/SessionWarning";
 import { useFirebaseAuth } from "./hooks/useFirebaseAuth";
+import { useSessionTimeout } from "./hooks/useSessionTimeout";
 
 function App() {
   const { user, loading } = useFirebaseAuth();
+
+  // Enable session timeout (5 min of inactivity)
+  const { showWarning, extendSession, logout } = useSessionTimeout();
 
   console.log(
     "App render - loading:",
@@ -36,6 +41,9 @@ function App() {
   return (
     <BrowserRouter>
       <Header />
+      {showWarning && (
+        <SessionWarning onExtend={extendSession} onSignOut={logout} />
+      )}
       <Routes>
         <Route path="/" element={user ? <Home /> : <Landing />} />
         <Route path="/post" element={<PostResource />} />

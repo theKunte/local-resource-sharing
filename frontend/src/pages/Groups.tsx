@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import apiClient from "../utils/apiClient";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
@@ -180,7 +181,7 @@ export default function Groups() {
       // Show specific error messages based on the response
       let errorMessage = "Failed to send invitation.";
 
-      if (apiClient.isAxiosError(error) && error.response?.data) {
+      if (axios.isAxiosError(error) && error.response?.data) {
         if (error.response.data.message) {
           errorMessage = error.response.data.message;
         } else if (error.response.data.error) {
@@ -269,7 +270,7 @@ export default function Groups() {
       await loadGroups();
     } catch (error) {
       console.error("Error updating group:", error);
-      if (apiClient.isAxiosError(error) && error.response?.data?.message) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
         alert(`❌ ${error.response.data.message}`);
       } else {
         alert("❌ Failed to update group. Please try again.");
