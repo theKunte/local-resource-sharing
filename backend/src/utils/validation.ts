@@ -30,6 +30,9 @@ export function validateResourceInput(data: any): {
   if (data.description && data.description.length > 2000) {
     errors.push("Description must be less than 2000 characters");
   }
+  if (!data.image || data.image.trim().length === 0) {
+    errors.push("Image is required");
+  }
   if (!data.ownerId) {
     errors.push("Owner ID is required");
   }
