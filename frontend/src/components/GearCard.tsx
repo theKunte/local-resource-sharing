@@ -71,18 +71,6 @@ const GearCard: React.FC<GearCardProps> = ({
   onManageGroups,
 }) => {
   const isBorrowed = status === "BORROWED" && currentLoan;
-  const effectivelyAvailable = isAvailable && !isBorrowed;
-
-  console.log(`[GearCard ${title}] Debug:`, {
-    status,
-    currentLoan: !!currentLoan,
-    isAvailable,
-    isBorrowed,
-    effectivelyAvailable,
-    showActions,
-    hasOnRequestBorrow: !!onRequestBorrow,
-    willShowButton: !showActions && effectivelyAvailable && !!onRequestBorrow,
-  });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -238,19 +226,10 @@ const GearCard: React.FC<GearCardProps> = ({
         <div className="flex gap-2 mt-auto">
           {!showActions && onRequestBorrow && (
             <button
-              onClick={(e) => {
+              onClick={() => {
                 if (isBorrowed) return;
-                console.log("[GearCard] ===== BUTTON CLICKED =====");
-                console.log("[GearCard] Event:", e);
-                console.log("[GearCard] Resource ID:", id);
-                console.log("[GearCard] Resource Title:", title);
-                console.log(
-                  "[GearCard] onRequestBorrow function:",
-                  onRequestBorrow
-                );
                 try {
                   onRequestBorrow(id);
-                  console.log("[GearCard] onRequestBorrow called successfully");
                 } catch (error) {
                   console.error(
                     "[GearCard] Error calling onRequestBorrow:",

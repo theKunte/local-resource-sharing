@@ -61,7 +61,7 @@ app.use(
 // Rate limiting - prevent abuse
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per window
+  max: 1000, // limit each IP to 1000 requests per window (increased for testing)
   message: "Too many requests from this IP, please try again later.",
 });
 
@@ -261,11 +261,6 @@ app.post("/api/resources", authenticateToken, async (req, res) => {
         },
         data: {},
       });
-
-      console.log(
-        `Created default group for user ${ownerId}:`,
-        defaultGroup.id
-      );
     }
 
     // Create resource
@@ -1200,8 +1195,6 @@ app.post("/api/auth/register", async (req, res) => {
           role: "owner",
         } as any,
       });
-
-      console.log(`Created default group for user ${uid}:`, defaultGroup.id);
     }
 
     res.json({
@@ -2373,12 +2366,12 @@ app.post(
         });
       }
 
-      // Update loan status to indicate return is being requested
-      // We'll use the returnedDate field to track when return was requested
+      // Update loan status to PENDING_RETURN_CONFIRMATION
       const updatedLoan = await prisma.loan.update({
         where: { id },
         data: {
-          returnedDate: new Date(),
+          status: "PENDING_RETURN_CONFIRMATION",
+          returnedDate: new Date(), // Track when borrower initiated return
         },
         include: {
           resource: {
@@ -2459,19 +2452,13 @@ app.post(
         });
       }
 
-      // Check if loan is active
-      if (loan.status !== "ACTIVE") {
+      // Check if return was initiated by borrower
+      if (loan.status !== "PENDING_RETURN_CONFIRMATION") {
         return res.status(400).json({
           error: "Invalid loan status",
-          message: `This loan is already ${loan.status.toLowerCase()}`,
-        });
-      }
-
-      // Check if return was requested (returnedDate should be set)
-      if (!loan.returnedDate) {
-        return res.status(400).json({
-          error: "Return not requested",
-          message: "The borrower must request a return first",
+          message: loan.status === "RETURNED" 
+            ? "This loan has already been marked as returned"
+            : "The borrower must initiate the return first",
         });
       }
 

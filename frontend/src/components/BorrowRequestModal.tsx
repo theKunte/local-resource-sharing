@@ -29,13 +29,6 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     endDate?: string;
   }>({});
 
-  console.log(
-    "BorrowRequestModal render - isOpen:",
-    isOpen,
-    "resourceTitle:",
-    resourceTitle
-  );
-
   const handleClose = () => {
     setStartDate("");
     setEndDate("");
@@ -113,6 +106,8 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
       alert("Borrow request sent successfully!");
     } catch (err: any) {
       console.error("Error creating borrow request:", err);
+      console.error("Error response data:", err.response?.data);
+      console.error("Error response status:", err.response?.status);
 
       // Show backend error/message for all errors including 409
       if (err.response?.data?.message) {
@@ -129,8 +124,6 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
 
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = new Date().toISOString().split("T")[0];
-
-  console.log("BorrowRequestModal: about to return JSX");
 
   return (
     <div

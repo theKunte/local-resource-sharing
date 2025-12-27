@@ -34,7 +34,7 @@ interface BorrowRequest {
   };
   loan?: {
     id: string;
-    status: "ACTIVE" | "RETURNED";
+    status: "ACTIVE" | "PENDING_RETURN_CONFIRMATION" | "RETURNED";
     startDate: string;
     endDate: string;
     returnedDate?: string;
@@ -76,7 +76,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       const incomingResponse = await apiClient.get(
         `/api/borrow-requests?userId=${userId}&role=owner`
       );
-      console.log("Incoming requests response:", incomingResponse.data);
       const incomingData =
         incomingResponse.data.requests || incomingResponse.data;
       setIncomingRequests(Array.isArray(incomingData) ? incomingData : []);
@@ -85,7 +84,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       const outgoingResponse = await apiClient.get(
         `/api/borrow-requests?userId=${userId}&role=borrower`
       );
-      console.log("Outgoing requests response:", outgoingResponse.data);
       const outgoingData =
         outgoingResponse.data.requests || outgoingResponse.data;
       setOutgoingRequests(Array.isArray(outgoingData) ? outgoingData : []);
@@ -238,6 +236,60 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     } catch (error: any) {
       console.error("Error marking as returned:", error);
       alert(error.response?.data?.error || "Failed to mark as returned");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleInitiateReturn = async (loanId: string) => {
+    if (
+      !confirm(
+        "Have you returned this item? The owner will need to confirm receipt before the item becomes available again."
+      )
+    )
+      return;
+
+    setActionLoading(loanId);
+    try {
+      await apiClient.post(`/api/loans/${loanId}/request-return`, { userId });
+      await loadRequests();
+      alert(
+        "Return initiated! The owner will be notified to confirm they received the item back."
+      );
+    } catch (error: any) {
+      console.error("Error initiating return:", error);
+      alert(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to initiate return"
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleConfirmReturn = async (loanId: string, requestId: string) => {
+    if (
+      !confirm(
+        "Confirm that you received the item back? This will make it available again."
+      )
+    )
+      return;
+
+    setActionLoading(requestId);
+    try {
+      await apiClient.post(`/api/loans/${loanId}/confirm-return`, { userId });
+      await loadRequests();
+      alert(
+        "Return confirmed! The item is now available in your groups again."
+      );
+    } catch (error: any) {
+      console.error("Error confirming return:", error);
+      alert(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to confirm return"
+      );
     } finally {
       setActionLoading(null);
     }
@@ -425,18 +477,75 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                 </button>
               )}
 
-              {/* Mark as Returned button for approved requests (owner only) */}
+              {/* Borrower: "I've Returned This" button for active loans */}
+              {!isOwner &&
+                request.status === "APPROVED" &&
+                request.loan?.status === "ACTIVE" && (
+                  <button
+                    onClick={() => handleInitiateReturn(request.loan!.id)}
+                    disabled={actionLoading === request.id}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {actionLoading === request.id
+                      ? "Processing..."
+                      : "I've Returned This"}
+                  </button>
+                )}
+
+              {/* Owner: "Confirm Return" button for pending return confirmation */}
+              {isOwner &&
+                request.status === "APPROVED" &&
+                request.loan?.status === "PENDING_RETURN_CONFIRMATION" && (
+                  <button
+                    onClick={() => handleConfirmReturn(request.loan!.id, request.id)}
+                    disabled={actionLoading === request.id}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {actionLoading === request.id
+                      ? "Processing..."
+                      : "Confirm Return"}
+                  </button>
+                )}
+
+              {/* Show pending return status */}
+              {request.loan?.status === "PENDING_RETURN_CONFIRMATION" && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-amber-700 font-medium text-sm">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span>
+                      {isOwner
+                        ? "Borrower says they've returned this. Please confirm."
+                        : "Return initiated. Waiting for owner confirmation."}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy: Mark as Returned button (remove after migration) */}
               {isOwner &&
                 request.status === "APPROVED" &&
                 request.loan?.status === "ACTIVE" && (
                   <button
                     onClick={() => handleMarkReturned(request.id)}
                     disabled={actionLoading === request.id}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gray-400 hover:bg-gray-500 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed opacity-60"
+                    title="Legacy: Ask borrower to use 'I've Returned This' instead"
                   >
                     {actionLoading === request.id
                       ? "Processing..."
-                      : "Mark as Returned"}
+                      : "Mark as Returned (Legacy)"}
                   </button>
                 )}
 
@@ -503,8 +612,99 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     ? currentRequests.filter((r) => r.status === "PENDING").length
     : 0;
 
+  // Count pending return confirmations (owner needs to confirm)
+  const pendingReturnConfirmations = Array.isArray(incomingRequests)
+    ? incomingRequests.filter(
+        (r) =>
+          r.status === "APPROVED" &&
+          r.loan?.status === "PENDING_RETURN_CONFIRMATION"
+      ).length
+    : 0;
+
+  // Count pending returns waiting for owner (borrower initiated)
+  const myPendingReturns = Array.isArray(outgoingRequests)
+    ? outgoingRequests.filter(
+        (r) =>
+          r.status === "APPROVED" &&
+          r.loan?.status === "PENDING_RETURN_CONFIRMATION"
+      ).length
+    : 0;
+
   return (
     <div className="w-full">
+      {/* Notification Banner for Pending Return Confirmations */}
+      {pendingReturnConfirmations > 0 && activeTab === "incoming" && (
+        <div className="mb-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-6 w-6 text-amber-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-amber-800">
+                Action Required: Return Confirmation{pendingReturnConfirmations > 1 ? 's' : ''}
+              </h3>
+              <div className="mt-2 text-sm text-amber-700">
+                <p>
+                  You have <strong>{pendingReturnConfirmations}</strong>{" "}
+                  {pendingReturnConfirmations === 1 ? "item" : "items"} waiting for your
+                  confirmation that {pendingReturnConfirmations === 1 ? "it was" : "they were"} returned.
+                  Please check the {pendingReturnConfirmations === 1 ? "item" : "items"} and click{" "}
+                  <strong>"Confirm Return"</strong> to make{" "}
+                  {pendingReturnConfirmations === 1 ? "it" : "them"} available again.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification for borrower waiting on owner */}
+      {myPendingReturns > 0 && activeTab === "outgoing" && (
+        <div className="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-6 w-6 text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-blue-800">
+                Waiting for Owner Confirmation
+              </h3>
+              <div className="mt-2 text-sm text-blue-700">
+                <p>
+                  You've initiated return for <strong>{myPendingReturns}</strong>{" "}
+                  {myPendingReturns === 1 ? "item" : "items"}. Waiting for the owner to
+                  confirm receipt.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="flex border-b border-gray-200 mb-6">
         <button

@@ -132,24 +132,12 @@ export default function Home() {
   if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   const handleRequestBorrow = (gearId: string) => {
-    console.log("[Home] ===== BORROW REQUEST INITIATED =====");
-    console.log("[Home] gearId:", gearId);
-    console.log("[Home] communityGear array:", communityGear);
-    console.log("[Home] Current borrowModalOpen state:", borrowModalOpen);
-    console.log("[Home] Current selectedResource state:", selectedResource);
-
     const resource = communityGear.find((g) => g.id === gearId);
-    console.log("[Home] Found resource:", resource);
 
     if (resource) {
       const newSelection = { id: resource.id, title: resource.title };
-      console.log("[Home] Setting selectedResource to:", newSelection);
       setSelectedResource(newSelection);
-
-      console.log("[Home] Setting borrowModalOpen to true");
       setBorrowModalOpen(true);
-
-      console.log("[Home] ===== STATE UPDATES TRIGGERED =====");
     } else {
       console.error(
         "[Home] !!!!! ERROR: Resource not found in communityGear !!!!!"
@@ -332,19 +320,10 @@ export default function Home() {
         {user?.uid && <RequestDashboard userId={user.uid} />}
       </section>
       {/* Borrow request modal */}
-      {(() => {
-        console.log("[Home] ===== MODAL RENDER CHECK =====");
-        console.log("[Home] selectedResource:", selectedResource);
-        console.log("[Home] user:", user?.email || "null");
-        console.log("[Home] borrowModalOpen:", borrowModalOpen);
-        console.log("[Home] Will render modal:", !!(selectedResource && user));
-        return null;
-      })()}
       {selectedResource && user && (
         <BorrowRequestModal
           isOpen={borrowModalOpen}
           onClose={() => {
-            console.log("[Home] Closing modal");
             setBorrowModalOpen(false);
             setSelectedResource(null);
           }}
