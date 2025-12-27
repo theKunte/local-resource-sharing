@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 
 interface BorrowRequest {
   id: string;
@@ -73,8 +73,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     setError(null);
     try {
       // Load incoming requests (as owner)
-      const incomingResponse = await axios.get(
-        `http://localhost:3001/api/borrow-requests?userId=${userId}&role=owner`
+      const incomingResponse = await apiClient.get(
+        `/api/borrow-requests?userId=${userId}&role=owner`
       );
       console.log("Incoming requests response:", incomingResponse.data);
       const incomingData =
@@ -82,8 +82,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       setIncomingRequests(Array.isArray(incomingData) ? incomingData : []);
 
       // Load outgoing requests (as borrower)
-      const outgoingResponse = await axios.get(
-        `http://localhost:3001/api/borrow-requests?userId=${userId}&role=borrower`
+      const outgoingResponse = await apiClient.get(
+        `/api/borrow-requests?userId=${userId}&role=borrower`
       );
       console.log("Outgoing requests response:", outgoingResponse.data);
       const outgoingData =
@@ -107,8 +107,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const handleAccept = async (requestId: string) => {
     setActionLoading(requestId);
     try {
-      await axios.post(
-        `http://localhost:3001/api/borrow-requests/${requestId}/accept`,
+      await apiClient.post(
+        `/api/borrow-requests/${requestId}/accept`,
         { userId }
       );
       await loadRequests();
@@ -126,8 +126,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await axios.post(
-        `http://localhost:3001/api/borrow-requests/${requestId}/decline`,
+      await apiClient.post(
+        `/api/borrow-requests/${requestId}/decline`,
         { userId }
       );
       await loadRequests();
@@ -145,8 +145,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await axios.post(
-        `http://localhost:3001/api/borrow-requests/${requestId}/cancel`,
+      await apiClient.post(
+        `/api/borrow-requests/${requestId}/cancel`,
         { userId }
       );
       await loadRequests();
@@ -173,8 +173,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(editingRequest.id);
     try {
-      await axios.put(
-        `http://localhost:3001/api/borrow-requests/${editingRequest.id}`,
+      await apiClient.put(
+        `/api/borrow-requests/${editingRequest.id}`,
         {
           userId,
           startDate: editForm.startDate,
@@ -203,8 +203,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await axios.delete(
-        `http://localhost:3001/api/borrow-requests/${requestId}`,
+      await apiClient.delete(
+        `/api/borrow-requests/${requestId}`,
         { data: { userId } }
       );
       await loadRequests();
@@ -227,8 +227,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await axios.post(
-        `http://localhost:3001/api/borrow-requests/${requestId}/mark-returned`,
+      await apiClient.post(
+        `/api/borrow-requests/${requestId}/mark-returned`,
         { userId }
       );
       await loadRequests();

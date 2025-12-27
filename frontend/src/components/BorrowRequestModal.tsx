@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 
 interface BorrowRequestModalProps {
   isOpen: boolean;
@@ -93,7 +93,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     setSubmitting(true);
 
     try {
-      await axios.post("http://localhost:3001/api/borrow-requests", {
+      await apiClient.post("/api/borrow-requests", {
         resourceId,
         borrowerId: userId,
         groupId: groupId || undefined, // Include groupId if provided

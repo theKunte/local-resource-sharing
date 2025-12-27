@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 
 interface Gear {
   id: string;
@@ -38,13 +38,13 @@ export default function AddGearToGroupModal({
       setLoading(true);
       try {
         const [resMy, resShared] = await Promise.all([
-          axios.get(
-            `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
+          apiClient.get(
+            `/api/resources?ownerId=${encodeURIComponent(
               userId
             )}`
           ),
-          axios.get(
-            `http://localhost:3001/api/groups/${encodeURIComponent(
+          apiClient.get(
+            `/api/groups/${encodeURIComponent(
               groupId
             )}/resources`
           ),
@@ -71,8 +71,8 @@ export default function AddGearToGroupModal({
   const handleAdd = async (resourceId: string) => {
     setSavingId(resourceId);
     try {
-      const res = await axios.post(
-        `http://localhost:3001/api/resources/${encodeURIComponent(
+      const res = await apiClient.post(
+        `/api/resources/${encodeURIComponent(
           resourceId
         )}/groups/${encodeURIComponent(groupId)}`,
         { userId }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 import GearCard, { Gear } from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
 import BorrowRequestModal from "../components/BorrowRequestModal";
@@ -26,23 +26,15 @@ export default function Home() {
     if (user) {
       // Load user's own gear
       setLoadingMyGear(true);
-      axios
-        .get(
-          `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
-            user.uid
-          )}`
-        )
+      apiClient
+        .get(`/api/resources?ownerId=${encodeURIComponent(user.uid)}`)
         .then((res) => setMyGear(res.data))
         .finally(() => setLoadingMyGear(false));
 
       // Load community gear (from groups)
       setLoadingCommunityGear(true);
-      axios
-        .get(
-          `http://localhost:3001/api/resources?user=${encodeURIComponent(
-            user.uid
-          )}`
-        )
+      apiClient
+        .get(`/api/resources?user=${encodeURIComponent(user.uid)}`)
         .then((res) => setCommunityGear(res.data))
         .finally(() => setLoadingCommunityGear(false));
     }
@@ -52,7 +44,7 @@ export default function Home() {
   const handleDeleteResource = async (resourceId: string) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
     try {
-      await axios.delete(`http://localhost:3001/api/resources/${resourceId}`, {
+      await apiClient.delete(`/api/resources/${resourceId}`, {
         data: { userId: user?.uid },
       });
       // remove from lists
@@ -81,13 +73,10 @@ export default function Home() {
     const newDescription = prompt("Edit description:", resource.description);
     if (!newDescription) return;
     try {
-      const resp = await axios.put(
-        `http://localhost:3001/api/resources/${resource.id}`,
-        {
-          title: newTitle,
-          description: newDescription,
-        }
-      );
+      const resp = await apiClient.put(`/api/resources/${resource.id}`, {
+        title: newTitle,
+        description: newDescription,
+      });
       // update local lists
       setMyGear((prev) =>
         prev.map((g) => (g.id === resp.data.id ? resp.data : g))
@@ -381,15 +370,11 @@ export default function Home() {
             setLoadingCommunityGear(true);
             try {
               const [myRes, communityRes] = await Promise.all([
-                axios.get(
-                  `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
-                    user.uid
-                  )}`
+                apiClient.get(
+                  `/api/resources?ownerId=${encodeURIComponent(user.uid)}`
                 ),
-                axios.get(
-                  `http://localhost:3001/api/resources?user=${encodeURIComponent(
-                    user.uid
-                  )}`
+                apiClient.get(
+                  `/api/resources?user=${encodeURIComponent(user.uid)}`
                 ),
               ]);
               setMyGear(myRes.data);
