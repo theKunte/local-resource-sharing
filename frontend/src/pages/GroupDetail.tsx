@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import GearCard from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
@@ -81,8 +81,8 @@ export default function GroupDetail() {
   const fetchGroupDetails = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:3001/api/groups/${groupId}/details`,
+      const response = await apiClient.get(
+        `/api/groups/${groupId}/details`,
         {
           params: { userId: user?.uid },
         }
@@ -118,8 +118,8 @@ export default function GroupDetail() {
 
     try {
       setInviting(true);
-      const response = await axios.post(
-        `http://localhost:3001/api/groups/${groupId}/invite`,
+      const response = await apiClient.post(
+        `/api/groups/${groupId}/invite`,
         {
           email: inviteEmail.toLowerCase(),
           invitedBy: user.uid,
@@ -155,8 +155,8 @@ export default function GroupDetail() {
     }
 
     try {
-      await axios.delete(
-        `http://localhost:3001/api/groups/${groupId}/remove-member`,
+      await apiClient.delete(
+        `/api/groups/${groupId}/remove-member`,
         {
           data: {
             userId: user?.uid,
@@ -181,7 +181,7 @@ export default function GroupDetail() {
   const handleDeleteResource = async (resourceId: string) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
     try {
-      await axios.delete(`http://localhost:3001/api/resources/${resourceId}`, {
+      await apiClient.delete(`/api/resources/${resourceId}`, {
         data: { userId: user?.uid },
       });
       alert("Resource deleted");
@@ -211,8 +211,8 @@ export default function GroupDetail() {
     const newDescription = prompt("Edit description:", resource.description);
     if (!newDescription) return;
     try {
-      const resp = await axios.put(
-        `http://localhost:3001/api/resources/${resource.id}`,
+      const resp = await apiClient.put(
+        `/api/resources/${resource.id}`,
         {
           title: newTitle,
           description: newDescription,
@@ -261,8 +261,8 @@ export default function GroupDetail() {
     memberName: string
   ) => {
     try {
-      const response = await axios.put(
-        `http://localhost:3001/api/groups/${groupId}/members/${memberId}/role`,
+      const response = await apiClient.put(
+        `/api/groups/${groupId}/members/${memberId}/role`,
         {
           requesterId: user?.uid,
           role: newRole,
@@ -295,7 +295,7 @@ export default function GroupDetail() {
     }
 
     try {
-      await axios.delete(`http://localhost:3001/api/groups/${group.id}`, {
+      await apiClient.delete(`/api/groups/${group.id}`, {
         data: { userId: user.uid },
       });
 

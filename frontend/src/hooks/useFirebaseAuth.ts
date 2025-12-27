@@ -7,7 +7,7 @@ import {
   User,
 } from "firebase/auth";
 import { auth } from "../firebase";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 
 export function useFirebaseAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -22,7 +22,7 @@ export function useFirebaseAuth() {
 
   const registerUserInBackend = async (firebaseUser: User) => {
     try {
-      await axios.post("http://localhost:3001/api/auth/register", {
+      await apiClient.post("/api/auth/register", {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         name: firebaseUser.displayName,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
 import { cropImageToSquare } from "../utils/cropImageToSquare";
@@ -35,8 +35,8 @@ export default function PostResource() {
 
       try {
         setLoadingGroups(true);
-        const response = await axios.get(
-          `http://localhost:3001/api/groups?userId=${user.uid}`
+        const response = await apiClient.get(
+          `/api/groups?userId=${user.uid}`
         );
         const userGroups = response.data;
         setGroups(userGroups);
@@ -83,8 +83,8 @@ export default function PostResource() {
       }
 
       // Create the resource
-      const resourceResponse = await axios.post(
-        "http://localhost:3001/api/resources",
+      const resourceResponse = await apiClient.post(
+        "/api/resources",
         {
           title,
           description,
@@ -102,8 +102,8 @@ export default function PostResource() {
         const selectedGroupIds = Array.from(selectedGroups);
 
         for (const groupId of selectedGroupIds) {
-          await axios.post(
-            `http://localhost:3001/api/resources/${newResource.id}/share`,
+          await apiClient.post(
+            `/api/resources/${newResource.id}/share`,
             {
               groupId,
             }

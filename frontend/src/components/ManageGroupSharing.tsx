@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 
 interface Group {
   id: string;
@@ -32,14 +32,14 @@ const ManageGroupSharing: React.FC<ManageGroupSharingProps> = ({
     setLoading(true);
     try {
       // Load all user's groups
-      const userGroupsResponse = await axios.get(
-        `http://localhost:3001/api/users/${userId}/groups`
+      const userGroupsResponse = await apiClient.get(
+        `/api/users/${userId}/groups`
       );
       setAllGroups(userGroupsResponse.data);
 
       // Load groups this gear is already shared with
-      const sharedGroupsResponse = await axios.get(
-        `http://localhost:3001/api/resources/${gearId}/groups?userId=${userId}`
+      const sharedGroupsResponse = await apiClient.get(
+        `/api/resources/${gearId}/groups?userId=${userId}`
       );
       setSharedGroups(sharedGroupsResponse.data);
     } catch (error) {
@@ -58,8 +58,8 @@ const ManageGroupSharing: React.FC<ManageGroupSharingProps> = ({
   const addToGroup = async (groupId: string) => {
     setSubmitting(true);
     try {
-      await axios.post(
-        `http://localhost:3001/api/resources/${gearId}/groups/${groupId}`,
+      await apiClient.post(
+        `/api/resources/${gearId}/groups/${groupId}`,
         {
           userId,
         }
@@ -78,8 +78,8 @@ const ManageGroupSharing: React.FC<ManageGroupSharingProps> = ({
   const removeFromGroup = async (groupId: string) => {
     setSubmitting(true);
     try {
-      await axios.delete(
-        `http://localhost:3001/api/resources/${gearId}/groups/${groupId}`,
+      await apiClient.delete(
+        `/api/resources/${gearId}/groups/${groupId}`,
         {
           data: { userId },
         }
