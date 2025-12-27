@@ -26,6 +26,7 @@ enum BorrowRequestStatus {
 
 enum LoanStatus {
   ACTIVE
+  PENDING_RETURN_CONFIRMATION
   RETURNED
   OVERDUE
 }

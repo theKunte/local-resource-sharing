@@ -43,10 +43,11 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - redirect to login
+      // Token expired or invalid - redirect to landing page
       console.error("Authentication failed. Please log in again.");
-      // You can dispatch a logout action here
-      window.location.href = "/login";
+      // Sign out user and redirect to home (which shows Landing page)
+      auth.signOut();
+      window.location.href = "/";
     }
     return Promise.reject(error);
   }

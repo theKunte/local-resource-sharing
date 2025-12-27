@@ -13,7 +13,6 @@ export function useSessionTimeout() {
   const [showWarning, setShowWarning] = useState(false);
 
   const logout = () => {
-    console.log("Session timeout - logging out user");
     setShowWarning(false);
     signOut(auth).catch((error) => {
       console.error("Error during session timeout logout:", error);

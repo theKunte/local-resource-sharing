@@ -17,26 +17,13 @@ function App() {
   // Enable session timeout (5 min of inactivity)
   const { showWarning, extendSession, logout } = useSessionTimeout();
 
-  console.log(
-    "App render - loading:",
-    loading,
-    "user:",
-    user?.email || "no user"
-  );
-
   if (loading) {
-    console.log("App: showing loading spinner");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
-
-  console.log(
-    "App: rendering routes, user is:",
-    user ? "authenticated" : "not authenticated"
-  );
 
   return (
     <BrowserRouter>
