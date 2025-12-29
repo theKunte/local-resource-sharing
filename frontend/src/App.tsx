@@ -7,7 +7,9 @@ import Profile from "./pages/Profile";
 import Groups from "./pages/Groups";
 import Requests from "./pages/Requests";
 import GroupDetail from "./pages/GroupDetail";
+import MyGear from "./pages/MyGear";
 import SessionWarning from "./components/SessionWarning";
+import FloatingActionButton from "./components/FloatingActionButton";
 import { useFirebaseAuth } from "./hooks/useFirebaseAuth";
 import { useSessionTimeout } from "./hooks/useSessionTimeout";
 
@@ -33,12 +35,14 @@ function App() {
       )}
       <Routes>
         <Route path="/" element={user ? <Home /> : <Landing />} />
+        <Route path="/my-gear" element={<MyGear />} />
         <Route path="/post" element={<PostResource />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/groups/:groupId" element={<GroupDetail />} />
         <Route path="/requests" element={<Requests />} />
       </Routes>
+      {user && <FloatingActionButton />}
     </BrowserRouter>
   );
 }

@@ -51,20 +51,17 @@ function Header() {
           className="flex items-center justify-between"
           // style={{ minHeight: "5rem" }}
         >
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="h-10 w-10 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center font-bold text-lg transition-colors">
-                GearShare
-              </div>
-            </Link>
-          </div>
-
           {/* Desktop Navigation */}
           {user && (
-            <div className="flex items-center gap-12">
+            <div className="flex items-center gap-8">
               <Link
-                to="/profile"
+                to="/"
+                className="text-white/90 hover:text-white hover:bg-white/15 px-4 py-2.5 rounded-lg text-base font-semibold transition-all duration-200 hover:shadow-md"
+              >
+                Explore
+              </Link>
+              <Link
+                to="/my-gear"
                 className="text-white/90 hover:text-white hover:bg-white/15 px-4 py-2.5 rounded-lg text-base font-semibold transition-all duration-200 hover:shadow-md"
               >
                 My Gear
@@ -76,10 +73,10 @@ function Header() {
                 Groups
               </Link>
               <Link
-                to="/post"
+                to="/requests"
                 className="text-white/90 hover:text-white hover:bg-white/15 px-4 py-2.5 rounded-lg text-base font-semibold transition-all duration-200 hover:shadow-md"
               >
-                Share Gear
+                Requests
               </Link>
             </div>
           )}
@@ -126,11 +123,11 @@ function Header() {
               className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors"
               onClick={() => setMobileOpen(false)}
             >
-              Browse Gear
+              Explore
             </Link>
             <Link
-              to="/profile"
-              className="block px-6 py-6 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+              to="/my-gear"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors"
               onClick={() => setMobileOpen(false)}
             >
               My Gear
