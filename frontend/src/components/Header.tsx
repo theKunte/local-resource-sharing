@@ -45,7 +45,7 @@ function Header() {
   }, [mobileOpen]);
 
   return (
-    <header className="bg-[#2C557C] h-50 text-white shadow-lg sticky top-0 z-50 ">
+    <header className="bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-xl sticky top-0 z-50 backdrop-blur-sm">
       <nav className="w-full px-4 sm:px-6 lg:px-8">
         <div
           className="flex items-center justify-between"
@@ -65,19 +65,19 @@ function Header() {
             <div className="flex items-center gap-12">
               <Link
                 to="/profile"
-                className="text-white/90 hover:text-white hover:bg-white/10 px-4 py-2 rounded-md text-base font-medium transition-colors"
+                className="text-white/90 hover:text-white hover:bg-white/15 px-4 py-2.5 rounded-lg text-base font-semibold transition-all duration-200 hover:shadow-md"
               >
                 My Gear
               </Link>
               <Link
                 to="/groups"
-                className="text-white/90 hover:text-white hover:bg-white/10 px-4 py-2 rounded-md text-base font-medium transition-colors"
+                className="text-white/90 hover:text-white hover:bg-white/15 px-4 py-2.5 rounded-lg text-base font-semibold transition-all duration-200 hover:shadow-md"
               >
                 Groups
               </Link>
               <Link
                 to="/post"
-                className="text-white/90 hover:text-white hover:bg-white/10 px-4 py-2 rounded-md text-base font-medium transition-colors"
+                className="text-white/90 hover:text-white hover:bg-white/15 px-4 py-2.5 rounded-lg text-base font-semibold transition-all duration-200 hover:shadow-md"
               >
                 Share Gear
               </Link>
