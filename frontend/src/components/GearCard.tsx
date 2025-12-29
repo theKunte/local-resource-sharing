@@ -81,38 +81,41 @@ const GearCard: React.FC<GearCardProps> = ({
   };
   return (
     <div
-      className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col mb-8 ${
-        isBorrowed ? "border-gray-300 opacity-75" : "border-gray-200"
+      className={`group bg-white border rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col ${
+        isBorrowed 
+          ? "border-warning-200 bg-warning-50/30" 
+          : "border-gray-200 hover:border-primary-300 hover:-translate-y-1"
       }`}
     >
       {/* Image Section */}
       {image && (
-        <div className="relative w-full aspect-[3/2] overflow-hidden bg-gray-100">
+        <div className="relative w-full aspect-[4/3] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
           <img
             src={image}
             alt={title}
-            className={`w-full h-full object-cover ${
-              isBorrowed ? "grayscale" : ""
-            }`}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
           {isBorrowed && (
-            <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-              <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                Currently Borrowed
+            <div className="absolute top-3 right-3 animate-fade-in">
+              <span className="bg-warning-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z"/>
+                </svg>
+                Borrowed
               </span>
             </div>
           )}
           {/* Edit/Delete overlay for owner */}
           {showActions && (
-            <div className="absolute top-2 right-2 flex gap-1 opacity-0 hover:opacity-100 transition-opacity duration-200">
+            <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               {onEdit && (
                 <button
                   onClick={() => onEdit({ id, title, description, image })}
-                  className="bg-white/90 hover:bg-white text-gray-600 hover:text-emerald-600 rounded-full p-1.5 shadow-sm transition-all duration-200"
+                  className="bg-white/95 hover:bg-white text-gray-700 hover:text-success-600 rounded-lg p-2 shadow-md hover:shadow-lg transition-all duration-200 backdrop-blur-sm"
                   title="Edit gear"
                 >
                   <svg
-                    className="w-3 h-3"
+                    className="w-4 h-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -129,11 +132,11 @@ const GearCard: React.FC<GearCardProps> = ({
               {onDelete && (
                 <button
                   onClick={() => onDelete(id)}
-                  className="bg-white/90 hover:bg-white text-gray-600 hover:text-red-600 rounded-full p-1.5 shadow-sm transition-all duration-200"
+                  className="bg-white/95 hover:bg-white text-gray-700 hover:text-danger-600 rounded-lg p-2 shadow-md hover:shadow-lg transition-all duration-200 backdrop-blur-sm"
                   title="Delete gear"
                 >
                   <svg
-                    className="w-3 h-3"
+                    className="w-4 h-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -152,11 +155,11 @@ const GearCard: React.FC<GearCardProps> = ({
                   onClick={() =>
                     onManageGroups({ id, title, description, image })
                   }
-                  className="bg-white/90 hover:bg-white text-gray-600 hover:text-sky-600 rounded-full p-1.5 shadow-sm transition-all duration-200"
+                  className="bg-white/95 hover:bg-white text-gray-700 hover:text-primary-600 rounded-lg p-2 shadow-md hover:shadow-lg transition-all duration-200 backdrop-blur-sm"
                   title="Manage groups"
                 >
                   <svg
-                    className="w-3 h-3"
+                    className="w-4 h-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -165,7 +168,7 @@ const GearCard: React.FC<GearCardProps> = ({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M4 6h16M4 12h8m-8 6h16"
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                     />
                   </svg>
                 </button>
@@ -176,54 +179,58 @@ const GearCard: React.FC<GearCardProps> = ({
       )}
 
       {/* Content Section */}
-      <div className="p-4 flex-1 flex flex-col">
+      <div className="p-5 flex-1 flex flex-col">
         {/* Title */}
-        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors">
           {title}
         </h3>
 
-        {/* Availability Status */}
-        <div className="mb-3 space-y-2">
-          {isBorrowed ? (
-            <>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                <span className="w-2 h-2 rounded-full mr-2 bg-red-400"></span>
-                Borrowed
-              </span>
-              {currentLoan?.endDate && (
-                <div className="text-xs text-gray-600">
-                  <span className="font-medium">Return by:</span>{" "}
-                  {formatDate(currentLoan.endDate)}
-                </div>
-              )}
-            </>
-          ) : (
+        {/* Description */}
+        <p className="text-sm text-gray-600 mb-4 line-clamp-3 leading-relaxed flex-1">
+          {description}
+        </p>
+
+        {/* Availability Status & Borrower Info */}
+        {isBorrowed && currentLoan ? (
+          <div className="mt-auto pt-4 border-t border-warning-200">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-full bg-warning-200 flex items-center justify-center font-semibold text-warning-700 text-xs">
+                {currentLoan.borrower.name?.[0]?.toUpperCase() || currentLoan.borrower.email[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-warning-800 truncate">
+                  {currentLoan.borrower.name || currentLoan.borrower.email}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-warning-700">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>Due back {formatDate(currentLoan.endDate)}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-auto pt-4 border-t border-gray-100">
             <span
-              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+              className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold ${
                 isAvailable
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-red-100 text-red-800"
+                  ? "bg-success-100 text-success-700"
+                  : "bg-gray-100 text-gray-600"
               }`}
             >
               <span
-                className={`w-2 h-2 rounded-full mr-2 ${
-                  isAvailable ? "bg-emerald-400" : "bg-red-400"
+                className={`w-2 h-2 rounded-full mr-2 animate-pulse ${
+                  isAvailable ? "bg-success-500" : "bg-gray-400"
                 }`}
               ></span>
-              {isAvailable ? "Available" : "Unavailable"}
+              {isAvailable ? "Available Now" : "Unavailable"}
             </span>
-          )}
-        </div>
-
-        {/* Description */}
-        <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-4 line-clamp-2">
-          {description.length > 80
-            ? `${description.substring(0, 80)}...`
-            : description}
-        </p>
+          </div>
+        )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 mt-auto">
+        <div className="flex gap-2 mt-4">
           {!showActions && onRequestBorrow && (
             <button
               onClick={() => {
@@ -238,10 +245,10 @@ const GearCard: React.FC<GearCardProps> = ({
                 }
               }}
               disabled={!!isBorrowed}
-              className={`flex-1 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 ${
+              className={`flex-1 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 shadow-sm ${
                 isBorrowed
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  : "bg-primary-500 hover:bg-primary-600 text-white hover:shadow-md active:scale-95"
               }`}
             >
               {isBorrowed ? "Currently Borrowed" : "Request to Borrow"}
@@ -253,7 +260,7 @@ const GearCard: React.FC<GearCardProps> = ({
               {onEdit && (
                 <button
                   onClick={() => onEdit({ id, title, description, image })}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors duration-200"
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md active:scale-95"
                 >
                   Edit
                 </button>
@@ -261,7 +268,7 @@ const GearCard: React.FC<GearCardProps> = ({
               {onDelete && (
                 <button
                   onClick={() => onDelete(id)}
-                  className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors duration-200"
+                  className="flex-1 bg-danger-100 hover:bg-danger-200 text-danger-700 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md active:scale-95"
                 >
                   Delete
                 </button>
