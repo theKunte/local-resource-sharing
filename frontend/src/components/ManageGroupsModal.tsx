@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 
 interface Group {
   id: string;
@@ -39,8 +39,8 @@ export default function ManageGroupsModal({
       setLoading(true);
       try {
         const [allRes, sharedRes] = await Promise.all([
-          axios.get(`/api/users/${encodeURIComponent(userId)}/groups`),
-          axios.get(`/api/resources/${encodeURIComponent(resourceId)}/groups`, {
+          apiClient.get(`/api/users/${encodeURIComponent(userId)}/groups`),
+          apiClient.get(`/api/resources/${encodeURIComponent(resourceId)}/groups`, {
             params: { userId },
           }),
         ]);
@@ -70,7 +70,7 @@ export default function ManageGroupsModal({
     try {
       const current = new Set<string>(selected);
       // fetch current shared (again) to compute diff reliably
-      const sharedResp = await axios.get(
+      const sharedResp = await apiClient.get(
         `/api/resources/${encodeURIComponent(resourceId)}/groups`,
         { params: { userId } }
       );
@@ -82,7 +82,7 @@ export default function ManageGroupsModal({
       const toRemove = currentlyShared.filter((id) => !current.has(id));
 
       for (const gid of toAdd) {
-        await axios.post(
+        await apiClient.post(
           `/api/resources/${encodeURIComponent(
             resourceId
           )}/groups/${encodeURIComponent(gid)}`,
@@ -90,7 +90,7 @@ export default function ManageGroupsModal({
         );
       }
       for (const gid of toRemove) {
-        await axios.delete(
+        await apiClient.delete(
           `/api/resources/${encodeURIComponent(
             resourceId
           )}/groups/${encodeURIComponent(gid)}`,

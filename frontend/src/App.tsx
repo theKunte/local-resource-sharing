@@ -7,20 +7,17 @@ import Profile from "./pages/Profile";
 import Groups from "./pages/Groups";
 import Requests from "./pages/Requests";
 import GroupDetail from "./pages/GroupDetail";
+import SessionWarning from "./components/SessionWarning";
 import { useFirebaseAuth } from "./hooks/useFirebaseAuth";
+import { useSessionTimeout } from "./hooks/useSessionTimeout";
 
 function App() {
   const { user, loading } = useFirebaseAuth();
 
-  console.log(
-    "App render - loading:",
-    loading,
-    "user:",
-    user?.email || "no user"
-  );
+  // Enable session timeout (5 min of inactivity)
+  const { showWarning, extendSession, logout } = useSessionTimeout();
 
   if (loading) {
-    console.log("App: showing loading spinner");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -28,14 +25,12 @@ function App() {
     );
   }
 
-  console.log(
-    "App: rendering routes, user is:",
-    user ? "authenticated" : "not authenticated"
-  );
-
   return (
     <BrowserRouter>
       <Header />
+      {showWarning && (
+        <SessionWarning onExtend={extendSession} onSignOut={logout} />
+      )}
       <Routes>
         <Route path="/" element={user ? <Home /> : <Landing />} />
         <Route path="/post" element={<PostResource />} />
