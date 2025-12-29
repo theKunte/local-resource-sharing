@@ -12,13 +12,21 @@ dist
 dist-ssr
 *.local
 
-# Ignore environment variables
+# Ignore environment variables (contains secrets)
 .env
+.env.local
+.env.*.local
 frontend/.env
 backend/.env
+*.pem
+*.key
+service-account*.json
 
 # Ignore local SQLite dev DB (binary, causes merge conflicts)
-backend/prisma/prisma/dev.db
+backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/prisma/prisma/*.db
+backend/prisma/prisma/*.db-journal
 
 # Editor directories and files
 .vscode/*

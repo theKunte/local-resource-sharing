@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import GearCard from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
@@ -81,12 +81,9 @@ export default function GroupDetail() {
   const fetchGroupDetails = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:3001/api/groups/${groupId}/details`,
-        {
-          params: { userId: user?.uid },
-        }
-      );
+      const response = await apiClient.get(`/api/groups/${groupId}/details`, {
+        params: { userId: user?.uid },
+      });
       setGroup(response.data);
     } catch (error: unknown) {
       console.error("Error fetching group details:", error);
@@ -118,13 +115,10 @@ export default function GroupDetail() {
 
     try {
       setInviting(true);
-      const response = await axios.post(
-        `http://localhost:3001/api/groups/${groupId}/invite`,
-        {
-          email: inviteEmail.toLowerCase(),
-          invitedBy: user.uid,
-        }
-      );
+      const response = await apiClient.post(`/api/groups/${groupId}/invite`, {
+        email: inviteEmail.toLowerCase(),
+        invitedBy: user.uid,
+      });
 
       if (response.data.success) {
         alert(`Successfully invited ${inviteEmail}`);
@@ -155,15 +149,12 @@ export default function GroupDetail() {
     }
 
     try {
-      await axios.delete(
-        `http://localhost:3001/api/groups/${groupId}/remove-member`,
-        {
-          data: {
-            userId: user?.uid,
-            targetUserId: memberId,
-          },
-        }
-      );
+      await apiClient.delete(`/api/groups/${groupId}/remove-member`, {
+        data: {
+          userId: user?.uid,
+          targetUserId: memberId,
+        },
+      });
 
       alert(`${memberName} has been removed from the group`);
       fetchGroupDetails(); // Refresh group data
@@ -181,7 +172,7 @@ export default function GroupDetail() {
   const handleDeleteResource = async (resourceId: string) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
     try {
-      await axios.delete(`http://localhost:3001/api/resources/${resourceId}`, {
+      await apiClient.delete(`/api/resources/${resourceId}`, {
         data: { userId: user?.uid },
       });
       alert("Resource deleted");
@@ -211,13 +202,10 @@ export default function GroupDetail() {
     const newDescription = prompt("Edit description:", resource.description);
     if (!newDescription) return;
     try {
-      const resp = await axios.put(
-        `http://localhost:3001/api/resources/${resource.id}`,
-        {
-          title: newTitle,
-          description: newDescription,
-        }
-      );
+      const resp = await apiClient.put(`/api/resources/${resource.id}`, {
+        title: newTitle,
+        description: newDescription,
+      });
       alert("Resource updated");
       fetchGroupDetails();
       try {
@@ -237,19 +225,13 @@ export default function GroupDetail() {
 
   // Handle request to borrow
   const handleRequestBorrow = (gearId: string) => {
-    console.log(
-      "[GroupDetail] handleRequestBorrow called with gearId:",
-      gearId
-    );
     const resource = group?.resources.find((r) => r.resource.id === gearId);
     if (resource) {
-      console.log("[GroupDetail] Found resource:", resource.resource.title);
       setSelectedResource({
         id: resource.resource.id,
         title: resource.resource.title,
       });
       setBorrowModalOpen(true);
-      console.log("[GroupDetail] Opening borrow modal");
     } else {
       console.error("[GroupDetail] Resource not found for id:", gearId);
     }
@@ -261,8 +243,8 @@ export default function GroupDetail() {
     memberName: string
   ) => {
     try {
-      const response = await axios.put(
-        `http://localhost:3001/api/groups/${groupId}/members/${memberId}/role`,
+      const response = await apiClient.put(
+        `/api/groups/${groupId}/members/${memberId}/role`,
         {
           requesterId: user?.uid,
           role: newRole,
@@ -295,7 +277,7 @@ export default function GroupDetail() {
     }
 
     try {
-      await axios.delete(`http://localhost:3001/api/groups/${group.id}`, {
+      await apiClient.delete(`/api/groups/${group.id}`, {
         data: { userId: user.uid },
       });
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 import { useNavigate } from "react-router-dom";
 import ResourceCard from "../components/ResourceCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
@@ -38,12 +38,8 @@ export default function Profile() {
 
   useEffect(() => {
     if (user) {
-      axios
-        .get(
-          `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
-            user.uid
-          )}`
-        )
+      apiClient
+        .get(`/api/resources?ownerId=${encodeURIComponent(user.uid)}`)
         .then((res) => setResources(res.data));
     }
   }, [user]);
@@ -52,10 +48,8 @@ export default function Profile() {
   const loadGroups = useCallback(async () => {
     if (!user) return;
     try {
-      const res = await axios.get(
-        `http://localhost:3001/api/groups?userId=${encodeURIComponent(
-          user.uid
-        )}`
+      const res = await apiClient.get(
+        `/api/groups?userId=${encodeURIComponent(user.uid)}`
       );
       setGroups(res.data);
     } catch (err) {
@@ -74,7 +68,7 @@ export default function Profile() {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this resource?"))
       return;
-    await axios.delete(`http://localhost:3001/api/resources/${id}`, {
+    await apiClient.delete(`/api/resources/${id}`, {
       data: { userId: user?.uid },
     });
     setResources((prev) => prev.filter((r) => r.id !== id));
@@ -94,13 +88,10 @@ export default function Profile() {
     if (!newTitle) return;
     const newDescription = prompt("Edit description:", resource.description);
     if (!newDescription) return;
-    const updated = await axios.put(
-      `http://localhost:3001/api/resources/${resource.id}`,
-      {
-        title: newTitle,
-        description: newDescription,
-      }
-    );
+    const updated = await apiClient.put(`/api/resources/${resource.id}`, {
+      title: newTitle,
+      description: newDescription,
+    });
     setResources((prev) =>
       prev.map((r) => (r.id === resource.id ? { ...r, ...updated.data } : r))
     );
@@ -128,7 +119,7 @@ export default function Profile() {
     if (!newGroupName || !user) return;
     try {
       setCreatingGroup(true);
-      const res = await axios.post("http://localhost:3001/api/groups", {
+      const res = await apiClient.post("/api/groups", {
         name: newGroupName.trim(),
         createdById: user.uid,
       });
@@ -371,12 +362,8 @@ export default function Profile() {
             }}
             onSaved={() => {
               // Optionally refresh resources list after changing group membership
-              axios
-                .get(
-                  `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
-                    user.uid
-                  )}`
-                )
+              apiClient
+                .get(`/api/resources?ownerId=${encodeURIComponent(user.uid)}`)
                 .then((res) => setResources(res.data))
                 .catch((_err) => {
                   console.debug("[Profile] refresh resources failed", _err);

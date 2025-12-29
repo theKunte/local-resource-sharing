@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
 import { cropImageToSquare } from "../utils/cropImageToSquare";
@@ -35,9 +35,7 @@ export default function PostResource() {
 
       try {
         setLoadingGroups(true);
-        const response = await axios.get(
-          `http://localhost:3001/api/groups?userId=${user.uid}`
-        );
+        const response = await apiClient.get(`/api/groups?userId=${user.uid}`);
         const userGroups = response.data;
         setGroups(userGroups);
 
@@ -74,6 +72,13 @@ export default function PostResource() {
       alert("You must be logged in to share gear.");
       return;
     }
+    
+    // Validate image is required
+    if (!image) {
+      alert("Please upload an image of your item. Photos help build trust and make your item more likely to be borrowed.");
+      return;
+    }
+    
     setSubmitting(true);
 
     try {
@@ -83,17 +88,14 @@ export default function PostResource() {
       }
 
       // Create the resource
-      const resourceResponse = await axios.post(
-        "http://localhost:3001/api/resources",
-        {
-          title,
-          description,
-          image: imageData,
-          ownerId: user.uid,
-          email: user.email,
-          name: user.displayName,
-        }
-      );
+      const resourceResponse = await apiClient.post("/api/resources", {
+        title,
+        description,
+        image: imageData,
+        ownerId: user.uid,
+        email: user.email,
+        name: user.displayName,
+      });
 
       const newResource = resourceResponse.data;
 
@@ -102,15 +104,10 @@ export default function PostResource() {
         const selectedGroupIds = Array.from(selectedGroups);
 
         for (const groupId of selectedGroupIds) {
-          await axios.post(
-            `http://localhost:3001/api/resources/${newResource.id}/share`,
-            {
-              groupId,
-            }
-          );
+          await apiClient.post(`/api/resources/${newResource.id}/share`, {
+            groupId,
+          });
         }
-
-        console.log(`Resource shared with ${selectedGroupIds.length} group(s)`);
       } catch (groupError) {
         console.warn("Could not share with groups:", groupError);
         // Don't fail the whole operation if group sharing fails
@@ -126,11 +123,17 @@ export default function PostResource() {
 
       // Navigate to profile to see the shared gear
       navigate("/profile");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sharing gear:", error);
-      alert(
-        "Oops! Something went wrong while sharing your gear. Please try again."
-      );
+      console.error("Error response:", error.response);
+
+      // Display specific error message from backend
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Oops! Something went wrong while sharing your gear. Please try again.";
+
+      alert(errorMessage);
     } finally {
       setSubmitting(false);
     }

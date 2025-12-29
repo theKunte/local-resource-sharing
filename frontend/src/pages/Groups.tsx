@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import apiClient from "../utils/apiClient";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
 import { cropImageToSquare } from "../utils/cropImageToSquare";
@@ -54,16 +55,14 @@ export default function Groups() {
     const loadGroups = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `http://localhost:3001/api/groups?userId=${user!.uid}`
-        );
+        const response = await apiClient.get(`/api/groups?userId=${user!.uid}`);
 
         // Get detailed info for each group including members
         const groupsWithDetails = await Promise.all(
           response.data.map(async (group: Group) => {
             try {
-              const membersResponse = await axios.get(
-                `http://localhost:3001/api/groups/${group.id}/members`
+              const membersResponse = await apiClient.get(
+                `/api/groups/${group.id}/members`
               );
               return {
                 ...group,
@@ -96,16 +95,14 @@ export default function Groups() {
   const loadGroups = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:3001/api/groups?userId=${user!.uid}`
-      );
+      const response = await apiClient.get(`/api/groups?userId=${user!.uid}`);
 
       // Get detailed info for each group including members
       const groupsWithDetails = await Promise.all(
         response.data.map(async (group: Group) => {
           try {
-            const membersResponse = await axios.get(
-              `http://localhost:3001/api/groups/${group.id}/members`
+            const membersResponse = await apiClient.get(
+              `/api/groups/${group.id}/members`
             );
             return {
               ...group,
@@ -137,7 +134,7 @@ export default function Groups() {
 
     try {
       setCreating(true);
-      await axios.post("http://localhost:3001/api/groups", {
+      await apiClient.post("/api/groups", {
         name: newGroupName.trim(),
         createdById: user!.uid,
       });
@@ -160,8 +157,8 @@ export default function Groups() {
 
     try {
       setInviting(true);
-      const response = await axios.post(
-        `http://localhost:3001/api/groups/${selectedGroup.id}/invite`,
+      const response = await apiClient.post(
+        `/api/groups/${selectedGroup.id}/invite`,
         {
           email: inviteEmail.trim().toLowerCase(), // Normalize email
           invitedBy: user!.uid,
@@ -218,9 +215,7 @@ export default function Groups() {
     if (!confirm(`Are you sure you want to leave "${groupName}"?`)) return;
 
     try {
-      await axios.delete(
-        `http://localhost:3001/api/groups/${groupId}/members/${user!.uid}`
-      );
+      await apiClient.delete(`/api/groups/${groupId}/members/${user!.uid}`);
       await loadGroups();
       alert(`You've left "${groupName}"`);
     } catch (error) {
@@ -241,7 +236,7 @@ export default function Groups() {
         avatar = await cropImageToSquare(avatarFile, 128);
       }
 
-      await axios.put(`http://localhost:3001/api/groups/${groupId}`, {
+      await apiClient.put(`/api/groups/${groupId}`, {
         avatar,
         userId: user!.uid,
       });
@@ -262,7 +257,7 @@ export default function Groups() {
 
     try {
       setUpdating(true);
-      await axios.put(`http://localhost:3001/api/groups/${editingGroup.id}`, {
+      await apiClient.put(`/api/groups/${editingGroup.id}`, {
         name: editGroupName.trim(),
         description: editGroupDescription.trim(),
         userId: user!.uid,

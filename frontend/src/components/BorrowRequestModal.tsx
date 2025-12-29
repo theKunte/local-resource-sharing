@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 
 interface BorrowRequestModalProps {
   isOpen: boolean;
@@ -28,13 +28,6 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     startDate?: string;
     endDate?: string;
   }>({});
-
-  console.log(
-    "BorrowRequestModal render - isOpen:",
-    isOpen,
-    "resourceTitle:",
-    resourceTitle
-  );
 
   const handleClose = () => {
     setStartDate("");
@@ -93,7 +86,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     setSubmitting(true);
 
     try {
-      await axios.post("http://localhost:3001/api/borrow-requests", {
+      await apiClient.post("/api/borrow-requests", {
         resourceId,
         borrowerId: userId,
         groupId: groupId || undefined, // Include groupId if provided
@@ -113,6 +106,8 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
       alert("Borrow request sent successfully!");
     } catch (err: any) {
       console.error("Error creating borrow request:", err);
+      console.error("Error response data:", err.response?.data);
+      console.error("Error response status:", err.response?.status);
 
       // Show backend error/message for all errors including 409
       if (err.response?.data?.message) {
@@ -129,8 +124,6 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
 
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = new Date().toISOString().split("T")[0];
-
-  console.log("BorrowRequestModal: about to return JSX");
 
   return (
     <div
