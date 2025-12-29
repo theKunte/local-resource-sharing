@@ -72,13 +72,15 @@ export default function PostResource() {
       alert("You must be logged in to share gear.");
       return;
     }
-    
+
     // Validate image is required
     if (!image) {
-      alert("Please upload an image of your item. Photos help build trust and make your item more likely to be borrowed.");
+      alert(
+        "Please upload an image of your item. Photos help build trust and make your item more likely to be borrowed."
+      );
       return;
     }
-    
+
     setSubmitting(true);
 
     try {

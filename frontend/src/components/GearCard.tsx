@@ -82,8 +82,8 @@ const GearCard: React.FC<GearCardProps> = ({
   return (
     <div
       className={`group bg-white border rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col ${
-        isBorrowed 
-          ? "border-warning-200 bg-warning-50/30" 
+        isBorrowed
+          ? "border-warning-200 bg-warning-50/30"
           : "border-gray-200 hover:border-primary-300 hover:-translate-y-1"
       }`}
     >
@@ -98,8 +98,12 @@ const GearCard: React.FC<GearCardProps> = ({
           {isBorrowed && (
             <div className="absolute top-3 right-3 animate-fade-in">
               <span className="bg-warning-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z"/>
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z" />
                 </svg>
                 Borrowed
               </span>
@@ -179,52 +183,73 @@ const GearCard: React.FC<GearCardProps> = ({
       )}
 
       {/* Content Section */}
-      <div className="p-5 flex-1 flex flex-col">
-        {/* Title */}
-        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors">
-          {title}
-        </h3>
-
-        {/* Description */}
-        <p className="text-sm text-gray-600 mb-4 line-clamp-3 leading-relaxed flex-1">
-          {description}
-        </p>
-
-        {/* Availability Status & Borrower Info */}
-        {isBorrowed && currentLoan ? (
-          <div className="mt-auto pt-4 border-t border-warning-200">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-full bg-warning-200 flex items-center justify-center font-semibold text-warning-700 text-xs">
-                {currentLoan.borrower.name?.[0]?.toUpperCase() || currentLoan.borrower.email[0].toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-warning-800 truncate">
-                  {currentLoan.borrower.name || currentLoan.borrower.email}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-warning-700">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span>Due back {formatDate(currentLoan.endDate)}</span>
-            </div>
+      <div className="p-6 flex-1 flex flex-col">
+        {/* Title & Status Row */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex-1">
+            <p className="text-lg font-bold text-gray-900 line-clamp-2 group-hover:text-primary-600 transition-colors">
+              <span className="text-sm text-gray-500 font-medium">Title: </span>
+              {title}
+            </p>
           </div>
-        ) : (
-          <div className="mt-auto pt-4 border-t border-gray-100">
+          {!isBorrowed && (
             <span
-              className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold ${
+              className={`flex-shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
                 isAvailable
-                  ? "bg-success-100 text-success-700"
-                  : "bg-gray-100 text-gray-600"
+                  ? "bg-green-500 text-white"
+                  : "bg-gray-100 text-gray-600 ring-1 ring-gray-200"
               }`}
             >
               <span
-                className={`w-2 h-2 rounded-full mr-2 animate-pulse ${
-                  isAvailable ? "bg-success-500" : "bg-gray-400"
+                className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                  isAvailable ? "bg-white animate-pulse" : "bg-gray-400"
                 }`}
               ></span>
-              {isAvailable ? "Available Now" : "Unavailable"}
+              {isAvailable ? "Available" : "Unavailable"}
+            </span>
+          )}
+        </div>
+
+        {/* Description */}
+        <div className="mb-4">
+          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+            <span className="text-xs text-gray-500 font-medium">
+              Description:{" "}
+            </span>
+            {description}
+          </p>
+        </div>
+
+        {/* Borrower Info or Availability */}
+        {isBorrowed && currentLoan ? (
+          <div className="mb-4">
+            <div className="mb-2 p-4 bg-gray-100 border border-gray-300 rounded-lg">
+              <div className="flex items-center gap-1.5 mb-2">
+                <p className="text-xs text-gray-600 font-medium">
+                  Borrowed by:
+                </p>
+                <p className="text-sm font-semibold text-gray-700 truncate">
+                  {currentLoan.borrower.name || currentLoan.borrower.email}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-gray-600 font-medium">
+                <span>Return by {formatDate(currentLoan.endDate)}</span>
+              </div>
+            </div>
+            <span className="inline-block px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-400 text-white">
+              Currently Borrowed
+            </span>
+          </div>
+        ) : (
+          <div className="mb-2">
+            <span
+              className={`inline-block px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                isAvailable
+                  ? "bg-success-500 text-white"
+                  : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {isAvailable ? "Available" : "Not available"}
             </span>
           </div>
         )}

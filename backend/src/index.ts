@@ -1623,6 +1623,18 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
     });
 
     if (overlappingRequests.length > 0) {
+      console.log("[DEBUG] Found overlapping requests:", {
+        resourceId,
+        requestedPeriod: { startDate, endDate },
+        conflictingRequests: overlappingRequests.map((r) => ({
+          id: r.id,
+          status: r.status,
+          borrowerId: r.borrowerId,
+          startDate: r.startDate,
+          endDate: r.endDate,
+          createdAt: r.createdAt,
+        })),
+      });
       return res.status(409).json({
         error: "Request conflict",
         message:
@@ -1683,6 +1695,8 @@ app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
   const userId = req.query.userId as string | undefined;
   const role = req.query.role as "owner" | "borrower" | undefined;
   const status = req.query.status as string | undefined;
+
+  console.log("[DEBUG] GET /api/borrow-requests", { userId, role, status });
 
   if (!userId) {
     return res.status(400).json({ error: "userId is required" });
@@ -2268,11 +2282,21 @@ app.delete("/api/borrow-requests/:id", authenticateToken, async (req, res) => {
     // Get the borrow request
     const borrowRequest = await prisma.borrowRequest.findUnique({
       where: { id },
+      include: {
+        loan: true, // Include loan to check if it exists
+      },
     });
 
     if (!borrowRequest) {
       return res.status(404).json({ error: "Borrow request not found" });
     }
+
+    console.log("[DEBUG] Delete request:", {
+      requestId: id,
+      status: borrowRequest.status,
+      hasLoan: !!borrowRequest.loan,
+      loanStatus: borrowRequest.loan?.status,
+    });
 
     // Verify user is the borrower or owner
     if (
@@ -2291,6 +2315,18 @@ app.delete("/api/borrow-requests/:id", authenticateToken, async (req, res) => {
         error: "Cannot delete approved request",
         message:
           "Approved requests cannot be deleted. Cancel the loan instead.",
+      });
+    }
+
+    // Check if there's an associated loan - if so, delete it first
+    if (borrowRequest.loan) {
+      console.log(
+        "[DEBUG] Deleting associated loan first:",
+        borrowRequest.loan.id
+      );
+      // Delete the loan first (this should only happen for completed/returned loans)
+      await prisma.loan.delete({
+        where: { id: borrowRequest.loan.id },
       });
     }
 
@@ -2456,9 +2492,10 @@ app.post(
       if (loan.status !== "PENDING_RETURN_CONFIRMATION") {
         return res.status(400).json({
           error: "Invalid loan status",
-          message: loan.status === "RETURNED" 
-            ? "This loan has already been marked as returned"
-            : "The borrower must initiate the return first",
+          message:
+            loan.status === "RETURNED"
+              ? "This loan has already been marked as returned"
+              : "The borrower must initiate the return first",
         });
       }
 

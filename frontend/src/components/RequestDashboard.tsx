@@ -105,10 +105,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const handleAccept = async (requestId: string) => {
     setActionLoading(requestId);
     try {
-      await apiClient.post(
-        `/api/borrow-requests/${requestId}/accept`,
-        { userId }
-      );
+      await apiClient.post(`/api/borrow-requests/${requestId}/accept`, {
+        userId,
+      });
       await loadRequests();
       alert("Request accepted successfully!");
     } catch (error: any) {
@@ -124,10 +123,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await apiClient.post(
-        `/api/borrow-requests/${requestId}/decline`,
-        { userId }
-      );
+      await apiClient.post(`/api/borrow-requests/${requestId}/decline`, {
+        userId,
+      });
       await loadRequests();
       alert("Request declined");
     } catch (error: any) {
@@ -143,10 +141,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await apiClient.post(
-        `/api/borrow-requests/${requestId}/cancel`,
-        { userId }
-      );
+      await apiClient.post(`/api/borrow-requests/${requestId}/cancel`, {
+        userId,
+      });
       await loadRequests();
       alert("Request cancelled");
     } catch (error: any) {
@@ -171,15 +168,12 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(editingRequest.id);
     try {
-      await apiClient.put(
-        `/api/borrow-requests/${editingRequest.id}`,
-        {
-          userId,
-          startDate: editForm.startDate,
-          endDate: editForm.endDate,
-          message: editForm.message,
-        }
-      );
+      await apiClient.put(`/api/borrow-requests/${editingRequest.id}`, {
+        userId,
+        startDate: editForm.startDate,
+        endDate: editForm.endDate,
+        message: editForm.message,
+      });
       await loadRequests();
       setEditingRequest(null);
       alert("Request updated successfully!");
@@ -201,10 +195,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await apiClient.delete(
-        `/api/borrow-requests/${requestId}`,
-        { data: { userId } }
-      );
+      await apiClient.delete(`/api/borrow-requests/${requestId}`, {
+        data: { userId },
+      });
       await loadRequests();
       alert("Request deleted");
     } catch (error: any) {
@@ -225,10 +218,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await apiClient.post(
-        `/api/borrow-requests/${requestId}/mark-returned`,
-        { userId }
-      );
+      await apiClient.post(`/api/borrow-requests/${requestId}/mark-returned`, {
+        userId,
+      });
       await loadRequests();
       alert(
         "Item marked as returned successfully! The item is now available in your groups."
@@ -466,14 +458,55 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                 </>
               )}
 
-              {/* Delete button for non-pending requests (both owner and borrower) */}
-              {!isPending && request.status !== "APPROVED" && (
+              {/* Delete button for rejected/cancelled requests (both owner and borrower) */}
+              {(request.status === "REJECTED" ||
+                request.status === "CANCELLED") && (
                 <button
                   onClick={() => handleDelete(request.id)}
                   disabled={actionLoading === request.id}
-                  className="bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-danger-100 hover:bg-danger-200 text-danger-700 text-sm font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {actionLoading === request.id ? "Deleting..." : "Delete"}
+                  {actionLoading === request.id ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg
+                        className="animate-spin h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Deleting...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                      Remove Request
+                    </span>
+                  )}
                 </button>
               )}
 
@@ -497,7 +530,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                 request.status === "APPROVED" &&
                 request.loan?.status === "PENDING_RETURN_CONFIRMATION" && (
                   <button
-                    onClick={() => handleConfirmReturn(request.loan!.id, request.id)}
+                    onClick={() =>
+                      handleConfirmReturn(request.loan!.id, request.id)
+                    }
                     disabled={actionLoading === request.id}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -653,16 +688,20 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             </div>
             <div className="ml-3 flex-1">
               <h3 className="text-sm font-medium text-amber-800">
-                Action Required: Return Confirmation{pendingReturnConfirmations > 1 ? 's' : ''}
+                Action Required: Return Confirmation
+                {pendingReturnConfirmations > 1 ? "s" : ""}
               </h3>
               <div className="mt-2 text-sm text-amber-700">
                 <p>
                   You have <strong>{pendingReturnConfirmations}</strong>{" "}
-                  {pendingReturnConfirmations === 1 ? "item" : "items"} waiting for your
-                  confirmation that {pendingReturnConfirmations === 1 ? "it was" : "they were"} returned.
-                  Please check the {pendingReturnConfirmations === 1 ? "item" : "items"} and click{" "}
-                  <strong>"Confirm Return"</strong> to make{" "}
-                  {pendingReturnConfirmations === 1 ? "it" : "them"} available again.
+                  {pendingReturnConfirmations === 1 ? "item" : "items"} waiting
+                  for your confirmation that{" "}
+                  {pendingReturnConfirmations === 1 ? "it was" : "they were"}{" "}
+                  returned. Please check the{" "}
+                  {pendingReturnConfirmations === 1 ? "item" : "items"} and
+                  click <strong>"Confirm Return"</strong> to make{" "}
+                  {pendingReturnConfirmations === 1 ? "it" : "them"} available
+                  again.
                 </p>
               </div>
             </div>
@@ -695,9 +734,10 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
               </h3>
               <div className="mt-2 text-sm text-blue-700">
                 <p>
-                  You've initiated return for <strong>{myPendingReturns}</strong>{" "}
-                  {myPendingReturns === 1 ? "item" : "items"}. Waiting for the owner to
-                  confirm receipt.
+                  You've initiated return for{" "}
+                  <strong>{myPendingReturns}</strong>{" "}
+                  {myPendingReturns === 1 ? "item" : "items"}. Waiting for the
+                  owner to confirm receipt.
                 </p>
               </div>
             </div>
