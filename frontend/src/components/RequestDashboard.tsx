@@ -49,6 +49,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const [activeTab, setActiveTab] = useState<"incoming" | "outgoing">(
     "incoming"
   );
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "pending" | "active" | "returned"
+  >("all");
   const [incomingRequests, setIncomingRequests] = useState<BorrowRequest[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<BorrowRequest[]>([]);
   const [loading, setLoading] = useState(false);
@@ -295,6 +298,28 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     });
   };
 
+  const getTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return "just now";
+    if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+    }
+    if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+    }
+    if (diffInSeconds < 2592000) {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} day${days !== 1 ? "s" : ""} ago`;
+    }
+    const months = Math.floor(diffInSeconds / 2592000);
+    return `${months} month${months !== 1 ? "s" : ""} ago`;
+  };
+
   const getStatusBadge = (status: string) => {
     const styles = {
       PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -321,102 +346,108 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     return (
       <div
         key={request.id}
-        className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow"
+        className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden"
       >
-        <div className="flex gap-4">
+        <div className="flex gap-4 p-5">
           {/* Resource Image */}
           {request.resource.image && (
-            <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg overflow-hidden">
+            <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
               <img
                 src={request.resource.image}
                 alt={request.resource.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             </div>
           )}
 
-          {/* Request Details */}
+          {/* Request Details Table */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 truncate">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900">
                   {request.resource.title}
                 </h3>
-                <p className="text-sm text-gray-600">
-                  {isOwner ? (
-                    <>
-                      Requested by{" "}
-                      <span className="font-medium">
-                        {request.borrower.name || request.borrower.email}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      Owner:{" "}
-                      <span className="font-medium">
-                        {request.owner.name || request.owner.email}
-                      </span>
-                    </>
-                  )}
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Requested {getTimeAgo(request.createdAt)}
                 </p>
               </div>
               {getStatusBadge(request.status)}
             </div>
 
-            {/* Group Info */}
-            {request.group && (
-              <div className="mb-2">
-                <span className="inline-flex items-center gap-1 text-sm text-gray-600">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                  </svg>
-                  Group:{" "}
-                  <span className="font-medium">{request.group.name}</span>
-                </span>
-              </div>
-            )}
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-gray-100">
+                <tr>
+                  <td className="py-2 pr-4 text-gray-500 font-medium w-32">
+                    {isOwner ? "Requested by" : "Owner"}
+                  </td>
+                  <td className="py-2 text-gray-900">
+                    {isOwner
+                      ? request.borrower.name || request.borrower.email
+                      : request.owner.name || request.owner.email}
+                  </td>
+                </tr>
 
-            {/* Dates */}
-            <div className="mb-3">
-              <div className="flex items-center gap-2 text-sm text-gray-700">
-                <svg
-                  className="w-4 h-4 text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>
-                  {formatDate(request.startDate)} -{" "}
-                  {formatDate(request.endDate)}
-                </span>
-              </div>
-            </div>
+                {request.group && (
+                  <tr>
+                    <td className="py-2 pr-4 text-gray-500 font-medium">
+                      Group
+                    </td>
+                    <td className="py-2 text-gray-900 flex items-center gap-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 flex-shrink-0 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                      {request.group.name}
+                    </td>
+                  </tr>
+                )}
 
-            {/* Message */}
-            {request.message && (
-              <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-700 italic">
-                  "{request.message}"
-                </p>
-              </div>
-            )}
+                <tr>
+                  <td className="py-2 pr-4 text-gray-500 font-medium">Dates</td>
+                  <td className="py-2 text-gray-900 flex items-center gap-1.5">
+                    <svg
+                      className="w-3.5 h-3.5 flex-shrink-0 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    {formatDate(request.startDate)} -{" "}
+                    {formatDate(request.endDate)}
+                  </td>
+                </tr>
+
+                {request.message && (
+                  <tr>
+                    <td className="py-2 pr-4 text-gray-500 font-medium align-top">
+                      Message
+                    </td>
+                    <td className="py-2">
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-sm text-gray-700 italic">
+                          "{request.message}"
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
 
             {/* Action Buttons */}
             <div className="flex gap-2 mt-4">
@@ -547,7 +578,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-amber-700 font-medium text-sm">
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4 flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -591,7 +622,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                       <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                         <div className="flex items-center gap-2 text-emerald-700 font-medium">
                           <svg
-                            className="w-5 h-5"
+                            className="w-4 h-4 flex-shrink-0"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -643,6 +674,20 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
   const currentRequests =
     activeTab === "incoming" ? incomingRequests : outgoingRequests;
+
+  // Filter requests based on statusFilter
+  const filteredRequests = Array.isArray(currentRequests)
+    ? currentRequests.filter((r) => {
+        if (statusFilter === "all") return true;
+        if (statusFilter === "pending") return r.status === "PENDING";
+        if (statusFilter === "active")
+          return r.status === "APPROVED" && r.loan?.status === "ACTIVE";
+        if (statusFilter === "returned")
+          return r.status === "APPROVED" && r.loan?.status === "RETURNED";
+        return true;
+      })
+    : [];
+
   const pendingCount = Array.isArray(currentRequests)
     ? currentRequests.filter((r) => r.status === "PENDING").length
     : 0;
@@ -667,13 +712,138 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
   return (
     <div className="w-full">
+      {/* Quick Stats Cards - Compact View */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {/* Pending Card */}
+        <button
+          onClick={() =>
+            setStatusFilter(statusFilter === "pending" ? "all" : "pending")
+          }
+          className={`rounded-lg p-3 transition-all transform hover:scale-105 cursor-pointer ${
+            statusFilter === "pending"
+              ? "bg-yellow-100 border-2 border-yellow-400 shadow-lg"
+              : "bg-yellow-50 border border-yellow-200 hover:shadow-md"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <p className="text-xs font-medium text-yellow-800">Pending</p>
+              <p className="text-xl font-bold text-yellow-900">
+                {activeTab === "incoming"
+                  ? incomingRequests.filter((r) => r.status === "PENDING")
+                      .length
+                  : outgoingRequests.filter((r) => r.status === "PENDING")
+                      .length}
+              </p>
+            </div>
+            <svg
+              className="w-5 h-5 text-yellow-600 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+        </button>
+
+        {/* Active Loans Card */}
+        <button
+          onClick={() =>
+            setStatusFilter(statusFilter === "active" ? "all" : "active")
+          }
+          className={`rounded-lg p-3 transition-all transform hover:scale-105 cursor-pointer ${
+            statusFilter === "active"
+              ? "bg-blue-100 border-2 border-blue-400 shadow-lg"
+              : "bg-blue-50 border border-blue-200 hover:shadow-md"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <p className="text-xs font-medium text-blue-800">Active</p>
+              <p className="text-xl font-bold text-blue-900">
+                {activeTab === "incoming"
+                  ? incomingRequests.filter(
+                      (r) =>
+                        r.status === "APPROVED" && r.loan?.status === "ACTIVE"
+                    ).length
+                  : outgoingRequests.filter(
+                      (r) =>
+                        r.status === "APPROVED" && r.loan?.status === "ACTIVE"
+                    ).length}
+              </p>
+            </div>
+            <svg
+              className="w-5 h-5 text-blue-600 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+        </button>
+
+        {/* Returned Card */}
+        <button
+          onClick={() =>
+            setStatusFilter(statusFilter === "returned" ? "all" : "returned")
+          }
+          className={`rounded-lg p-3 transition-all transform hover:scale-105 cursor-pointer ${
+            statusFilter === "returned"
+              ? "bg-green-100 border-2 border-green-400 shadow-lg"
+              : "bg-green-50 border border-green-200 hover:shadow-md"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <p className="text-xs font-medium text-green-800">Returned</p>
+              <p className="text-xl font-bold text-green-900">
+                {activeTab === "incoming"
+                  ? incomingRequests.filter(
+                      (r) =>
+                        r.status === "APPROVED" && r.loan?.status === "RETURNED"
+                    ).length
+                  : outgoingRequests.filter(
+                      (r) =>
+                        r.status === "APPROVED" && r.loan?.status === "RETURNED"
+                    ).length}
+              </p>
+            </div>
+            <svg
+              className="w-5 h-5 text-green-600 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+        </button>
+      </div>
+
       {/* Notification Banner for Pending Return Confirmations */}
       {pendingReturnConfirmations > 0 && activeTab === "incoming" && (
-        <div className="mb-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+        <div className="mb-4 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
           <div className="flex items-start">
             <div className="flex-shrink-0">
               <svg
-                className="h-6 w-6 text-amber-400"
+                className="h-2 w-2 text-amber-200"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -813,7 +983,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
           <p className="mt-2 text-gray-600">Loading requests...</p>
         </div>
-      ) : !Array.isArray(currentRequests) || currentRequests.length === 0 ? (
+      ) : !Array.isArray(filteredRequests) || filteredRequests.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <svg
             className="mx-auto h-12 w-12 text-gray-400"
@@ -829,10 +999,12 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">
-            No requests
+            No {statusFilter !== "all" ? statusFilter : ""} requests
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            {activeTab === "incoming"
+            {statusFilter !== "all"
+              ? `No ${statusFilter} requests found. Click a stat card to see all requests.`
+              : activeTab === "incoming"
               ? "You don't have any incoming borrow requests yet."
               : "You haven't made any borrow requests yet."}
           </p>
@@ -854,8 +1026,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
           {/* Request List */}
           <div className="space-y-4">
-            {Array.isArray(currentRequests) &&
-              currentRequests.map((request) =>
+            {Array.isArray(filteredRequests) &&
+              filteredRequests.map((request) =>
                 renderRequest(request, activeTab === "incoming")
               )}
           </div>

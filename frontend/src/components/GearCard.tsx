@@ -81,10 +81,10 @@ const GearCard: React.FC<GearCardProps> = ({
   };
   return (
     <div
-      className={`group bg-white border rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col ${
+      className={`group bg-white border rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden h-full flex flex-col ${
         isBorrowed
           ? "border-warning-200 bg-warning-50/30"
-          : "border-gray-200 hover:border-primary-300 hover:-translate-y-1"
+          : "border-gray-200 hover:border-primary-300 hover:-translate-y-0.5"
       }`}
     >
       {/* Image Section */}
@@ -93,21 +93,12 @@ const GearCard: React.FC<GearCardProps> = ({
           <img
             src={image}
             alt={title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+              isBorrowed ? "opacity-50 grayscale" : ""
+            }`}
           />
           {isBorrowed && (
-            <div className="absolute top-3 right-3 animate-fade-in">
-              <span className="bg-warning-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1.5">
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z" />
-                </svg>
-                Borrowed
-              </span>
-            </div>
+            <div className="absolute inset-0 bg-gray-900 opacity-20 pointer-events-none"></div>
           )}
           {/* Edit/Delete overlay for owner */}
           {showActions && (
@@ -183,7 +174,7 @@ const GearCard: React.FC<GearCardProps> = ({
       )}
 
       {/* Content Section */}
-      <div className="p-6 flex-1 flex flex-col">
+      <div className="px-6 pt-6 pb-0 flex-1 flex flex-col">
         {/* Title & Status Row */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex-1">
@@ -255,7 +246,7 @@ const GearCard: React.FC<GearCardProps> = ({
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2 mt-auto mb-6">
           {!showActions && onRequestBorrow && (
             <button
               onClick={() => {
@@ -270,7 +261,7 @@ const GearCard: React.FC<GearCardProps> = ({
                 }
               }}
               disabled={!!isBorrowed}
-              className={`flex-1 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 shadow-sm ${
+              className={`flex-1 text-sm font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 shadow-sm ${
                 isBorrowed
                   ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                   : "bg-primary-500 hover:bg-primary-600 text-white hover:shadow-md active:scale-95"

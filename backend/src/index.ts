@@ -200,6 +200,29 @@ app.get("/api/resources", authenticateToken, async (req, res) => {
   }
 });
 
+// Get pending request count for a resource
+app.get(
+  "/api/resources/:id/pending-requests-count",
+  authenticateToken,
+  async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const count = await prisma.borrowRequest.count({
+        where: {
+          resourceId: id,
+          status: "PENDING",
+        },
+      });
+
+      res.json({ resourceId: id, pendingRequestsCount: count });
+    } catch (error) {
+      console.error("Error fetching pending requests count:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
 // Post a new resource to the database
 app.post("/api/resources", authenticateToken, async (req, res) => {
   const { title, description, ownerId, image } = req.body;
@@ -1603,44 +1626,8 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
       });
     }
 
-    // Check for pending or approved requests for the same period
-    const overlappingRequests = await prisma.borrowRequest.findMany({
-      where: {
-        resourceId,
-        status: { in: ["PENDING", "APPROVED"] },
-        OR: [
-          {
-            AND: [{ startDate: { lte: end } }, { startDate: { gte: start } }],
-          },
-          {
-            AND: [{ endDate: { lte: end } }, { endDate: { gte: start } }],
-          },
-          {
-            AND: [{ startDate: { lte: start } }, { endDate: { gte: end } }],
-          },
-        ],
-      },
-    });
-
-    if (overlappingRequests.length > 0) {
-      console.log("[DEBUG] Found overlapping requests:", {
-        resourceId,
-        requestedPeriod: { startDate, endDate },
-        conflictingRequests: overlappingRequests.map((r) => ({
-          id: r.id,
-          status: r.status,
-          borrowerId: r.borrowerId,
-          startDate: r.startDate,
-          endDate: r.endDate,
-          createdAt: r.createdAt,
-        })),
-      });
-      return res.status(409).json({
-        error: "Request conflict",
-        message:
-          "There is already a pending or approved request for this resource during the requested time period",
-      });
-    }
+    // Note: Multiple pending requests are now allowed
+    // When owner accepts one, overlapping requests will be auto-declined
 
     // Create the borrow request (using finalGroupId for validation but not storing it)
     const borrowRequest = await prisma.borrowRequest.create({
