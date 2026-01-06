@@ -226,7 +226,7 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 md:gap-6 px-4 sm:px-4 md:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 sm:gap-7 md:gap-8 px-4 sm:px-4 md:px-6 pb-20">
             {communityGear.map((item) => (
               <GearCard
                 key={item.id}
@@ -244,7 +244,7 @@ export default function Home() {
           </div>
         )}
       </section>
-      
+
       {/* Borrow request modal */}
       {selectedResource && user && (
         <BorrowRequestModal
