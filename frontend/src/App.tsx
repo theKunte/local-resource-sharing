@@ -30,23 +30,21 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="flex flex-col min-h-screen">
-        <Header />
-        {showWarning && (
-          <SessionWarning onExtend={extendSession} onSignOut={logout} />
-        )}
-        <main className="flex-1 pb-20">
-          <Routes>
-            <Route path="/" element={user ? <Home /> : <Landing />} />
-            <Route path="/my-gear" element={<MyGear />} />
-            <Route path="/post" element={<PostResource />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/groups" element={<Groups />} />
-            <Route path="/groups/:groupId" element={<GroupDetail />} />
-            <Route path="/requests" element={<Requests />} />
-          </Routes>
-        </main>
-      </div>
+      <Header />
+      {showWarning && (
+        <SessionWarning onExtend={extendSession} onSignOut={logout} />
+      )}
+      <main className="flex-1 pb-16 overflow-y-auto">
+        <Routes>
+          <Route path="/" element={user ? <Home /> : <Landing />} />
+          <Route path="/my-gear" element={<MyGear />} />
+          <Route path="/post" element={<PostResource />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/groups" element={<Groups />} />
+          <Route path="/groups/:groupId" element={<GroupDetail />} />
+          <Route path="/requests" element={<Requests />} />
+        </Routes>
+      </main>
       <BottomNavigation />
     </BrowserRouter>
   );
