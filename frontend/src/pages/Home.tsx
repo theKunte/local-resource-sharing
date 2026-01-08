@@ -161,10 +161,10 @@ export default function Home() {
 
   // Authenticated user dashboard
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10">
+    <div className="h-full flex flex-col">
       {/* Inline status/toast banner */}
       {statusMessage && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
           <div className="flex items-center gap-3 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg">
             <span className="text-sm font-medium">{statusMessage}</span>
             <button
@@ -177,73 +177,78 @@ export default function Home() {
           </div>
         </div>
       )}
-      {/* Welcome Section */}
-      <section className="mb-10 text-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              Explore Community Gear
-            </h1>
-            <p className="text-lg text-gray-600 mb-6">
-              Discover and borrow gear from your trusted network
-            </p>
-          </div>
-        </div>
-      </section>
-      {/* Community Gear Section */}
-      <section className="mb-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl sm:text-3xl font-bold text-gray-900 flex items-center">
-            <span className="mr-3">🌐</span>
-            Available Gear
-            {communityGear.length > 0 && (
-              <span className="ml-3 text-lg font-normal text-gray-500">
-                ({communityGear.length} item
-                {communityGear.length !== 1 ? "s" : ""})
-              </span>
-            )}
-          </h2>
-        </div>
 
-        {loadingCommunityGear ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-            <p className="text-gray-500 mt-2">Loading community gear...</p>
-          </div>
-        ) : communityGear.length === 0 ? (
-          <div className="text-center py-12 px-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-200">
-            <span className="text-5xl mb-4 block">👥</span>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              No community gear available
-            </h3>
-            <p className="text-gray-500 mb-4">
-              Join groups or invite friends to start discovering gear from your
-              trusted network!
-            </p>
-            <p className="text-sm text-gray-400">
-              Gear is only visible to people within your trusted groups for
-              safety and privacy.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 sm:gap-7 md:gap-8 px-4 sm:px-4 md:px-6 pb-20">
-            {communityGear.map((item) => (
-              <GearCard
-                key={item.id}
-                id={item.id}
-                title={item.title}
-                description={item.description}
-                image={item.image}
-                status={item.status}
-                currentLoan={item.currentLoan}
-                isAvailable={true}
-                showActions={false}
-                onRequestBorrow={handleRequestBorrow}
-              />
-            ))}
-          </div>
-        )}
+      {/* Fixed Header Section */}
+      <section className="px-4 pt-6 pb-4 bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">
+            Explore Community Gear
+          </h1>
+          <p className="text-sm text-gray-600">
+            Discover and borrow gear from your trusted network
+          </p>
+        </div>
       </section>
+
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          {/* Community Gear Section */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                <span className="mr-2">🌐</span>
+                Available Gear
+                {communityGear.length > 0 && (
+                  <span className="ml-2 text-sm font-normal text-gray-500">
+                    ({communityGear.length} item
+                    {communityGear.length !== 1 ? "s" : ""})
+                  </span>
+                )}
+              </h2>
+            </div>
+
+            {loadingCommunityGear ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                <p className="text-gray-500 mt-2">Loading community gear...</p>
+              </div>
+            ) : communityGear.length === 0 ? (
+              <div className="text-center py-12 px-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-200">
+                <span className="text-5xl mb-4 block">👥</span>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  No community gear available
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  Join groups or invite friends to start discovering gear from
+                  your trusted network!
+                </p>
+                <p className="text-sm text-gray-400">
+                  Gear is only visible to people within your trusted groups for
+                  safety and privacy.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {communityGear.map((item) => (
+                  <GearCard
+                    key={item.id}
+                    id={item.id}
+                    title={item.title}
+                    description={item.description}
+                    image={item.image}
+                    status={item.status}
+                    currentLoan={item.currentLoan}
+                    isAvailable={true}
+                    showActions={false}
+                    onRequestBorrow={handleRequestBorrow}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
 
       {/* Borrow request modal */}
       {selectedResource && user && (

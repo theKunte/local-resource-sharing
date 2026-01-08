@@ -10,6 +10,7 @@ import GroupDetail from "./pages/GroupDetail";
 import MyGear from "./pages/MyGear";
 import SessionWarning from "./components/SessionWarning";
 import FloatingActionButton from "./components/FloatingActionButton";
+import BottomNavigation from "./components/BottomNavigation";
 import { useFirebaseAuth } from "./hooks/useFirebaseAuth";
 import { useSessionTimeout } from "./hooks/useSessionTimeout";
 
@@ -29,20 +30,24 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Header />
-      {showWarning && (
-        <SessionWarning onExtend={extendSession} onSignOut={logout} />
-      )}
-      <Routes>
-        <Route path="/" element={user ? <Home /> : <Landing />} />
-        <Route path="/my-gear" element={<MyGear />} />
-        <Route path="/post" element={<PostResource />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/groups" element={<Groups />} />
-        <Route path="/groups/:groupId" element={<GroupDetail />} />
-        <Route path="/requests" element={<Requests />} />
-      </Routes>
-      {user && <FloatingActionButton />}
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        {showWarning && (
+          <SessionWarning onExtend={extendSession} onSignOut={logout} />
+        )}
+        <main className="flex-1 pb-20">
+          <Routes>
+            <Route path="/" element={user ? <Home /> : <Landing />} />
+            <Route path="/my-gear" element={<MyGear />} />
+            <Route path="/post" element={<PostResource />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/groups" element={<Groups />} />
+            <Route path="/groups/:groupId" element={<GroupDetail />} />
+            <Route path="/requests" element={<Requests />} />
+          </Routes>
+        </main>
+      </div>
+      <BottomNavigation />
     </BrowserRouter>
   );
 }
