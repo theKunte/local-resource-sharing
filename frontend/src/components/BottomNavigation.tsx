@@ -1,11 +1,18 @@
 import { Link, useLocation } from "react-router-dom";
+import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
 function BottomNavigation() {
   const location = useLocation();
+  const { user } = useFirebaseAuth();
 
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+
+  // Don't render if user is not logged in
+  if (!user) {
+    return null;
+  }
 
   const navItems = [
     {
@@ -13,7 +20,7 @@ function BottomNavigation() {
       label: "Home",
       icon: (active: boolean) => (
         <svg
-          className={`w-6 h-6 ${active ? "fill-primary-600" : "fill-gray-600"}`}
+          className={`w-5 h-5 ${active ? "fill-primary-600" : "fill-gray-600"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -26,7 +33,7 @@ function BottomNavigation() {
       label: "Groups",
       icon: (active: boolean) => (
         <svg
-          className={`w-6 h-6 ${active ? "fill-primary-600" : "fill-gray-600"}`}
+          className={`w-5 h-5 ${active ? "fill-primary-600" : "fill-gray-600"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -39,7 +46,7 @@ function BottomNavigation() {
       label: "Add",
       icon: (active: boolean) => (
         <svg
-          className={`w-8 h-8 ${active ? "fill-white" : "fill-white"}`}
+          className={`w-6 h-6 ${active ? "fill-white" : "fill-white"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -53,7 +60,7 @@ function BottomNavigation() {
       label: "My Gear",
       icon: (active: boolean) => (
         <svg
-          className={`w-6 h-6 ${active ? "fill-primary-600" : "fill-gray-600"}`}
+          className={`w-5 h-5 ${active ? "fill-primary-600" : "fill-gray-600"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -66,7 +73,7 @@ function BottomNavigation() {
       label: "Requests",
       icon: (active: boolean) => (
         <svg
-          className={`w-6 h-6 ${active ? "fill-primary-600" : "fill-gray-600"}`}
+          className={`w-5 h-5 ${active ? "fill-primary-600" : "fill-gray-600"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -78,15 +85,15 @@ function BottomNavigation() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white border-t-2 border-gray-300 shadow-2xl"
+      className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 shadow-lg"
       style={{
         zIndex: 99999,
         position: "fixed",
         bottom: 0,
-        height: "64px",
+        height: "56px",
       }}
     >
-      <div className="flex justify-around items-center h-16 px-2">
+      <div className="flex justify-between items-center h-14 px-4 max-w-md mx-auto">
         {navItems.map((item) => {
           const active = isActive(item.path);
 
@@ -95,12 +102,14 @@ function BottomNavigation() {
               <Link
                 key={item.path}
                 to={item.path}
-                className="flex flex-col items-center justify-center -mt-8"
+                className="flex flex-col items-center justify-center -mt-6"
               >
-                <div className="bg-primary-600 rounded-full p-3 shadow-lg hover:bg-primary-700 transition-colors">
+                <div className="bg-primary-600 rounded-full p-2.5 shadow-lg hover:bg-primary-700 transition-colors">
                   {item.icon(active)}
                 </div>
-                <span className="text-xs mt-1 text-gray-600">{item.label}</span>
+                <span className="text-[10px] mt-0.5 text-gray-600">
+                  {item.label}
+                </span>
               </Link>
             );
           }
@@ -109,11 +118,11 @@ function BottomNavigation() {
             <Link
               key={item.path}
               to={item.path}
-              className="flex flex-col items-center justify-center flex-1 h-full hover:bg-gray-50 transition-colors"
+              className="flex flex-col items-center justify-center min-w-[60px] h-full hover:bg-gray-50 transition-colors"
             >
               {item.icon(active)}
               <span
-                className={`text-xs mt-1 ${
+                className={`text-[10px] mt-0.5 ${
                   active ? "text-primary-600 font-semibold" : "text-gray-600"
                 }`}
               >
