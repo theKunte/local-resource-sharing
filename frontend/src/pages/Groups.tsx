@@ -314,7 +314,7 @@ export default function Groups() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 pb-12">
+      <div className="max-w-6xl mx-auto px-4 pb-28">
         {/* Create Group Button */}
         <div className="mb-8 text-center">
           <button

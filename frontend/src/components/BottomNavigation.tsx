@@ -84,55 +84,64 @@ function BottomNavigation() {
   ];
 
   return (
-    <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 shadow-lg"
-      style={{
-        zIndex: 99999,
-        position: "fixed",
-        bottom: 0,
-        height: "56px",
-      }}
-    >
-      <div className="flex justify-between items-center h-14 px-4 max-w-md mx-auto">
-        {navItems.map((item) => {
-          const active = isActive(item.path);
+    <>
+      <style>{`
+        @media (min-width: 1024px) {
+          .mobile-bottom-nav {
+            display: none !important;
+          }
+        }
+      `}</style>
+      <nav
+        className="mobile-bottom-nav fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 shadow-lg"
+        style={{
+          zIndex: 99999,
+          position: "fixed",
+          bottom: 0,
+          height: "56px",
+        }}
+      >
+        <div className="flex justify-between items-center h-14 px-4 max-w-md mx-auto">
+          {navItems.map((item) => {
+            const active = isActive(item.path);
 
-          if (item.isSpecial) {
+            if (item.isSpecial) {
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="flex flex-col items-center justify-center -mt-6"
+                >
+                  <div className="bg-primary-600 rounded-full p-2.5 shadow-lg hover:bg-primary-700 transition-colors">
+                    {item.icon(active)}
+                  </div>
+                  <span className="text-[10px] mt-0.5 text-gray-600">
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            }
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className="flex flex-col items-center justify-center -mt-6"
+                className="flex flex-col items-center justify-center min-w-[60px] h-full hover:bg-gray-50 transition-colors"
               >
-                <div className="bg-primary-600 rounded-full p-2.5 shadow-lg hover:bg-primary-700 transition-colors">
-                  {item.icon(active)}
-                </div>
-                <span className="text-[10px] mt-0.5 text-gray-600">
+                {item.icon(active)}
+                <span
+                  className={`text-[10px] mt-0.5 ${
+                    active ? "text-primary-600 font-semibold" : "text-gray-600"
+                  }`}
+                >
                   {item.label}
                 </span>
               </Link>
             );
-          }
-
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="flex flex-col items-center justify-center min-w-[60px] h-full hover:bg-gray-50 transition-colors"
-            >
-              {item.icon(active)}
-              <span
-                className={`text-[10px] mt-0.5 ${
-                  active ? "text-primary-600 font-semibold" : "text-gray-600"
-                }`}
-              >
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
 
