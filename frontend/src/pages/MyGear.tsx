@@ -78,15 +78,18 @@ export default function MyGear() {
     if (!newTitle || newTitle.trim() === "") return;
     const newDescription = prompt("Edit description:", resource.description);
     if (!newDescription || newDescription.trim() === "") return;
-    
+
     try {
-      console.log("Updating resource:", resource.id, { title: newTitle, description: newDescription });
+      console.log("Updating resource:", resource.id, {
+        title: newTitle,
+        description: newDescription,
+      });
       const resp = await apiClient.put(`/api/resources/${resource.id}`, {
         title: newTitle.trim(),
         description: newDescription.trim(),
       });
       console.log("Update response:", resp.data);
-      
+
       setMyGear((prev) =>
         prev.map((g) => (g.id === resp.data.id ? { ...g, ...resp.data } : g))
       );
@@ -104,7 +107,12 @@ export default function MyGear() {
     }
   };
 
-  const handleManageGroups = (gear: { id: string; title: string; description: string; image?: string }) => {
+  const handleManageGroups = (gear: {
+    id: string;
+    title: string;
+    description: string;
+    image?: string;
+  }) => {
     setManageResourceId(gear.id);
     setShowManageModal(true);
   };
@@ -147,13 +155,13 @@ export default function MyGear() {
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="text-3xl font-bold text-success-600">
-              {myGear.filter((g) => g.status !== 'BORROWED').length}
+              {myGear.filter((g) => g.status !== "BORROWED").length}
             </div>
             <div className="text-gray-600 mt-1">Available</div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="text-3xl font-bold text-warning-600">
-              {myGear.filter((g) => g.status === 'BORROWED').length}
+              {myGear.filter((g) => g.status === "BORROWED").length}
             </div>
             <div className="text-gray-600 mt-1">Borrowed</div>
           </div>
