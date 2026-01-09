@@ -50,7 +50,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     "incoming"
   );
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "pending" | "active" | "returned"
+    "all" | "active" | "completed"
   >("all");
   const [incomingRequests, setIncomingRequests] = useState<BorrowRequest[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<BorrowRequest[]>([]);
@@ -346,55 +346,220 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     return (
       <div
         key={request.id}
-        className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+        className="bg-white border-2 border-gray-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden"
       >
-        <div className="flex gap-4 p-5">
-          {/* Resource Image */}
-          {request.resource.image && (
-            <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
-              <img
-                src={request.resource.image}
-                alt={request.resource.title}
-                className="w-full h-full object-contain"
-              />
+        {/* Status Banner */}
+        <div
+          className={`px-4 py-2 flex items-center justify-between ${
+            request.status === "PENDING"
+              ? "bg-amber-50 border-b-2 border-amber-200"
+              : request.status === "APPROVED" &&
+                request.loan?.status === "ACTIVE"
+              ? "bg-emerald-50 border-b-2 border-emerald-200"
+              : request.status === "APPROVED" &&
+                request.loan?.status === "RETURNED"
+              ? "bg-blue-50 border-b-2 border-blue-200"
+              : request.status === "REJECTED"
+              ? "bg-red-50 border-b-2 border-red-200"
+              : "bg-gray-50 border-b-2 border-gray-200"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {request.status === "PENDING" && (
+              <span className="text-sm font-semibold text-amber-900">
+                Pending Approval
+              </span>
+            )}
+            {request.status === "APPROVED" &&
+              request.loan?.status === "ACTIVE" && (
+                <span className="text-sm font-semibold text-emerald-900">
+                  Currently Borrowed
+                </span>
+              )}
+            {request.status === "APPROVED" &&
+              request.loan?.status === "RETURNED" && (
+                <span className="text-sm font-semibold text-blue-900">
+                  Returned
+                </span>
+              )}
+            {request.status === "REJECTED" && (
+              <span className="text-sm font-semibold text-red-900">
+                Declined
+              </span>
+            )}
+            {request.status === "CANCELLED" && (
+              <span className="text-sm font-semibold text-gray-900">
+                Cancelled
+              </span>
+            )}
+          </div>
+          <span className="text-xs text-gray-500">
+            {getTimeAgo(request.createdAt)}
+          </span>
+        </div>
+
+        <div className="p-5">
+          {/* Header with Image and Title */}
+          <div className="flex gap-4 mb-4">
+            {request.resource.image && (
+              <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                <img
+                  src={request.resource.image}
+                  alt={request.resource.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-gray-900 mb-1">
+                {request.resource.title}
+              </h3>
+              {request.resource.description && (
+                <p className="text-sm text-gray-600 line-clamp-2">
+                  {request.resource.description}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Info Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            {/* Person */}
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  {isOwner ? "Requested by" : "Owner"}
+                </p>
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {isOwner
+                    ? request.borrower.name || request.borrower.email
+                    : request.owner.name || request.owner.email}
+                </p>
+              </div>
+            </div>
+
+            {/* Group */}
+            {request.group && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                    Group
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {request.group.name}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Borrow Period */}
+            <div
+              className={`p-3 bg-gray-50 rounded-lg ${
+                !request.group ? "md:col-span-2" : ""
+              }`}
+            >
+              <div className="flex-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  Borrow Period
+                </p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {formatDate(request.startDate)}{" "}
+                  <span className="text-gray-400">→</span>{" "}
+                  {formatDate(request.endDate)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Message Bubble */}
+          {request.message && (
+            <div className="mb-4">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                Message
+              </p>
+              <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3">
+                <p className="text-sm text-gray-700 italic">
+                  "{request.message}"
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Request Details Table */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {request.resource.title}
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Requested {getTimeAgo(request.createdAt)}
+          {/* Return Status Banner */}
+          {request.loan?.status === "PENDING_RETURN_CONFIRMATION" && (
+            <div className="mb-4 bg-amber-50 border-l-4 border-amber-400 rounded-r-lg p-3">
+              <div className="flex items-center gap-2 text-amber-800">
+                <svg
+                  className="w-5 h-5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <p className="text-sm font-medium">
+                  {isOwner
+                    ? "Borrower says they've returned this. Please confirm."
+                    : "Return initiated. Waiting for owner confirmation."}
                 </p>
               </div>
-              {getStatusBadge(request.status)}
             </div>
+          )}
 
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-gray-100">
-                <tr>
-                  <td className="py-2 pr-4 text-gray-500 font-medium w-32">
-                    {isOwner ? "Requested by" : "Owner"}
-                  </td>
-                  <td className="py-2 text-gray-900">
-                    {isOwner
-                      ? request.borrower.name || request.borrower.email
-                      : request.owner.name || request.owner.email}
-                  </td>
-                </tr>
+          {/* Completed Return Banner */}
+          {request.status === "APPROVED" &&
+            request.loan?.status === "RETURNED" && (
+              <div className="mb-4 bg-emerald-50 border-l-4 border-emerald-400 rounded-r-lg p-3">
+                <div className="flex items-center gap-2 text-emerald-800">
+                  <svg
+                    className="w-5 h-5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      {isOwner
+                        ? "You confirmed this item was returned"
+                        : "Item successfully returned"}
+                    </p>
+                    {request.loan?.returnedDate && (
+                      <p className="text-xs text-emerald-600 mt-0.5">
+                        Returned on {formatDate(request.loan.returnedDate)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
-                {request.group && (
-                  <tr>
-                    <td className="py-2 pr-4 text-gray-500 font-medium">
-                      Group
-                    </td>
-                    <td className="py-2 text-gray-900 flex items-center gap-1.5">
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-2">
+            {isOwner && isPending && (
+              <>
+                <button
+                  onClick={() => handleAccept(request.id)}
+                  disabled={actionLoading === request.id}
+                  className="flex-1 min-w-[120px] bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {actionLoading === request.id ? (
+                    "Processing..."
+                  ) : (
+                    <>
                       <svg
-                        className="w-3.5 h-3.5 flex-shrink-0 text-gray-400"
+                        className="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -403,269 +568,201 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                          d="M5 13l4 4L19 7"
                         />
                       </svg>
-                      {request.group.name}
-                    </td>
-                  </tr>
-                )}
+                      Accept
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => handleDecline(request.id)}
+                  disabled={actionLoading === request.id}
+                  className="flex-1 min-w-[120px] bg-white border-2 border-red-200 hover:bg-red-50 text-red-700 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                  Decline
+                </button>
+              </>
+            )}
 
-                <tr>
-                  <td className="py-2 pr-4 text-gray-500 font-medium">Dates</td>
-                  <td className="py-2 text-gray-900 flex items-center gap-1.5">
+            {!isOwner && isPending && (
+              <>
+                <button
+                  onClick={() => handleEdit(request)}
+                  disabled={actionLoading === request.id}
+                  className="flex-1 min-w-[120px] bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleCancel(request.id)}
+                  disabled={actionLoading === request.id}
+                  className="flex-1 min-w-[120px] bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {actionLoading === request.id ? "Cancelling..." : "Cancel"}
+                </button>
+              </>
+            )}
+
+            {/* Delete button for rejected/cancelled requests */}
+            {(request.status === "REJECTED" ||
+              request.status === "CANCELLED") && (
+              <button
+                onClick={() => handleDelete(request.id)}
+                disabled={actionLoading === request.id}
+                className="flex-1 bg-white border-2 border-red-200 hover:bg-red-50 text-red-700 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {actionLoading === request.id ? (
+                  <span className="flex items-center justify-center gap-2">
                     <svg
-                      className="w-3.5 h-3.5 flex-shrink-0 text-gray-400"
+                      className="animate-spin h-4 w-4"
                       fill="none"
-                      stroke="currentColor"
                       viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Deleting...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                       />
                     </svg>
-                    {formatDate(request.startDate)} -{" "}
-                    {formatDate(request.endDate)}
-                  </td>
-                </tr>
-
-                {request.message && (
-                  <tr>
-                    <td className="py-2 pr-4 text-gray-500 font-medium align-top">
-                      Message
-                    </td>
-                    <td className="py-2">
-                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-sm text-gray-700 italic">
-                          "{request.message}"
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
+                    Remove Request
+                  </span>
                 )}
-              </tbody>
-            </table>
+              </button>
+            )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-2 mt-4">
-              {isOwner && isPending && (
-                <>
-                  <button
-                    onClick={() => handleAccept(request.id)}
-                    disabled={actionLoading === request.id}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {actionLoading === request.id ? "Processing..." : "Accept"}
-                  </button>
-                  <button
-                    onClick={() => handleDecline(request.id)}
-                    disabled={actionLoading === request.id}
-                    className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Decline
-                  </button>
-                </>
-              )}
-
-              {!isOwner && isPending && (
-                <>
-                  <button
-                    onClick={() => handleEdit(request)}
-                    disabled={actionLoading === request.id}
-                    className="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleCancel(request.id)}
-                    disabled={actionLoading === request.id}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {actionLoading === request.id ? "Cancelling..." : "Cancel"}
-                  </button>
-                </>
-              )}
-
-              {/* Delete button for rejected/cancelled requests (both owner and borrower) */}
-              {(request.status === "REJECTED" ||
-                request.status === "CANCELLED") && (
+            {/* Borrower: Return button for active loans */}
+            {!isOwner &&
+              request.status === "APPROVED" &&
+              request.loan?.status === "ACTIVE" && (
                 <button
-                  onClick={() => handleDelete(request.id)}
+                  onClick={() => handleInitiateReturn(request.loan!.id)}
                   disabled={actionLoading === request.id}
-                  className="flex-1 bg-danger-100 hover:bg-danger-200 text-danger-700 text-sm font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {actionLoading === request.id ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg
-                        className="animate-spin h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Deleting...
-                    </span>
+                    "Processing..."
                   ) : (
-                    <span className="flex items-center justify-center gap-2">
+                    <>
                       <svg
                         className="w-4 h-4"
                         fill="none"
-                        viewBox="0 0 24 24"
                         stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
                         />
                       </svg>
-                      Remove Request
-                    </span>
+                      I've Returned This
+                    </>
                   )}
                 </button>
               )}
 
-              {/* Borrower: "I've Returned This" button for active loans */}
-              {!isOwner &&
-                request.status === "APPROVED" &&
-                request.loan?.status === "ACTIVE" && (
-                  <button
-                    onClick={() => handleInitiateReturn(request.loan!.id)}
-                    disabled={actionLoading === request.id}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {actionLoading === request.id
-                      ? "Processing..."
-                      : "I've Returned This"}
-                  </button>
-                )}
-
-              {/* Owner: "Confirm Return" button for pending return confirmation */}
-              {isOwner &&
-                request.status === "APPROVED" &&
-                request.loan?.status === "PENDING_RETURN_CONFIRMATION" && (
-                  <button
-                    onClick={() =>
-                      handleConfirmReturn(request.loan!.id, request.id)
-                    }
-                    disabled={actionLoading === request.id}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {actionLoading === request.id
-                      ? "Processing..."
-                      : "Confirm Return"}
-                  </button>
-                )}
-
-              {/* Show pending return status */}
-              {request.loan?.status === "PENDING_RETURN_CONFIRMATION" && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-amber-700 font-medium text-sm">
-                    <svg
-                      className="w-4 h-4 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span>
-                      {isOwner
-                        ? "Borrower says they've returned this. Please confirm."
-                        : "Return initiated. Waiting for owner confirmation."}
-                    </span>
-                  </div>
-                </div>
+            {/* Owner: Confirm Return button */}
+            {isOwner &&
+              request.status === "APPROVED" &&
+              request.loan?.status === "PENDING_RETURN_CONFIRMATION" && (
+                <button
+                  onClick={() =>
+                    handleConfirmReturn(request.loan!.id, request.id)
+                  }
+                  disabled={actionLoading === request.id}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {actionLoading === request.id ? (
+                    "Processing..."
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      Confirm Return
+                    </>
+                  )}
+                </button>
               )}
 
-              {/* Legacy: Mark as Returned button (remove after migration) */}
-              {isOwner &&
-                request.status === "APPROVED" &&
-                request.loan?.status === "ACTIVE" && (
-                  <button
-                    onClick={() => handleMarkReturned(request.id)}
-                    disabled={actionLoading === request.id}
-                    className="flex-1 bg-gray-400 hover:bg-gray-500 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed opacity-60"
-                    title="Legacy: Ask borrower to use 'I've Returned This' instead"
-                  >
-                    {actionLoading === request.id
-                      ? "Processing..."
-                      : "Mark as Returned (Legacy)"}
-                  </button>
-                )}
-
-              {!isActionable && request.status !== "PENDING" && (
-                <div className="text-sm py-2">
-                  {request.status === "APPROVED" &&
-                    request.loan?.status === "RETURNED" && (
-                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                        <div className="flex items-center gap-2 text-emerald-700 font-medium">
-                          <svg
-                            className="w-4 h-4 flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          <span>
-                            {isOwner
-                              ? "You confirmed this item was returned"
-                              : "Item successfully returned"}
-                          </span>
-                        </div>
-                        {request.loan?.returnedDate && (
-                          <div className="text-emerald-600 text-xs mt-1 ml-7">
-                            Returned on {formatDate(request.loan.returnedDate)}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  {request.status === "APPROVED" &&
-                    request.loan?.status !== "RETURNED" && (
-                      <div className="text-gray-500">
-                        This request has been approved
-                      </div>
-                    )}
-                  {request.status === "REJECTED" && (
-                    <div className="text-gray-500">
-                      This request was declined
-                    </div>
-                  )}
-                  {request.status === "CANCELLED" && (
-                    <div className="text-gray-500">
-                      This request was cancelled
-                    </div>
-                  )}
-                </div>
+            {/* Legacy: Mark as Returned */}
+            {isOwner &&
+              request.status === "APPROVED" &&
+              request.loan?.status === "ACTIVE" && (
+                <button
+                  onClick={() => handleMarkReturned(request.id)}
+                  disabled={actionLoading === request.id}
+                  className="flex-1 bg-gray-400 hover:bg-gray-500 text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed opacity-60"
+                  title="Legacy: Ask borrower to use 'I've Returned This' instead"
+                >
+                  {actionLoading === request.id
+                    ? "Processing..."
+                    : "Mark as Returned (Legacy)"}
+                </button>
               )}
-            </div>
           </div>
         </div>
       </div>
@@ -679,10 +776,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const filteredRequests = Array.isArray(currentRequests)
     ? currentRequests.filter((r) => {
         if (statusFilter === "all") return true;
-        if (statusFilter === "pending") return r.status === "PENDING";
         if (statusFilter === "active")
           return r.status === "APPROVED" && r.loan?.status === "ACTIVE";
-        if (statusFilter === "returned")
+        if (statusFilter === "completed")
           return r.status === "APPROVED" && r.loan?.status === "RETURNED";
         return true;
       })
@@ -710,130 +806,244 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       ).length
     : 0;
 
+  // Get pending incoming requests that need approval
+  const pendingApprovals = Array.isArray(incomingRequests)
+    ? incomingRequests.filter((r) => r.status === "PENDING")
+    : [];
+
   return (
     <div className="w-full">
-      {/* Quick Stats Cards - Compact View */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {/* Pending Card */}
-        <button
-          onClick={() =>
-            setStatusFilter(statusFilter === "pending" ? "all" : "pending")
-          }
-          className={`rounded-lg p-3 transition-all transform hover:scale-105 cursor-pointer ${
-            statusFilter === "pending"
-              ? "bg-yellow-100 border-2 border-yellow-400 shadow-lg"
-              : "bg-yellow-50 border border-yellow-200 hover:shadow-md"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="text-left">
-              <p className="text-xs font-medium text-yellow-800">Pending</p>
-              <p className="text-xl font-bold text-yellow-900">
-                {activeTab === "incoming"
-                  ? incomingRequests.filter((r) => r.status === "PENDING")
-                      .length
-                  : outgoingRequests.filter((r) => r.status === "PENDING")
-                      .length}
+      {/* Action Required Section - Only show if there are pending approvals */}
+      {pendingApprovals.length > 0 && (
+        <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <svg
+                className="w-6 h-6 text-amber-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-amber-900">
+                Requires Your Approval
+              </h3>
+              <p className="text-sm text-amber-700">
+                {pendingApprovals.length}{" "}
+                {pendingApprovals.length === 1 ? "request" : "requests"} waiting
+                for your response
               </p>
             </div>
-            <svg
-              className="w-5 h-5 text-yellow-600 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <button
+              onClick={() => {
+                setActiveTab("incoming");
+                setStatusFilter("all");
+              }}
+              className="px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+              Review {pendingApprovals.length > 3 ? "All" : ""}
+            </button>
           </div>
+
+          {/* Show first 3 pending requests as preview */}
+          <div className="grid gap-3">
+            {pendingApprovals.slice(0, 3).map((request) => (
+              <div
+                key={request.id}
+                className="bg-white rounded-lg p-4 border border-amber-200 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-gray-900">
+                        {request.resource.title}
+                      </h4>
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                        Pending
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">
+                      <span className="font-medium">
+                        {request.borrower.name || request.borrower.email}
+                      </span>{" "}
+                      wants to borrow this
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(request.startDate).toLocaleDateString()} -{" "}
+                      {new Date(request.endDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleAccept(request.id)}
+                      disabled={actionLoading === request.id}
+                      className="px-3 py-1.5 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleDecline(request.id)}
+                      disabled={actionLoading === request.id}
+                      className="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 transition-colors disabled:opacity-50"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {pendingApprovals.length > 3 && (
+            <p className="text-center text-sm text-amber-700 mt-3">
+              + {pendingApprovals.length - 3} more{" "}
+              {pendingApprovals.length - 3 === 1 ? "request" : "requests"}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Tab Navigation - Lending/Borrowing */}
+      <div className="bg-gray-100 rounded-lg p-1 mb-4 inline-flex gap-1 max-w-md mx-auto">
+        <button
+          onClick={() => setActiveTab("incoming")}
+          className={`flex-1 py-2 px-3 text-sm font-semibold rounded-md transition-all duration-200 relative flex items-center justify-center gap-2 ${
+            activeTab === "incoming"
+              ? "bg-primary-600 text-white shadow-sm"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
+          }`}
+        >
+          <span>Lending Out</span>
+          {pendingApprovals.length > 0 && (
+            <span
+              className={`inline-flex items-center justify-center min-w-[18px] h-4 px-1.5 text-xs font-bold rounded-full ${
+                activeTab === "incoming"
+                  ? "bg-white text-primary-600"
+                  : "bg-amber-500 text-white"
+              }`}
+            >
+              {pendingApprovals.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("outgoing")}
+          className={`flex-1 py-2 px-3 text-sm font-semibold rounded-md transition-all duration-200 relative flex items-center justify-center gap-2 ${
+            activeTab === "outgoing"
+              ? "bg-primary-600 text-white shadow-sm"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
+          }`}
+        >
+          <span>Borrowing</span>
+          {Array.isArray(outgoingRequests) &&
+            outgoingRequests.filter((r) => r.status === "PENDING").length >
+              0 && (
+              <span
+                className={`inline-flex items-center justify-center min-w-[18px] h-4 px-1.5 text-xs font-bold rounded-full ${
+                  activeTab === "outgoing"
+                    ? "bg-white text-primary-600"
+                    : "bg-primary-600 text-white"
+                }`}
+              >
+                {outgoingRequests.filter((r) => r.status === "PENDING").length}
+              </span>
+            )}
+        </button>
+      </div>
+
+      {/* Status Filters - Simplified */}
+      <div className="bg-gray-100 rounded-lg p-1 mb-6 inline-flex gap-1 max-w-2xl mx-auto w-full">
+        {/* All */}
+        <button
+          onClick={() => setStatusFilter("all")}
+          className={`flex-1 py-2 px-3 text-sm font-semibold rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+            statusFilter === "all"
+              ? "bg-primary-600 text-white shadow-sm"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
+          }`}
+        >
+          <span>All</span>
         </button>
 
-        {/* Active Loans Card */}
+        {/* Active */}
         <button
           onClick={() =>
             setStatusFilter(statusFilter === "active" ? "all" : "active")
           }
-          className={`rounded-lg p-3 transition-all transform hover:scale-105 cursor-pointer ${
+          className={`flex-1 py-2 px-3 text-sm font-semibold rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
             statusFilter === "active"
-              ? "bg-blue-100 border-2 border-blue-400 shadow-lg"
-              : "bg-blue-50 border border-blue-200 hover:shadow-md"
+              ? "bg-primary-600 text-white shadow-sm"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
           }`}
         >
-          <div className="flex items-center justify-between">
-            <div className="text-left">
-              <p className="text-xs font-medium text-blue-800">Active</p>
-              <p className="text-xl font-bold text-blue-900">
-                {activeTab === "incoming"
-                  ? incomingRequests.filter(
-                      (r) =>
-                        r.status === "APPROVED" && r.loan?.status === "ACTIVE"
-                    ).length
-                  : outgoingRequests.filter(
-                      (r) =>
-                        r.status === "APPROVED" && r.loan?.status === "ACTIVE"
-                    ).length}
-              </p>
-            </div>
-            <svg
-              className="w-5 h-5 text-blue-600 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
+          <span>Active</span>
+          <span
+            className={`inline-flex items-center justify-center min-w-[18px] h-4 px-1.5 text-xs font-bold rounded-full ${
+              statusFilter === "active"
+                ? "bg-white text-primary-600"
+                : "bg-primary-600 text-white"
+            }`}
+          >
+            {activeTab === "incoming"
+              ? incomingRequests.filter(
+                  (r) => r.status === "APPROVED" && r.loan?.status === "ACTIVE"
+                ).length
+              : outgoingRequests.filter(
+                  (r) => r.status === "APPROVED" && r.loan?.status === "ACTIVE"
+                ).length}
+          </span>
         </button>
 
-        {/* Returned Card */}
+        {/* Completed */}
         <button
           onClick={() =>
-            setStatusFilter(statusFilter === "returned" ? "all" : "returned")
+            setStatusFilter(statusFilter === "completed" ? "all" : "completed")
           }
-          className={`rounded-lg p-3 transition-all transform hover:scale-105 cursor-pointer ${
-            statusFilter === "returned"
-              ? "bg-green-100 border-2 border-green-400 shadow-lg"
-              : "bg-green-50 border border-green-200 hover:shadow-md"
+          className={`flex-1 py-2 px-3 text-sm font-semibold rounded-md transition-all duration-200 flex items-center justify-center gap-2 ${
+            statusFilter === "completed"
+              ? "bg-primary-600 text-white shadow-sm"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
           }`}
         >
-          <div className="flex items-center justify-between">
-            <div className="text-left">
-              <p className="text-xs font-medium text-green-800">Returned</p>
-              <p className="text-xl font-bold text-green-900">
-                {activeTab === "incoming"
-                  ? incomingRequests.filter(
-                      (r) =>
-                        r.status === "APPROVED" && r.loan?.status === "RETURNED"
-                    ).length
-                  : outgoingRequests.filter(
-                      (r) =>
-                        r.status === "APPROVED" && r.loan?.status === "RETURNED"
-                    ).length}
-              </p>
-            </div>
-            <svg
-              className="w-5 h-5 text-green-600 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          <span>Completed</span>
+          <span
+            className={`inline-flex items-center justify-center min-w-[18px] h-4 px-1.5 text-xs font-bold rounded-full ${
+              statusFilter === "completed"
+                ? "bg-white text-primary-600"
+                : "bg-primary-600 text-white"
+            }`}
+          >
+            {activeTab === "incoming"
+              ? incomingRequests.filter(
+                  (r) =>
+                    r.status === "APPROVED" && r.loan?.status === "RETURNED"
+                ).length
+              : outgoingRequests.filter(
+                  (r) =>
+                    r.status === "APPROVED" && r.loan?.status === "RETURNED"
+                ).length}
+          </span>
         </button>
       </div>
 
@@ -914,44 +1124,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
           </div>
         </div>
       )}
-
-      {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 mb-6">
-        <button
-          onClick={() => setActiveTab("incoming")}
-          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
-            activeTab === "incoming"
-              ? "text-emerald-600 border-b-2 border-emerald-600"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Incoming Requests
-          {Array.isArray(incomingRequests) &&
-            incomingRequests.filter((r) => r.status === "PENDING").length >
-              0 && (
-              <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-emerald-600 rounded-full">
-                {incomingRequests.filter((r) => r.status === "PENDING").length}
-              </span>
-            )}
-        </button>
-        <button
-          onClick={() => setActiveTab("outgoing")}
-          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors relative ${
-            activeTab === "outgoing"
-              ? "text-emerald-600 border-b-2 border-emerald-600"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          My Requests
-          {Array.isArray(outgoingRequests) &&
-            outgoingRequests.filter((r) => r.status === "PENDING").length >
-              0 && (
-              <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-yellow-500 rounded-full">
-                {outgoingRequests.filter((r) => r.status === "PENDING").length}
-              </span>
-            )}
-        </button>
-      </div>
 
       {/* Content */}
       {error ? (
