@@ -75,16 +75,20 @@ export default function MyGear() {
 
   const handleEditResource = async (resource: Gear) => {
     const newTitle = prompt("Edit title:", resource.title);
-    if (!newTitle) return;
+    if (!newTitle || newTitle.trim() === "") return;
     const newDescription = prompt("Edit description:", resource.description);
-    if (!newDescription) return;
+    if (!newDescription || newDescription.trim() === "") return;
+    
     try {
+      console.log("Updating resource:", resource.id, { title: newTitle, description: newDescription });
       const resp = await apiClient.put(`/api/resources/${resource.id}`, {
-        title: newTitle,
-        description: newDescription,
+        title: newTitle.trim(),
+        description: newDescription.trim(),
       });
+      console.log("Update response:", resp.data);
+      
       setMyGear((prev) =>
-        prev.map((g) => (g.id === resp.data.id ? resp.data : g))
+        prev.map((g) => (g.id === resp.data.id ? { ...g, ...resp.data } : g))
       );
       window.dispatchEvent(
         new CustomEvent("resource:updated", {
@@ -100,8 +104,8 @@ export default function MyGear() {
     }
   };
 
-  const handleManageGroups = (resourceId: string) => {
-    setManageResourceId(resourceId);
+  const handleManageGroups = (gear: { id: string; title: string; description: string; image?: string }) => {
+    setManageResourceId(gear.id);
     setShowManageModal(true);
   };
 
@@ -117,7 +121,7 @@ export default function MyGear() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Gear</h1>
@@ -143,13 +147,13 @@ export default function MyGear() {
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="text-3xl font-bold text-success-600">
-              {myGear.filter((g) => g.isAvailable).length}
+              {myGear.filter((g) => g.status !== 'BORROWED').length}
             </div>
             <div className="text-gray-600 mt-1">Available</div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="text-3xl font-bold text-warning-600">
-              {myGear.filter((g) => !g.isAvailable).length}
+              {myGear.filter((g) => g.status === 'BORROWED').length}
             </div>
             <div className="text-gray-600 mt-1">Borrowed</div>
           </div>
@@ -198,12 +202,29 @@ export default function MyGear() {
         )}
 
         {/* Manage Groups Modal */}
-        {showManageModal && manageResourceId && (
+        {showManageModal && manageResourceId && user && (
           <ManageGroupsModal
+            open={showManageModal}
+            userId={user.uid}
             resourceId={manageResourceId}
             onClose={() => {
               setShowManageModal(false);
               setManageResourceId(null);
+            }}
+            onSaved={async () => {
+              // Reload gear after group changes
+              if (!user) return;
+              setLoadingGear(true);
+              try {
+                const res = await apiClient.get(
+                  `/api/resources?ownerId=${encodeURIComponent(user.uid)}`
+                );
+                setMyGear(res.data);
+              } catch (error) {
+                console.error("Error reloading gear:", error);
+              } finally {
+                setLoadingGear(false);
+              }
             }}
           />
         )}

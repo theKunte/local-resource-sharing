@@ -29,71 +29,12 @@ export default function Home() {
     }
   }, [user]);
 
-  // Delete a resource (only owner can)
-  const handleDeleteResource = async (resourceId: string) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
-    try {
-      await apiClient.delete(`/api/resources/${resourceId}`, {
-        data: { userId: user?.uid },
-      });
-      // remove from list
-      setCommunityGear((prev) => prev.filter((g) => g.id !== resourceId));
-      try {
-        window.dispatchEvent(
-          new CustomEvent("resource:deleted", { detail: { id: resourceId } })
-        );
-      } catch (_err) {
-        console.debug("[Home] dispatch resource:deleted failed", _err);
-      }
-      setStatusMessage("Resource deleted");
-      setTimeout(() => setStatusMessage(null), 3500);
-    } catch (error) {
-      console.error("Error deleting resource:", error);
-      setStatusMessage("Failed to delete resource");
-      setTimeout(() => setStatusMessage(null), 3500);
-    }
-  };
-
-  // Edit a resource (simple prompt-based flow)
-  const handleEditResource = async (resource: Gear) => {
-    const newTitle = prompt("Edit title:", resource.title);
-    if (!newTitle) return;
-    const newDescription = prompt("Edit description:", resource.description);
-    if (!newDescription) return;
-    try {
-      const resp = await apiClient.put(`/api/resources/${resource.id}`, {
-        title: newTitle,
-        description: newDescription,
-      });
-      // update local list
-      setCommunityGear((prev) =>
-        prev.map((g) => (g.id === resp.data.id ? resp.data : g))
-      );
-      try {
-        window.dispatchEvent(
-          new CustomEvent("resource:updated", {
-            detail: { resource: resp.data },
-          })
-        );
-      } catch (_err) {
-        console.debug("[Home] dispatch resource:updated failed", _err);
-      }
-      setStatusMessage("Resource updated");
-      setTimeout(() => setStatusMessage(null), 3500);
-    } catch (error) {
-      console.error("Error updating resource:", error);
-      setStatusMessage("Failed to update resource");
-      setTimeout(() => setStatusMessage(null), 3500);
-    }
-  };
-
   // Listen for resource change events (delete/update) coming from other pages
   useEffect(() => {
     const onDeleted = (e: Event) => {
       const ce = e as CustomEvent<{ id: string }>;
       const id = ce?.detail?.id;
       if (!id) return;
-      setMyGear((prev) => prev.filter((g) => g.id !== id));
       setCommunityGear((prev) => prev.filter((g) => g.id !== id));
     };
 
@@ -101,7 +42,6 @@ export default function Home() {
       const ce = e as CustomEvent<{ resource: Gear }>;
       const r = ce?.detail?.resource;
       if (!r) return;
-      setMyGear((prev) => prev.map((g) => (g.id === r.id ? r : g)));
       setCommunityGear((prev) => prev.map((g) => (g.id === r.id ? r : g)));
     };
 
@@ -192,7 +132,7 @@ export default function Home() {
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="max-w-4xl mx-auto px-4 py-6 pb-28">
           {/* Community Gear Section */}
           <section>
             <div className="flex items-center justify-between mb-4">
@@ -274,25 +214,17 @@ export default function Home() {
             setManageResourceId(null);
           }}
           onSaved={async () => {
-            // reload lists
+            // reload community gear
             if (!user) return;
-            setLoadingMyGear(true);
             setLoadingCommunityGear(true);
             try {
-              const [myRes, communityRes] = await Promise.all([
-                apiClient.get(
-                  `/api/resources?ownerId=${encodeURIComponent(user.uid)}`
-                ),
-                apiClient.get(
-                  `/api/resources?user=${encodeURIComponent(user.uid)}`
-                ),
-              ]);
-              setMyGear(myRes.data);
-              setCommunityGear(communityRes.data);
+              const res = await apiClient.get(
+                `/api/resources?user=${encodeURIComponent(user.uid)}`
+              );
+              setCommunityGear(res.data);
             } catch (_err) {
               console.error(_err);
             } finally {
-              setLoadingMyGear(false);
               setLoadingCommunityGear(false);
             }
           }}

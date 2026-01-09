@@ -161,7 +161,7 @@ export default function PostResource() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 pb-12">
+      <div className="max-w-4xl mx-auto px-4 pb-28">
         {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-4 text-sm font-medium">

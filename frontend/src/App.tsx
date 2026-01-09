@@ -34,7 +34,7 @@ function App() {
       {showWarning && (
         <SessionWarning onExtend={extendSession} onSignOut={logout} />
       )}
-      <main className="flex-1 pb-16 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
         <Routes>
           <Route path="/" element={user ? <Home /> : <Landing />} />
           <Route path="/my-gear" element={<MyGear />} />
