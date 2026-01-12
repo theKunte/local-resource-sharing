@@ -1,6 +1,10 @@
 // Firebase config and initialization
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  getAuth,
+  setPersistence,
+  browserSessionPersistence,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -27,3 +31,8 @@ if (!firebaseConfig.apiKey) {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+// Set session-only persistence (clears on browser close)
+setPersistence(auth, browserSessionPersistence).catch((error) => {
+  console.error("Error setting auth persistence:", error);
+});

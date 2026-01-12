@@ -356,7 +356,7 @@ export default function GroupDetail() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8 pb-48 lg:pb-8">
         {/* Header */}
         <div className="mb-8">
           <Link
@@ -577,7 +577,7 @@ export default function GroupDetail() {
                   </Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6 mb-32">
                   {group.resources.map(({ resource }) => (
                     <div key={resource.id} className="relative">
                       <GearCard

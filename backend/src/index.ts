@@ -303,14 +303,23 @@ app.put("/api/resources/:id", authenticateToken, async (req, res) => {
   const { title, description } = req.body;
   const authenticatedUserId = (req as any).user.uid;
 
-  // Validate input
-  const validation = validateResourceInput({
-    title,
-    description,
-    ownerId: authenticatedUserId,
-  });
-  if (!validation.valid) {
-    return res.status(400).json({ error: validation.errors.join(", ") });
+  // Validate input (only title and description for updates)
+  const errors: string[] = [];
+  if (!title || title.trim().length < 3) {
+    errors.push("Title must be at least 3 characters");
+  }
+  if (title && title.length > 200) {
+    errors.push("Title must be less than 200 characters");
+  }
+  if (!description || description.trim().length < 10) {
+    errors.push("Description must be at least 10 characters");
+  }
+  if (description && description.length > 2000) {
+    errors.push("Description must be less than 2000 characters");
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({ error: errors.join(", ") });
   }
 
   try {
@@ -336,6 +345,22 @@ app.put("/api/resources/:id", authenticateToken, async (req, res) => {
         ownerId: true,
         status: true,
         currentLoanId: true,
+        currentLoan: {
+          select: {
+            id: true,
+            status: true,
+            startDate: true,
+            endDate: true,
+            returnedDate: true,
+            borrower: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
     res.json(updated);

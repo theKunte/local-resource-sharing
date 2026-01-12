@@ -1,8 +1,16 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 
 function Header() {
-  const { user } = useFirebaseAuth();
+  const { user, signOutUser } = useFirebaseAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    if (window.confirm("Are you sure you want to log out?")) {
+      await signOutUser();
+      navigate("/");
+    }
+  };
 
   return (
     <>
@@ -69,9 +77,9 @@ function Header() {
               </div>
             )}
 
-            {/* User Avatar */}
+            {/* User Avatar and Logout */}
             {user && (
-              <div className="flex items-center">
+              <div className="flex items-center gap-3">
                 {user.photoURL && (
                   <img
                     src={user.photoURL}
@@ -79,6 +87,13 @@ function Header() {
                     className="w-8 h-8 rounded-full border-2 border-white/30 object-cover"
                   />
                 )}
+                <button
+                  onClick={handleLogout}
+                  className="text-white/90 hover:text-white hover:bg-white/15 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                  title="Log out"
+                >
+                  Logout
+                </button>
               </div>
             )}
           </div>
