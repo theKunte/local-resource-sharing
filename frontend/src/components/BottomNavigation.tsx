@@ -93,15 +93,15 @@ function BottomNavigation() {
         }
       `}</style>
       <nav
-        className="mobile-bottom-nav fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 shadow-lg"
+        className="mobile-bottom-nav fixed bottom-0 left-0 right-0 w-full bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg"
         style={{
           zIndex: 99999,
           position: "fixed",
           bottom: 0,
-          height: "56px",
+          height: "48px",
         }}
       >
-        <div className="flex justify-between items-center h-14 px-4 max-w-md mx-auto">
+        <div className="flex justify-between items-center h-12 px-3 max-w-md mx-auto">
           {navItems.map((item) => {
             const active = isActive(item.path);
 
@@ -110,12 +110,12 @@ function BottomNavigation() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className="flex flex-col items-center justify-center -mt-6"
+                  className="flex flex-col items-center justify-center -mt-4"
                 >
-                  <div className="bg-primary-600 rounded-full p-2.5 shadow-lg hover:bg-primary-700 transition-colors">
+                  <div className="bg-primary-600 rounded-full p-2 shadow-lg hover:bg-primary-700 transition-colors">
                     {item.icon(active)}
                   </div>
-                  <span className="text-[10px] mt-0.5 text-gray-600">
+                  <span className="text-[9px] mt-0.5 text-gray-600">
                     {item.label}
                   </span>
                 </Link>
@@ -126,11 +126,11 @@ function BottomNavigation() {
               <Link
                 key={item.path}
                 to={item.path}
-                className="flex flex-col items-center justify-center min-w-[60px] h-full hover:bg-gray-50 transition-colors"
+                className="flex flex-col items-center justify-center min-w-[56px] h-full hover:bg-gray-50 transition-colors"
               >
                 {item.icon(active)}
                 <span
-                  className={`text-[10px] mt-0.5 ${
+                  className={`text-[9px] mt-0.5 ${
                     active ? "text-primary-600 font-semibold" : "text-gray-600"
                   }`}
                 >

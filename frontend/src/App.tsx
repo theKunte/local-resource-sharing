@@ -30,22 +30,24 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Header />
-      {showWarning && (
-        <SessionWarning onExtend={extendSession} onSignOut={logout} />
-      )}
-      <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-        <Routes>
-          <Route path="/" element={user ? <Home /> : <Landing />} />
-          <Route path="/my-gear" element={<MyGear />} />
-          <Route path="/post" element={<PostResource />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/groups" element={<Groups />} />
-          <Route path="/groups/:groupId" element={<GroupDetail />} />
-          <Route path="/requests" element={<Requests />} />
-        </Routes>
-      </main>
-      <BottomNavigation />
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        {showWarning && (
+          <SessionWarning onExtend={extendSession} onSignOut={logout} />
+        )}
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={user ? <Home /> : <Landing />} />
+            <Route path="/my-gear" element={<MyGear />} />
+            <Route path="/post" element={<PostResource />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/groups" element={<Groups />} />
+            <Route path="/groups/:groupId" element={<GroupDetail />} />
+            <Route path="/requests" element={<Requests />} />
+          </Routes>
+        </main>
+        <BottomNavigation />
+      </div>
     </BrowserRouter>
   );
 }
