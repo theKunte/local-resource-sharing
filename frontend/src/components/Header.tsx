@@ -29,16 +29,20 @@ function Header() {
           <div className="flex items-center justify-between">
             {/* Logo and App Name */}
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0">
                 <svg
                   className="w-5 h-5 fill-primary-600"
+                  width="20"
+                  height="20"
                   viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V7.3l7-3.11v8.8z" />
                 </svg>
               </div>
-              <span className="text-lg font-bold">GearShare</span>
+              <span className="text-lg font-bold whitespace-nowrap">
+                GearShare
+              </span>
             </Link>
 
             {/* Desktop Navigation - Hidden on mobile */}
