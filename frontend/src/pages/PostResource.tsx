@@ -3,13 +3,8 @@ import apiClient from "../utils/apiClient";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
 import { cropImageToSquare } from "../utils/cropImageToSquare";
-
-interface Group {
-  id: string;
-  name: string;
-  memberCount: number;
-  userRole: string;
-}
+import type { Group, CreateResourceRequest } from "../types/api.types";
+import { getErrorMessage, logError } from "../utils/errorHandler";
 
 export default function PostResource() {
   const [title, setTitle] = useState("");
@@ -46,7 +41,7 @@ export default function PostResource() {
         });
         setSelectedGroups(allGroupIds);
       } catch (error) {
-        console.error("Error loading groups:", error);
+        logError("PostResource - loadGroups", error);
       } finally {
         setLoadingGroups(false);
       }
@@ -76,7 +71,7 @@ export default function PostResource() {
     // Validate image is required
     if (!image) {
       alert(
-        "Please upload an image of your item. Photos help build trust and make your item more likely to be borrowed."
+        "Please upload an image of your item. Photos help build trust and make your item more likely to be borrowed.",
       );
       return;
     }
@@ -90,14 +85,17 @@ export default function PostResource() {
       }
 
       // Create the resource
-      const resourceResponse = await apiClient.post("/api/resources", {
+      const resourceData: CreateResourceRequest = {
         title,
         description,
-        image: imageData,
+        image: imageData!,
         ownerId: user.uid,
-        email: user.email,
-        name: user.displayName,
-      });
+      };
+
+      const resourceResponse = await apiClient.post(
+        "/api/resources",
+        resourceData,
+      );
 
       const newResource = resourceResponse.data;
 
@@ -111,7 +109,7 @@ export default function PostResource() {
           });
         }
       } catch (groupError) {
-        console.warn("Could not share with groups:", groupError);
+        logError("PostResource - share with groups", groupError);
         // Don't fail the whole operation if group sharing fails
       }
       setTitle("");
@@ -125,17 +123,9 @@ export default function PostResource() {
 
       // Navigate to profile to see the shared gear
       navigate("/profile");
-    } catch (error: any) {
-      console.error("Error sharing gear:", error);
-      console.error("Error response:", error.response);
-
-      // Display specific error message from backend
-      const errorMessage =
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        "Oops! Something went wrong while sharing your gear. Please try again.";
-
-      alert(errorMessage);
+    } catch (error) {
+      logError("PostResource - handleSubmit", error);
+      alert(getErrorMessage(error));
     } finally {
       setSubmitting(false);
     }

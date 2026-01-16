@@ -1,54 +1,214 @@
-# React + TypeScript + Vite
+# Local Resource Sharing Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A community-based gear sharing platform built with React, TypeScript, and Firebase. Share equipment, tools, and resources within trusted groups of friends and neighbors.
 
-Currently, two official plugins are available:
+## 🌟 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **User Authentication**: Secure Firebase authentication
+- **Group Management**: Create and manage trusted sharing groups
+- **Resource Sharing**: List gear and share with specific groups
+- **Borrow Requests**: Request to borrow items with date ranges
+- **Request Dashboard**: Manage incoming and outgoing borrow requests
+- **Real-time Updates**: Live status updates across the app
+- **Responsive Design**: Mobile-first design with Tailwind CSS
 
-## Expanding the ESLint configuration
+## 🏗️ Architecture
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Frontend
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+- **React 19** with TypeScript
+- **Vite** for build tooling
+- **Tailwind CSS** for styling
+- **React Router** for navigation
+- **Firebase** for authentication
+- **Axios** for API communication
+
+### Backend
+
+- **Node.js** with Express
+- **TypeScript** for type safety
+- **Prisma** ORM with SQLite (dev) / PostgreSQL (prod)
+- **Firebase Admin SDK** for auth verification
+- **Helmet** for security headers
+- **Rate limiting** for API protection
+
+## 📋 Prerequisites
+
+- Node.js 18+ and npm
+- Firebase account
+- Git
+
+## 🚀 Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/theKunte/local-resource-sharing.git
+cd local-resource-sharing
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Install Dependencies
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Install root dependencies
+npm install
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
+# Install frontend dependencies
+cd frontend
+npm install
+
+# Install backend dependencies
+cd ../backend
+npm install
+```
+
+### 3. Firebase Setup
+
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com)
+2. Enable Email/Password authentication
+3. Generate a service account key (see [SETUP_AUTH.md](SETUP_AUTH.md))
+4. Configure environment variables (next step)
+
+### 4. Environment Configuration
+
+#### Frontend (.env)
+
+```bash
+cd frontend
+cp .env.example .env
+# Edit .env with your Firebase config
+```
+
+#### Backend (.env)
+
+```bash
+cd backend
+cp .env.example .env
+# Edit .env with your Firebase service account credentials
+```
+
+See [SETUP_AUTH.md](SETUP_AUTH.md) for detailed Firebase configuration.
+
+### 5. Database Setup
+
+```bash
+cd backend
+npx prisma generate
+npx prisma migrate dev
+```
+
+### 6. Run the Application
+
+**Terminal 1 - Backend:**
+
+```bash
+cd backend
+npm run dev
+```
+
+**Terminal 2 - Frontend:**
+
+```bash
+cd frontend
+npm run dev
+```
+
+The app will be available at `http://localhost:5173`
+
+## 📁 Project Structure
+
+```
+local-resource-sharing/
+├── frontend/               # React frontend
+│   ├── src/
+│   │   ├── components/    # Reusable UI components
+│   │   ├── pages/         # Page components
+│   │   ├── hooks/         # Custom React hooks
+│   │   ├── utils/         # Utility functions
+│   │   ├── types/         # TypeScript type definitions
+│   │   └── context/       # React context providers
+│   └── package.json
+├── backend/               # Express backend
+│   ├── src/
+│   │   ├── index.ts       # Main server file
+│   │   ├── controllers/   # Request handlers
+│   │   ├── middleware/    # Auth & validation
+│   │   ├── routes/        # API routes
+│   │   └── utils/         # Helper functions
+│   ├── prisma/
+│   │   └── schema.prisma  # Database schema
+│   └── package.json
+└── docs/                  # Documentation
+    ├── API.md            # API documentation
+    └── DATABASE_SCHEMA.md # Database schema docs
+```
+
+## 🔧 Development
+
+### Available Scripts
+
+**Frontend:**
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
+
+**Backend:**
+
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Compile TypeScript
+- `npm start` - Run compiled code
+
+### Code Quality
+
+- TypeScript strict mode enabled
+- ESLint configured for React and TypeScript
+- Consistent error handling patterns
+- Proper TypeScript types throughout
+
+## 📚 Documentation
+
+- [API Documentation](docs/API.md) - API endpoints and usage
+- [Database Schema](docs/DATABASE_SCHEMA.md) - Database structure
+- [Authentication Setup](SETUP_AUTH.md) - Firebase configuration guide
+
+## 🔐 Security
+
+- Firebase authentication with JWT tokens
+- Rate limiting on all API endpoints
+- Helmet.js security headers
+- CORS configured for specific origins
+- Input validation and sanitization
+- Group-based access control
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## 📝 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+- Built with [React](https://react.dev/)
+- Styled with [Tailwind CSS](https://tailwindcss.com/)
+- Powered by [Firebase](https://firebase.google.com/)
+- Database by [Prisma](https://www.prisma.io/)
+
+---
+
+Made with ❤️ for building stronger communities through sharing
+...reactDom.configs.recommended.rules,
+},
 })
+
+```
+
 ```

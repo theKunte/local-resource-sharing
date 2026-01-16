@@ -4,6 +4,7 @@ import apiClient from "../utils/apiClient";
 import { useNavigate } from "react-router-dom";
 import GearCard, { Gear } from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
+import { logError } from "../utils/errorHandler";
 
 export default function MyGear() {
   const { user, loading } = useFirebaseAuth();
@@ -36,7 +37,7 @@ export default function MyGear() {
     const handleUpdate = ((e: CustomEvent) => {
       const { resource } = e.detail;
       setMyGear((prev) =>
-        prev.map((g) => (g.id === resource.id ? resource : g))
+        prev.map((g) => (g.id === resource.id ? resource : g)),
       );
     }) as EventListener;
 
@@ -62,12 +63,12 @@ export default function MyGear() {
       });
       setMyGear((prev) => prev.filter((g) => g.id !== resourceId));
       window.dispatchEvent(
-        new CustomEvent("resource:deleted", { detail: { id: resourceId } })
+        new CustomEvent("resource:deleted", { detail: { id: resourceId } }),
       );
       setStatusMessage("Resource deleted successfully");
       setTimeout(() => setStatusMessage(null), 3500);
     } catch (error) {
-      console.error("Error deleting resource:", error);
+      logError("MyGear - handleDeleteResource", error);
       setStatusMessage("Failed to delete resource");
       setTimeout(() => setStatusMessage(null), 3500);
     }
@@ -80,28 +81,23 @@ export default function MyGear() {
     if (!newDescription || newDescription.trim() === "") return;
 
     try {
-      console.log("Updating resource:", resource.id, {
-        title: newTitle,
-        description: newDescription,
-      });
       const resp = await apiClient.put(`/api/resources/${resource.id}`, {
         title: newTitle.trim(),
         description: newDescription.trim(),
       });
-      console.log("Update response:", resp.data);
 
       setMyGear((prev) =>
-        prev.map((g) => (g.id === resp.data.id ? { ...g, ...resp.data } : g))
+        prev.map((g) => (g.id === resp.data.id ? { ...g, ...resp.data } : g)),
       );
       window.dispatchEvent(
         new CustomEvent("resource:updated", {
           detail: { resource: resp.data },
-        })
+        }),
       );
       setStatusMessage("Resource updated successfully");
       setTimeout(() => setStatusMessage(null), 3500);
     } catch (error) {
-      console.error("Error updating resource:", error);
+      logError("MyGear - handleEditResource", error);
       setStatusMessage("Failed to update resource");
       setTimeout(() => setStatusMessage(null), 3500);
     }
@@ -225,11 +221,11 @@ export default function MyGear() {
               setLoadingGear(true);
               try {
                 const res = await apiClient.get(
-                  `/api/resources?ownerId=${encodeURIComponent(user.uid)}`
+                  `/api/resources?ownerId=${encodeURIComponent(user.uid)}`,
                 );
                 setMyGear(res.data);
               } catch (error) {
-                console.error("Error reloading gear:", error);
+                logError("MyGear - reload gear after group changes", error);
               } finally {
                 setLoadingGear(false);
               }

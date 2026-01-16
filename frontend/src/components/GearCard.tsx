@@ -1,57 +1,33 @@
 import React from "react";
+import type { Resource, CurrentLoan } from "../types/api.types";
 
-export type Gear = {
-  id: string;
-  title: string;
-  description: string;
-  image?: string;
-  status?: string;
-  currentLoan?: {
-    id: string;
-    status: string;
-    startDate: string;
-    endDate: string;
-    returnedDate?: string;
-    borrower: {
-      id: string;
-      name?: string;
-      email: string;
-    };
-  };
-};
+// Re-export Resource as Gear for backward compatibility
+export type Gear = Resource;
 
-interface GearCardProps {
-  id: string;
-  title: string;
-  description: string;
-  image?: string;
+interface GearCardProps extends Omit<
+  Resource,
+  "ownerId" | "status" | "currentLoan"
+> {
+  ownerId?: string;
   isAvailable?: boolean;
-  status?: string;
-  currentLoan?: {
-    id: string;
-    status: string;
-    startDate: string;
-    endDate: string;
-    returnedDate?: string;
-    borrower: {
-      id: string;
-      name?: string;
-      email: string;
-    };
-  };
+  status?: "AVAILABLE" | "BORROWED" | "UNAVAILABLE";
+  currentLoan?:
+    | CurrentLoan
+    | {
+        id: string;
+        status: string;
+        startDate: string;
+        endDate: string;
+        returnedDate?: string;
+        borrower: {
+          id: string;
+          name?: string;
+          email: string;
+        };
+      };
   onDelete?: (id: string) => void;
-  onEdit?: (gear: {
-    id: string;
-    title: string;
-    description: string;
-    image?: string;
-  }) => void;
-  onManageGroups?: (gear: {
-    id: string;
-    title: string;
-    description: string;
-    image?: string;
-  }) => void;
+  onEdit?: (gear: Resource) => void;
+  onManageGroups?: (gear: Resource) => void;
   onRequestBorrow?: (gearId: string) => void;
   showActions?: boolean;
 }
@@ -61,8 +37,9 @@ const GearCard: React.FC<GearCardProps> = ({
   title,
   description,
   image,
+  ownerId = "",
   isAvailable = true,
-  status,
+  status = "AVAILABLE",
   currentLoan,
   onDelete,
   onEdit,
@@ -105,7 +82,17 @@ const GearCard: React.FC<GearCardProps> = ({
             <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               {onEdit && (
                 <button
-                  onClick={() => onEdit({ id, title, description, image })}
+                  onClick={() =>
+                    onEdit({
+                      id,
+                      title,
+                      description,
+                      image,
+                      ownerId,
+                      status,
+                      currentLoan,
+                    } as Resource)
+                  }
                   className="bg-white/95 hover:bg-white text-gray-700 hover:text-success-600 rounded-lg p-2 shadow-md hover:shadow-lg transition-all duration-200 backdrop-blur-sm"
                   title="Edit gear"
                 >
@@ -148,7 +135,15 @@ const GearCard: React.FC<GearCardProps> = ({
               {onManageGroups && (
                 <button
                   onClick={() =>
-                    onManageGroups({ id, title, description, image })
+                    onManageGroups({
+                      id,
+                      title,
+                      description,
+                      image,
+                      ownerId,
+                      status,
+                      currentLoan,
+                    } as Resource)
                   }
                   className="bg-white/95 hover:bg-white text-gray-700 hover:text-primary-600 rounded-lg p-2 shadow-md hover:shadow-lg transition-all duration-200 backdrop-blur-sm"
                   title="Manage groups"
@@ -256,7 +251,7 @@ const GearCard: React.FC<GearCardProps> = ({
                 } catch (error) {
                   console.error(
                     "[GearCard] Error calling onRequestBorrow:",
-                    error
+                    error,
                   );
                 }
               }}
@@ -275,7 +270,17 @@ const GearCard: React.FC<GearCardProps> = ({
             <div className="flex gap-2 w-full">
               {onEdit && (
                 <button
-                  onClick={() => onEdit({ id, title, description, image })}
+                  onClick={() =>
+                    onEdit({
+                      id,
+                      title,
+                      description,
+                      image,
+                      ownerId,
+                      status,
+                      currentLoan,
+                    } as Resource)
+                  }
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md active:scale-95"
                 >
                   Edit
