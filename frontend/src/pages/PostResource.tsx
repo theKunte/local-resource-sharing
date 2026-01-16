@@ -6,6 +6,9 @@ import { cropImageToSquare } from "../utils/cropImageToSquare";
 import type { Group, CreateResourceRequest } from "../types/api.types";
 import { getErrorMessage, logError } from "../utils/errorHandler";
 
+const MAX_DESCRIPTION_LENGTH = 500;
+const MAX_IMAGE_SIZE_MB = 10;
+
 export default function PostResource() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -15,6 +18,7 @@ export default function PostResource() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [loadingGroups, setLoadingGroups] = useState(false);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
   const { user, loading } = useFirebaseAuth();
   const navigate = useNavigate();
 
@@ -30,18 +34,19 @@ export default function PostResource() {
 
       try {
         setLoadingGroups(true);
+        setGroupsError(null);
         const response = await apiClient.get(`/api/groups?userId=${user.uid}`);
         const userGroups = response.data;
         setGroups(userGroups);
 
         // By default, select all groups
-        const allGroupIds = new Set<string>();
-        userGroups.forEach((group: Group) => {
-          allGroupIds.add(group.id);
-        });
+        const allGroupIds = new Set<string>(
+          userGroups.map((group: Group) => group.id),
+        );
         setSelectedGroups(allGroupIds);
       } catch (error) {
         logError("PostResource - loadGroups", error);
+        setGroupsError("Failed to load groups. Please refresh the page.");
       } finally {
         setLoadingGroups(false);
       }
@@ -50,17 +55,47 @@ export default function PostResource() {
     loadGroups();
   }, [user]);
 
+  // Cleanup image preview on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    setImage(file);
+
     if (file) {
+      // Validate file size
+      const sizeMB = file.size / (1024 * 1024);
+      if (sizeMB > MAX_IMAGE_SIZE_MB) {
+        alert(
+          `Image is too large (${sizeMB.toFixed(1)}MB). Please choose an image under ${MAX_IMAGE_SIZE_MB}MB.`,
+        );
+        return;
+      }
+
+      setImage(file);
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
     } else {
+      setImage(null);
       setImagePreview(null);
     }
   };
+
+  const handleDescriptionChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+  ) => {
+    const value = e.target.value;
+    if (value.length <= MAX_DESCRIPTION_LENGTH) {
+      setDescription(value);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -79,16 +114,13 @@ export default function PostResource() {
     setSubmitting(true);
 
     try {
-      let imageData: string | undefined = undefined;
-      if (image) {
-        imageData = await cropImageToSquare(image, 200);
-      }
+      const imageData = await cropImageToSquare(image, 200);
 
       // Create the resource
       const resourceData: CreateResourceRequest = {
         title,
         description,
-        image: imageData!,
+        image: imageData,
         ownerId: user.uid,
       };
 
@@ -99,23 +131,29 @@ export default function PostResource() {
 
       const newResource = resourceResponse.data;
 
-      // Share the resource with selected groups
-      try {
-        const selectedGroupIds = Array.from(selectedGroups);
-
-        for (const groupId of selectedGroupIds) {
-          await apiClient.post(`/api/resources/${newResource.id}/share`, {
-            groupId,
-          });
+      // Share the resource with selected groups in parallel
+      if (selectedGroups.size > 0) {
+        try {
+          const selectedGroupIds = Array.from(selectedGroups);
+          await Promise.all(
+            selectedGroupIds.map((groupId) =>
+              apiClient.post(`/api/resources/${newResource.id}/share`, {
+                groupId,
+              }),
+            ),
+          );
+        } catch (groupError) {
+          logError("PostResource - share with groups", groupError);
+          // Don't fail the whole operation if group sharing fails
         }
-      } catch (groupError) {
-        logError("PostResource - share with groups", groupError);
-        // Don't fail the whole operation if group sharing fails
       }
+
+      // Reset form
       setTitle("");
       setDescription("");
       setImage(null);
       setImagePreview(null);
+      setSelectedGroups(new Set(groups.map((g) => g.id))); // Reset to all groups selected
 
       // Better success feedback
       const successMessage = `🎉 Your ${title} has been shared successfully!\n\n✅ Added to your gear collection\n👥 Shared with your trusted groups\n🔒 Only visible to people in your groups\n\nYour network can now discover and request this gear.`;
@@ -131,29 +169,57 @@ export default function PostResource() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (loading)
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 pb-20">
+        {/* Hero Skeleton */}
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white py-8 sm:py-12 mb-6 sm:mb-8">
+          <div className="max-w-4xl mx-auto px-4 text-center">
+            <div className="mb-3 sm:mb-4">
+              <div className="inline-block w-12 h-12 sm:w-16 sm:h-16 bg-emerald-500 rounded-full animate-pulse"></div>
+            </div>
+            <div className="h-9 sm:h-12 md:h-14 bg-emerald-500 rounded-lg mx-auto max-w-md mb-3 sm:mb-4 animate-pulse"></div>
+            <div className="h-6 sm:h-8 bg-emerald-500 rounded-lg mx-auto max-w-lg animate-pulse opacity-70"></div>
+          </div>
+        </div>
+        {/* Form Skeleton */}
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 sm:p-6">
+              <div className="h-7 sm:h-8 bg-emerald-400 rounded-lg max-w-xs mb-2 animate-pulse"></div>
+              <div className="h-4 sm:h-5 bg-emerald-400 rounded-lg max-w-md animate-pulse opacity-70"></div>
+            </div>
+            <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-5 sm:h-6 bg-gray-200 rounded-lg max-w-xs animate-pulse"></div>
+                  <div className="h-12 sm:h-14 bg-gray-100 rounded-lg animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   if (!user) return null;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 pb-20">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white py-12 mb-8">
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white py-8 sm:py-12 mb-6 sm:mb-8">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="mb-4">
-            <span className="text-5xl">🏔️</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
             Share Your Adventure Gear
           </h1>
-          <p className="text-xl text-emerald-100 max-w-2xl mx-auto">
+          <p className="text-base sm:text-xl text-emerald-100 max-w-2xl mx-auto px-4">
             Help fellow adventurers discover amazing gear and build a community
             of trust
           </p>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 pb-28">
-        {/* Progress Indicator */}
-        <div className="mb-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        {/* Progress Indicator - Hidden on mobile */}
+        <div className="mb-6 sm:mb-8 hidden sm:block">
           <div className="flex items-center justify-center space-x-4 text-sm font-medium">
             <div className="flex items-center text-emerald-600">
               <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -172,96 +238,115 @@ export default function PostResource() {
         </div>
 
         {/* Main Form Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           {/* Card Header */}
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-6 text-white">
-            <h2 className="text-2xl font-bold flex items-center">
-              <span className="mr-3">📦</span>
+          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 sm:p-6 text-white">
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center">
               Tell us about your gear
             </h2>
-            <p className="text-emerald-100 mt-2">
+            <p className="text-emerald-100 mt-1 sm:mt-2 text-sm sm:text-base">
               The more details you share, the more likely someone will want to
               borrow it!
             </p>
           </div>
 
           {/* Form Content */}
-          <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          <form
+            onSubmit={handleSubmit}
+            className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 min-h-[50vh]"
+          >
             {/* Gear Name Section */}
             <div className="group">
-              <label className="block mb-3 text-lg font-semibold text-gray-800 flex items-center">
-                <span className="mr-2">🎯</span>
+              <label
+                htmlFor="gear-title"
+                className="block mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-gray-800 flex items-center"
+              >
                 What gear are you sharing?
               </label>
               <input
+                id="gear-title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                placeholder="e.g., REI Co-op Half Dome 2 Plus Tent, Osprey Atmos 65L Backpack"
-                className="w-full px-6 py-4 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-200 text-lg group-hover:border-gray-300"
+                placeholder="e.g., REI Half Dome Tent"
+                className="w-full px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-200 rounded-lg sm:rounded-xl text-gray-800 placeholder-gray-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-200 text-base sm:text-lg group-hover:border-gray-300"
               />
-              <p className="text-sm text-gray-600 mt-2 flex items-center">
-                <span className="mr-1">💡</span>
-                Include brand and model for better visibility
+              <p className="text-xs sm:text-sm text-gray-600 mt-2 flex items-center">
+                Include brand and model
               </p>
             </div>
 
             {/* Description Section */}
             <div className="group">
-              <label className="block mb-3 text-lg font-semibold text-gray-800 flex items-center">
-                <span className="mr-2">📝</span>
-                Describe your gear
+              <label
+                htmlFor="gear-description"
+                className="block mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-gray-800 flex items-center"
+              >
+                Describe your gear:
               </label>
               <textarea
+                id="gear-description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={handleDescriptionChange}
                 required
-                rows={6}
-                placeholder="Share details about condition, capacity, special features, what adventures it's been on, and any tips for using it..."
-                className="w-full px-6 py-4 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-200 text-lg resize-none group-hover:border-gray-300"
+                rows={5}
+                maxLength={MAX_DESCRIPTION_LENGTH}
+                placeholder="Share details about condition, capacity, and special features..."
+                className="w-full px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-200 rounded-lg sm:rounded-xl text-gray-800 placeholder-gray-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-200 text-base sm:text-lg resize-none group-hover:border-gray-300"
               />
               <div className="flex justify-between items-center mt-2">
-                <p className="text-sm text-gray-600 flex items-center">
-                  <span className="mr-1">⭐</span>
-                  Detailed descriptions get 3x more requests
+                <p className="text-xs sm:text-sm text-gray-600 flex items-center">
+                  <span className="hidden sm:inline">
+                    Detailed descriptions get 3x more requests
+                  </span>
+                  <span className="sm:hidden">Details increase requests</span>
                 </p>
-                <span className="text-sm text-gray-500">
-                  {description.length}/500
+                <span
+                  className={`text-xs sm:text-sm ${description.length >= MAX_DESCRIPTION_LENGTH ? "text-red-500 font-semibold" : "text-gray-500"}`}
+                >
+                  {description.length}/{MAX_DESCRIPTION_LENGTH}
                 </span>
               </div>
             </div>
 
             {/* Photo Section */}
             <div className="group">
-              <label className="block mb-3 text-lg font-semibold text-gray-800 flex items-center">
-                <span className="mr-2">📸</span>
+              <label
+                htmlFor="image-upload-section"
+                className="block mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-gray-800 flex items-center flex-wrap"
+              >
                 Add a photo
-                <span className="ml-2 text-sm font-normal text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                  Recommended
+                <span className="ml-2 text-xs sm:text-sm font-normal text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                  Required
                 </span>
               </label>
 
               {!imagePreview ? (
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-emerald-400 transition-colors duration-200 group-hover:border-gray-400">
-                  <div className="mb-4">
-                    <span className="text-4xl">📷</span>
-                  </div>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg sm:rounded-xl p-6 sm:p-8 text-center hover:border-emerald-400 transition-colors duration-200 group-hover:border-gray-400">
+                  <div className="mb-3 sm:mb-4"></div>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleImageChange}
                     className="hidden"
                     id="image-upload"
+                    aria-labelledby="image-upload-section"
                   />
                   <label
                     htmlFor="image-upload"
-                    className="cursor-pointer inline-block bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+                    className="cursor-pointer inline-block bg-emerald-500 hover:bg-emerald-600 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold transition-colors duration-200 text-sm sm:text-base"
                   >
                     Choose Photo
                   </label>
-                  <p className="text-gray-600 mt-2 text-sm">
-                    Clear photos get 5x more interest! Show your gear in action.
+                  <p className="text-gray-600 mt-2 text-xs sm:text-sm">
+                    <span className="hidden sm:inline">
+                      Clear photos get 5x more interest! (Max{" "}
+                      {MAX_IMAGE_SIZE_MB}MB)
+                    </span>
+                    <span className="sm:hidden">
+                      Photos increase interest! (Max {MAX_IMAGE_SIZE_MB}MB)
+                    </span>
                   </p>
                 </div>
               ) : (
@@ -269,7 +354,7 @@ export default function PostResource() {
                   <img
                     src={imagePreview}
                     alt="Gear preview"
-                    className="w-full max-h-80 object-cover rounded-xl border-2 border-gray-200"
+                    className="w-full h-64 sm:h-80 object-cover rounded-lg sm:rounded-xl border-2 border-gray-200"
                   />
                   <button
                     type="button"
@@ -277,14 +362,15 @@ export default function PostResource() {
                       setImage(null);
                       setImagePreview(null);
                     }}
-                    className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-colors duration-200"
+                    className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-red-500 hover:bg-red-600 text-white w-8 h-8 sm:w-10 sm:h-10 rounded-full transition-colors duration-200 flex items-center justify-center"
+                    aria-label="Remove photo"
                   >
-                    <span className="text-sm">✕</span>
+                    <span className="text-sm sm:text-base">✕</span>
                   </button>
                   <div className="mt-3 text-center">
                     <label
                       htmlFor="image-upload"
-                      className="cursor-pointer text-emerald-600 hover:text-emerald-700 font-medium"
+                      className="cursor-pointer text-emerald-600 hover:text-emerald-700 font-medium text-sm sm:text-base"
                     >
                       Change photo
                     </label>
@@ -294,6 +380,7 @@ export default function PostResource() {
                       onChange={handleImageChange}
                       className="hidden"
                       id="image-upload"
+                      aria-labelledby="image-upload-section"
                     />
                   </div>
                 </div>
@@ -302,28 +389,59 @@ export default function PostResource() {
 
             {/* Group Selection Section */}
             <div className="group">
-              <label className="block mb-3 text-lg font-semibold text-gray-800 flex items-center">
-                <span className="mr-2">👥</span>
+              <label
+                htmlFor="group-selection-section"
+                className="block mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-gray-800 flex items-center flex-wrap gap-2"
+              >
                 Share with groups
                 {loadingGroups && (
-                  <span className="ml-2 text-sm font-normal text-gray-500">
+                  <span className="text-xs sm:text-sm font-normal text-gray-500">
                     Loading...
                   </span>
                 )}
               </label>
 
-              {groups.length === 0 && !loadingGroups ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                  <p className="text-yellow-800 text-sm">
-                    <span className="mr-1">ℹ️</span>
+              {groupsError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+                  <p className="text-red-800 text-xs sm:text-sm">
+                    <span className="mr-1">⚠️</span>
+                    {groupsError}
+                  </p>
+                </div>
+              )}
+
+              {loadingGroups ? (
+                <div className="space-y-3">
+                  <div className="h-5 bg-gray-200 rounded max-w-xs animate-pulse"></div>
+                  <div className="grid gap-2 sm:gap-3 min-h-[12rem]">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="flex items-center space-x-3 p-2.5 sm:p-3 bg-gray-50 rounded-lg animate-pulse"
+                      >
+                        <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-gray-300 rounded max-w-[60%]"></div>
+                          <div className="h-3 bg-gray-200 rounded max-w-[40%]"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : groups.length === 0 ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                  <p className="text-yellow-800 text-xs sm:text-sm">
                     You're not in any groups yet. Your gear will be private
                     until you join or create a group.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-gray-600">
+                <div
+                  className="space-y-3 min-h-[12rem]"
+                  id="group-selection-section"
+                >
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                    <p className="text-xs sm:text-sm text-gray-600">
                       Select which groups can see this gear
                     </p>
                     <div className="flex gap-2">
@@ -346,11 +464,11 @@ export default function PostResource() {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 max-h-48 overflow-y-auto">
+                  <div className="grid gap-2 sm:gap-3 max-h-48 sm:max-h-56 overflow-y-auto">
                     {groups.map((group) => (
                       <label
                         key={group.id}
-                        className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                        className="flex items-center space-x-3 p-2.5 sm:p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
                       >
                         <input
                           type="checkbox"
@@ -366,12 +484,12 @@ export default function PostResource() {
                           }}
                           className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                         />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-gray-900">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium text-gray-900 text-sm sm:text-base truncate">
                               {group.name}
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 whitespace-nowrap">
                               {group.memberCount} member
                               {group.memberCount !== 1 ? "s" : ""}
                             </span>
@@ -385,8 +503,8 @@ export default function PostResource() {
                   </div>
 
                   {selectedGroups.size === 0 && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                      <p className="text-orange-800 text-sm">
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 sm:p-3">
+                      <p className="text-orange-800 text-xs sm:text-sm">
                         <span className="mr-1">⚠️</span>
                         No groups selected. Your gear will be private and not
                         visible to anyone.
@@ -398,22 +516,24 @@ export default function PostResource() {
             </div>
 
             {/* Action Section */}
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-emerald-100">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">
+                  <h3 className="font-semibold text-gray-800 text-base sm:text-lg">
                     Ready to share?
                   </h3>
-                  <p className="text-gray-600 text-sm">
-                    Your gear will be visible to your trusted network
+                  <p className="text-gray-600 text-xs sm:text-sm">
+                    <span className="hidden sm:inline">
+                      Your gear will be visible to your trusted network
+                    </span>
+                    <span className="sm:hidden">Visible to your network</span>
                   </p>
                 </div>
-                <span className="text-3xl">🤝</span>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg"
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-lg sm:rounded-xl shadow-lg transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base sm:text-lg"
                 disabled={submitting}
               >
                 {submitting ? (
@@ -442,7 +562,6 @@ export default function PostResource() {
                   </span>
                 ) : (
                   <span className="flex items-center justify-center">
-                    <span className="mr-2">�️</span>
                     Share My Gear
                   </span>
                 )}
@@ -452,14 +571,14 @@ export default function PostResource() {
         </div>
 
         {/* Trust & Safety Note */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <div className="mt-6 sm:mt-8 bg-blue-50 border border-blue-200 rounded-lg sm:rounded-xl p-4 sm:p-6">
           <div className="flex items-start">
-            <span className="text-2xl mr-3">🛡️</span>
+            <span className="text-xl sm:text-2xl mr-2 sm:mr-3">🛡️</span>
             <div>
-              <h3 className="font-semibold text-blue-800 mb-2">
+              <h3 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">
                 Trust & Safety
               </h3>
-              <p className="text-blue-700 text-sm leading-relaxed">
+              <p className="text-blue-700 text-xs sm:text-sm leading-relaxed">
                 Your gear is only visible to people in your trusted groups. We
                 recommend starting with close friends and expanding your network
                 gradually as you build confidence in the community.

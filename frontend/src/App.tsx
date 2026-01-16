@@ -35,7 +35,7 @@ function App() {
         {showWarning && (
           <SessionWarning onExtend={extendSession} onSignOut={logout} />
         )}
-        <main className="flex-1">
+        <main className="flex-1 min-h-[calc(100vh-4rem)]">
           <Routes>
             <Route path="/" element={user ? <Home /> : <Landing />} />
             <Route path="/my-gear" element={<MyGear />} />
