@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { createPortal } from "react-dom";
 import apiClient from "../utils/apiClient";
+import type { CreateBorrowRequestData } from "../types/api.types";
+import { getErrorMessage, logError } from "../utils/errorHandler";
 
 interface BorrowRequestModalProps {
   isOpen: boolean;
@@ -39,11 +40,8 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
   };
 
   if (!isOpen) {
-    console.log("BorrowRequestModal: returning null because isOpen is false");
     return null;
   }
-
-  console.log("BorrowRequestModal: rendering modal JSX");
 
   const validateDates = (): boolean => {
     const errors: { startDate?: string; endDate?: string } = {};
@@ -79,18 +77,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     e.preventDefault();
     setError(null);
 
-    console.log("[BorrowRequestModal] Form submitted", {
-      startDate,
-      endDate,
-      resourceId,
-      userId,
-    });
-
     if (!validateDates()) {
-      console.log(
-        "[BorrowRequestModal] Date validation failed",
-        validationErrors
-      );
       setError("Please fill in all required fields correctly");
       return;
     }
@@ -98,14 +85,16 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     setSubmitting(true);
 
     try {
-      await apiClient.post("/api/borrow-requests", {
+      const requestData: CreateBorrowRequestData = {
         resourceId,
         borrowerId: userId,
-        groupId: groupId || undefined, // Include groupId if provided
+        groupId: groupId || undefined,
         startDate,
         endDate,
         message: message.trim() || undefined,
-      });
+      };
+
+      await apiClient.post("/api/borrow-requests", requestData);
 
       // Reset form
       setStartDate("");
@@ -116,19 +105,9 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
       // Close modal and show success
       onClose();
       alert("Borrow request sent successfully!");
-    } catch (err: any) {
-      console.error("Error creating borrow request:", err);
-      console.error("Error response data:", err.response?.data);
-      console.error("Error response status:", err.response?.status);
-
-      // Show backend error/message for all errors including 409
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError("Failed to send borrow request. Please try again.");
-      }
+    } catch (err) {
+      logError("BorrowRequestModal", err);
+      setError(getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }

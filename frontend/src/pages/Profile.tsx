@@ -4,25 +4,13 @@ import apiClient from "../utils/apiClient";
 import { useNavigate } from "react-router-dom";
 import ResourceCard from "../components/ResourceCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
-// removed cropImageToSquare (no longer used)
-
-interface ResourceItem {
-  id: string;
-  title: string;
-  description: string;
-  image?: string | null;
-}
-
-interface GroupItem {
-  id: string;
-  name: string;
-  avatar?: string | null;
-}
+import type { Resource, Group } from "../types/api.types";
+import { logError } from "../utils/errorHandler";
 
 export default function Profile() {
   const { user, loading } = useFirebaseAuth();
-  const [resources, setResources] = useState<ResourceItem[]>([]);
-  const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -49,11 +37,11 @@ export default function Profile() {
     if (!user) return;
     try {
       const res = await apiClient.get(
-        `/api/groups?userId=${encodeURIComponent(user.uid)}`
+        `/api/groups?userId=${encodeURIComponent(user.uid)}`,
       );
       setGroups(res.data);
     } catch (err) {
-      console.error("Failed to fetch groups:", err);
+      logError("Profile - loadGroups", err);
       setGroups([]);
     }
   }, [user]);
@@ -73,17 +61,13 @@ export default function Profile() {
     });
     setResources((prev) => prev.filter((r) => r.id !== id));
     // notify other pages that a resource was deleted
-    try {
-      window.dispatchEvent(
-        new CustomEvent("resource:deleted", { detail: { id } })
-      );
-    } catch (_err) {
-      console.debug("[Profile] dispatch resource:deleted failed", _err);
-    }
+    window.dispatchEvent(
+      new CustomEvent("resource:deleted", { detail: { id } }),
+    );
   };
 
   // Edit resource handler
-  const handleEdit = async (resource: ResourceItem) => {
+  const handleEdit = async (resource: Resource) => {
     const newTitle = prompt("Edit title:", resource.title);
     if (!newTitle) return;
     const newDescription = prompt("Edit description:", resource.description);
@@ -93,18 +77,14 @@ export default function Profile() {
       description: newDescription,
     });
     setResources((prev) =>
-      prev.map((r) => (r.id === resource.id ? { ...r, ...updated.data } : r))
+      prev.map((r) => (r.id === resource.id ? { ...r, ...updated.data } : r)),
     );
     // notify other pages that a resource was updated
-    try {
-      window.dispatchEvent(
-        new CustomEvent("resource:updated", {
-          detail: { resource: updated.data },
-        })
-      );
-    } catch (_err) {
-      console.debug("[Profile] dispatch resource:updated failed", _err);
-    }
+    window.dispatchEvent(
+      new CustomEvent("resource:updated", {
+        detail: { resource: updated.data },
+      }),
+    );
   };
 
   // helper to shorten long group names for display
@@ -128,7 +108,7 @@ export default function Profile() {
       setNewGroupName("");
       alert(`Group '${res.data.name}' created!`);
     } catch (err) {
-      console.error("Failed to create group:", err);
+      logError("Profile - createGroup", err);
       alert("Failed to create group.");
     } finally {
       setCreatingGroup(false);

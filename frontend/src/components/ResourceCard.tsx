@@ -1,46 +1,34 @@
 import React from "react";
+import type { Resource, CurrentLoan } from "../types/api.types";
 
-export type Gear = {
-  id: string;
-  title: string;
-  description: string;
-  image?: string;
-};
+export type Gear = Resource;
 
-interface GearCardProps {
-  id: string;
-  title: string;
-  description: string;
-  image?: string;
+interface GearCardProps extends Omit<
+  Resource,
+  "ownerId" | "status" | "currentLoan"
+> {
+  ownerId?: string;
   isAvailable?: boolean;
-  status?: string;
-  currentLoan?: {
-    id: string;
-    status: string;
-    startDate: string;
-    endDate: string;
-    returnedDate?: string;
-    borrower: {
-      id: string;
-      name?: string;
-      email: string;
-    };
-  };
+  status?: "AVAILABLE" | "BORROWED" | "UNAVAILABLE" | string;
+  currentLoan?:
+    | CurrentLoan
+    | {
+        id: string;
+        status: string;
+        startDate: string;
+        endDate: string;
+        returnedDate?: string;
+        borrower: {
+          id: string;
+          name?: string;
+          email: string;
+        };
+      };
   onDelete?: (id: string) => void;
-  onEdit?: (gear: {
-    id: string;
-    title: string;
-    description: string;
-    image?: string;
-  }) => void;
+  onEdit?: (gear: Resource) => void;
   onRequestBorrow?: (gearId: string) => void;
   showActions?: boolean;
-  onManageGroups?: (gear: {
-    id: string;
-    title: string;
-    description: string;
-    image?: string;
-  }) => void;
+  onManageGroups?: (gear: Resource) => void;
 }
 
 const GearCard: React.FC<GearCardProps> = ({
@@ -48,8 +36,9 @@ const GearCard: React.FC<GearCardProps> = ({
   title,
   description,
   image,
+  ownerId = "",
   isAvailable = true,
-  status,
+  status = "AVAILABLE",
   currentLoan,
   onDelete,
   onEdit,
@@ -96,7 +85,17 @@ const GearCard: React.FC<GearCardProps> = ({
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 hover:opacity-100 transition-opacity duration-200">
                 {onEdit && (
                   <button
-                    onClick={() => onEdit({ id, title, description, image })}
+                    onClick={() =>
+                      onEdit({
+                        id,
+                        title,
+                        description,
+                        image,
+                        ownerId,
+                        status,
+                        currentLoan,
+                      } as Resource)
+                    }
                     className="bg-white/90 hover:bg-white text-gray-600 hover:text-emerald-600 rounded-full p-1.5 shadow-sm transition-all duration-200"
                     title="Edit gear"
                   >
@@ -118,7 +117,15 @@ const GearCard: React.FC<GearCardProps> = ({
                 {onManageGroups && (
                   <button
                     onClick={() =>
-                      onManageGroups({ id, title, description, image })
+                      onManageGroups({
+                        id,
+                        title,
+                        description,
+                        image,
+                        ownerId,
+                        status,
+                        currentLoan,
+                      } as Resource)
                     }
                     className="bg-white/90 hover:bg-white text-gray-600 hover:text-sky-600 rounded-full p-1.5 shadow-sm transition-all duration-200"
                     title="Manage groups"
@@ -231,7 +238,17 @@ const GearCard: React.FC<GearCardProps> = ({
               <div className="flex gap-2 w-full">
                 {onEdit && (
                   <button
-                    onClick={() => onEdit({ id, title, description, image })}
+                    onClick={() =>
+                      onEdit({
+                        id,
+                        title,
+                        description,
+                        image,
+                        ownerId,
+                        status,
+                        currentLoan,
+                      } as Resource)
+                    }
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors duration-200"
                   >
                     Edit

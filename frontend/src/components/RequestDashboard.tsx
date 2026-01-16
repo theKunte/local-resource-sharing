@@ -47,7 +47,7 @@ interface RequestDashboardProps {
 
 const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const [activeTab, setActiveTab] = useState<"incoming" | "outgoing">(
-    "incoming"
+    "incoming",
   );
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "completed"
@@ -58,7 +58,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingRequest, setEditingRequest] = useState<BorrowRequest | null>(
-    null
+    null,
   );
   const [editForm, setEditForm] = useState({
     startDate: "",
@@ -77,7 +77,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     try {
       // Load incoming requests (as owner)
       const incomingResponse = await apiClient.get(
-        `/api/borrow-requests?userId=${userId}&role=owner`
+        `/api/borrow-requests?userId=${userId}&role=owner`,
       );
       const incomingData =
         incomingResponse.data.requests || incomingResponse.data;
@@ -85,7 +85,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
       // Load outgoing requests (as borrower)
       const outgoingResponse = await apiClient.get(
-        `/api/borrow-requests?userId=${userId}&role=borrower`
+        `/api/borrow-requests?userId=${userId}&role=borrower`,
       );
       const outgoingData =
         outgoingResponse.data.requests || outgoingResponse.data;
@@ -191,7 +191,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const handleDelete = async (requestId: string) => {
     if (
       !confirm(
-        "Are you sure you want to delete this request? This action cannot be undone."
+        "Are you sure you want to delete this request? This action cannot be undone.",
       )
     )
       return;
@@ -214,7 +214,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const handleMarkReturned = async (requestId: string) => {
     if (
       !confirm(
-        "Mark this item as returned? This will make the item available again and notify the borrower."
+        "Mark this item as returned? This will make the item available again and notify the borrower.",
       )
     )
       return;
@@ -226,7 +226,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       });
       await loadRequests();
       alert(
-        "Item marked as returned successfully! The item is now available in your groups."
+        "Item marked as returned successfully! The item is now available in your groups.",
       );
     } catch (error: any) {
       console.error("Error marking as returned:", error);
@@ -239,7 +239,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const handleInitiateReturn = async (loanId: string) => {
     if (
       !confirm(
-        "Have you returned this item? The owner will need to confirm receipt before the item becomes available again."
+        "Have you returned this item? The owner will need to confirm receipt before the item becomes available again.",
       )
     )
       return;
@@ -249,14 +249,14 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       await apiClient.post(`/api/loans/${loanId}/request-return`, { userId });
       await loadRequests();
       alert(
-        "Return initiated! The owner will be notified to confirm they received the item back."
+        "Return initiated! The owner will be notified to confirm they received the item back.",
       );
     } catch (error: any) {
       console.error("Error initiating return:", error);
       alert(
         error.response?.data?.message ||
           error.response?.data?.error ||
-          "Failed to initiate return"
+          "Failed to initiate return",
       );
     } finally {
       setActionLoading(null);
@@ -266,7 +266,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const handleConfirmReturn = async (loanId: string, requestId: string) => {
     if (
       !confirm(
-        "Confirm that you received the item back? This will make it available again."
+        "Confirm that you received the item back? This will make it available again.",
       )
     )
       return;
@@ -276,14 +276,14 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       await apiClient.post(`/api/loans/${loanId}/confirm-return`, { userId });
       await loadRequests();
       alert(
-        "Return confirmed! The item is now available in your groups again."
+        "Return confirmed! The item is now available in your groups again.",
       );
     } catch (error: any) {
       console.error("Error confirming return:", error);
       alert(
         error.response?.data?.message ||
           error.response?.data?.error ||
-          "Failed to confirm return"
+          "Failed to confirm return",
       );
     } finally {
       setActionLoading(null);
@@ -354,14 +354,14 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             request.status === "PENDING"
               ? "bg-amber-50 border-b-2 border-amber-200"
               : request.status === "APPROVED" &&
-                request.loan?.status === "ACTIVE"
-              ? "bg-emerald-50 border-b-2 border-emerald-200"
-              : request.status === "APPROVED" &&
-                request.loan?.status === "RETURNED"
-              ? "bg-blue-50 border-b-2 border-blue-200"
-              : request.status === "REJECTED"
-              ? "bg-red-50 border-b-2 border-red-200"
-              : "bg-gray-50 border-b-2 border-gray-200"
+                  request.loan?.status === "ACTIVE"
+                ? "bg-emerald-50 border-b-2 border-emerald-200"
+                : request.status === "APPROVED" &&
+                    request.loan?.status === "RETURNED"
+                  ? "bg-blue-50 border-b-2 border-blue-200"
+                  : request.status === "REJECTED"
+                    ? "bg-red-50 border-b-2 border-red-200"
+                    : "bg-gray-50 border-b-2 border-gray-200"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -516,19 +516,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             request.loan?.status === "RETURNED" && (
               <div className="mb-4 bg-emerald-50 border-l-4 border-emerald-400 rounded-r-lg p-3">
                 <div className="flex items-center gap-2 text-emerald-800">
-                  <svg
-                    className="w-5 h-5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
                   <div className="flex-1">
                     <p className="text-sm font-medium">
                       {isOwner
@@ -793,7 +780,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     ? incomingRequests.filter(
         (r) =>
           r.status === "APPROVED" &&
-          r.loan?.status === "PENDING_RETURN_CONFIRMATION"
+          r.loan?.status === "PENDING_RETURN_CONFIRMATION",
       ).length
     : 0;
 
@@ -802,7 +789,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     ? outgoingRequests.filter(
         (r) =>
           r.status === "APPROVED" &&
-          r.loan?.status === "PENDING_RETURN_CONFIRMATION"
+          r.loan?.status === "PENDING_RETURN_CONFIRMATION",
       ).length
     : 0;
 
@@ -994,10 +981,10 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
           >
             {activeTab === "incoming"
               ? incomingRequests.filter(
-                  (r) => r.status === "APPROVED" && r.loan?.status === "ACTIVE"
+                  (r) => r.status === "APPROVED" && r.loan?.status === "ACTIVE",
                 ).length
               : outgoingRequests.filter(
-                  (r) => r.status === "APPROVED" && r.loan?.status === "ACTIVE"
+                  (r) => r.status === "APPROVED" && r.loan?.status === "ACTIVE",
                 ).length}
           </span>
         </button>
@@ -1037,11 +1024,11 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             {activeTab === "incoming"
               ? incomingRequests.filter(
                   (r) =>
-                    r.status === "APPROVED" && r.loan?.status === "RETURNED"
+                    r.status === "APPROVED" && r.loan?.status === "RETURNED",
                 ).length
               : outgoingRequests.filter(
                   (r) =>
-                    r.status === "APPROVED" && r.loan?.status === "RETURNED"
+                    r.status === "APPROVED" && r.loan?.status === "RETURNED",
                 ).length}
           </span>
         </button>
@@ -1177,8 +1164,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             {statusFilter !== "all"
               ? `No ${statusFilter} requests found. Click a stat card to see all requests.`
               : activeTab === "incoming"
-              ? "You don't have any incoming borrow requests yet."
-              : "You haven't made any borrow requests yet."}
+                ? "You don't have any incoming borrow requests yet."
+                : "You haven't made any borrow requests yet."}
           </p>
         </div>
       ) : (
@@ -1200,7 +1187,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
           <div className="space-y-4">
             {Array.isArray(filteredRequests) &&
               filteredRequests.map((request) =>
-                renderRequest(request, activeTab === "incoming")
+                renderRequest(request, activeTab === "incoming"),
               )}
           </div>
         </>

@@ -4,6 +4,7 @@ import GearCard, { Gear } from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
 import BorrowRequestModal from "../components/BorrowRequestModal";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
+import { logError } from "../utils/errorHandler";
 
 export default function Home() {
   const { user, loading } = useFirebaseAuth();
@@ -62,14 +63,7 @@ export default function Home() {
       setSelectedResource(newSelection);
       setBorrowModalOpen(true);
     } else {
-      console.error(
-        "[Home] !!!!! ERROR: Resource not found in communityGear !!!!!"
-      );
-      console.error("[Home] Looking for ID:", gearId);
-      console.error(
-        "[Home] Available IDs:",
-        communityGear.map((g) => g.id)
-      );
+      logError("Home - handleRequestBorrow", `Resource not found: ${gearId}`);
     }
   };
 
@@ -219,11 +213,11 @@ export default function Home() {
             setLoadingCommunityGear(true);
             try {
               const res = await apiClient.get(
-                `/api/resources?user=${encodeURIComponent(user.uid)}`
+                `/api/resources?user=${encodeURIComponent(user.uid)}`,
               );
               setCommunityGear(res.data);
-            } catch (_err) {
-              console.error(_err);
+            } catch (err) {
+              logError("Home - reload community gear", err);
             } finally {
               setLoadingCommunityGear(false);
             }
