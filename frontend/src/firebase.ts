@@ -19,7 +19,7 @@ const firebaseConfig = {
 // Check if Firebase config is present
 if (!firebaseConfig.apiKey) {
   console.error(
-    "❌ Firebase configuration missing! Please create a .env file in the frontend directory with:"
+    "❌ Firebase configuration missing! Please create a .env file in the frontend directory with:",
   );
   console.error("VITE_FIREBASE_API_KEY=your_api_key");
   console.error("VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain");
@@ -33,6 +33,15 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 // Set session-only persistence (clears on browser close)
-setPersistence(auth, browserSessionPersistence).catch((error) => {
-  console.error("Error setting auth persistence:", error);
-});
+setPersistence(auth, browserSessionPersistence)
+  .then(() => {
+    console.log("✅ Firebase auth persistence set to session-only");
+  })
+  .catch((error) => {
+    console.error("❌ Error setting auth persistence:", error);
+    // If persistence fails, sign out user for security
+    auth.signOut();
+    alert(
+      "Failed to configure secure authentication. Please refresh and try again.",
+    );
+  });

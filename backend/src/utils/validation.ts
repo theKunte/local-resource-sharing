@@ -7,7 +7,7 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
-export function sanitizeString(str: string, maxLength: number = 500): string {
+export function sanitizeString(str: string | undefined | null, maxLength: number = 500): string {
   if (!str) return "";
   return str.trim().slice(0, maxLength);
 }
@@ -30,7 +30,8 @@ export function validateResourceInput(data: any): {
   if (data.description && data.description.length > 2000) {
     errors.push("Description must be less than 2000 characters");
   }
-  if (!data.image || data.image.trim().length === 0) {
+  // Image validation - only check if explicitly checking for new resource (not update)
+  if (data.image !== undefined && (!data.image || data.image.trim().length === 0)) {
     errors.push("Image is required");
   }
   if (!data.ownerId) {
