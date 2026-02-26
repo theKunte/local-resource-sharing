@@ -62,6 +62,10 @@ model GroupMember {
   user    User   @relation(fields: [userId], references: [id])
   userId  String
   role    String @default("member") // "owner", "admin", "member"
+
+  @@index([groupId])
+  @@index([userId])
+  @@unique([groupId, userId])
 }
 
 model Resource {
@@ -77,11 +81,18 @@ model Resource {
   borrowRequests BorrowRequest[]
   loans          Loan[]
   currentLoan    Loan?             @relation("CurrentLoan", fields: [currentLoanId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ownerId])
+  @@index([status])
 }
 
 model ResourceSharing {
   id         String   @id @default(uuid())
   resource   Resource @relation(fields: [resourceId], references: [id])
+
+  @@index([resourceId])
+  @@index([groupId])
+  @@unique([resourceId, groupId])
   resourceId String
   group      Group    @relation(fields: [groupId], references: [id])
   groupId    String
@@ -98,6 +109,12 @@ model BorrowRequest {
   status     BorrowRequestStatus @default(PENDING)
   message    String?
   startDate  DateTime
+
+  @@index([borrowerId])
+  @@index([ownerId])
+  @@index([resourceId])
+  @@index([status])
+  @@index([createdAt])
   endDate    DateTime
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
@@ -111,6 +128,13 @@ model Loan {
   resourceId      String
   resource        Resource      @relation(fields: [resourceId], references: [id])
   borrowerId      String
+
+  @@index([borrowerId])
+  @@index([lenderId])
+  @@index([resourceId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
   borrower        User          @relation("BorrowerLoans", fields: [borrowerId], references: [id])
   lenderId        String
   lender          User          @relation("LenderLoans", fields: [lenderId], references: [id])

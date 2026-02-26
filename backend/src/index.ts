@@ -10,8 +10,35 @@ import {
   validateGroupInput,
   sanitizeString,
 } from "./utils/validation";
+import { Logger } from "./utils/logger";
+import {
+  validateRequestSize,
+  validateImageSize,
+} from "./middleware/requestValidation";
 
 dotenv.config();
+
+// Initialize logger
+const logger = new Logger();
+
+// Validate required environment variables on startup
+const requiredEnvVars = [
+  "DATABASE_URL",
+  "FIREBASE_PROJECT_ID",
+  "FIREBASE_CLIENT_EMAIL",
+  "FIREBASE_PRIVATE_KEY",
+];
+
+const missingEnvVars = requiredEnvVars.filter(
+  (varName) => !process.env[varName],
+);
+
+if (missingEnvVars.length > 0) {
+  logger.error("Missing required environment variables", {
+    missing: missingEnvVars,
+  });
+  process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -27,14 +54,26 @@ if (!admin.apps.length) {
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
       }),
     });
-    console.log("✅ Firebase Admin initialized");
+    logger.info("Firebase Admin initialized successfully");
   } catch (error) {
-    console.error("❌ Firebase Admin initialization error:", error);
+    logger.error("Firebase Admin initialization error", { error });
+    process.exit(1);
   }
 }
 
 // Security headers - protect against common vulnerabilities
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+  }),
+);
 
 // Restricted CORS - only allow specific origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
@@ -45,46 +84,62 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
-      if (!origin) return callback(null, true);
+      // Only allow requests from allowed origins
+      // Reject requests with no origin header in production
+      if (!origin && process.env.NODE_ENV === "production") {
+        return callback(new Error("Not allowed by CORS - no origin header"));
+      }
 
-      if (allowedOrigins.includes(origin)) {
+      // In development, allow no-origin requests (Postman, etc.)
+      if (!origin && process.env.NODE_ENV !== "production") {
+        return callback(null, true);
+      }
+
+      // At this point, origin is guaranteed to be a string
+      if (origin && allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
-  })
+  }),
 );
 
 // Rate limiting - prevent abuse
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per window (increased for testing)
+  max: 100, // limit each IP to 100 requests per window
   message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 app.use("/api/", limiter);
 app.use(express.json({ limit: "5mb" })); // Allow large payloads for images
+app.use(validateRequestSize()); // Validate request size
 
 // Authentication Middleware
 async function authenticateToken(
   req: express.Request,
   res: express.Response,
-  next: express.NextFunction
+  next: express.NextFunction,
 ) {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      logger.security("Authentication failed - no token", {
+        path: req.path,
+        method: req.method,
+      });
       return res.status(401).json({ error: "No authorization token provided" });
     }
 
     const token = authHeader.split("Bearer ")[1];
 
     // Verify the token with Firebase Admin
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    const decodedToken = await admin.auth().verifyIdToken(token, true); // checkRevoked = true
 
     // Attach user info to request
     (req as any).user = {
@@ -95,15 +150,38 @@ async function authenticateToken(
 
     next();
   } catch (error) {
-    console.error("Token verification error:", error);
+    // Log error securely without exposing details to client
+    logger.security("Token verification failed", {
+      path: req.path,
+      method: req.method,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
     return res.status(403).json({ error: "Invalid or expired token" });
   }
+}
+
+// Middleware to require verified email
+function requireVerifiedEmail(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) {
+  const user = (req as any).user;
+
+  if (!user || !user.emailVerified) {
+    return res.status(403).json({
+      error: "Email verification required",
+      message: "Please verify your email address to access this resource",
+    });
+  }
+
+  next();
 }
 
 // Root route for API info or friendly message
 app.get("/", (req, res) => {
   res.send(
-    "<h2>Local Resource Sharing API is running.<br>Use <code>/api/resources</code> to access resources.</h2>"
+    "<h2>Local Resource Sharing API is running.<br>Use <code>/api/resources</code> to access resources.</h2>",
   );
 });
 
@@ -195,7 +273,7 @@ app.get("/api/resources", authenticateToken, async (req, res) => {
     const resources = Array.from(uniqueResources.values());
     res.json(resources);
   } catch (error) {
-    console.error("Error fetching resources:", error);
+    logger.error("Error fetching resources", error, { path: req.path });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -217,19 +295,33 @@ app.get(
 
       res.json({ resourceId: id, pendingRequestsCount: count });
     } catch (error) {
-      console.error("Error fetching pending requests count:", error);
+      logger.error("Error fetching pending requests count", error, { path: req.path, resourceId: id });
       res.status(500).json({ error: "Internal server error" });
     }
-  }
+  },
 );
 
 // Post a new resource to the database
-app.post("/api/resources", authenticateToken, async (req, res) => {
+app.post(
+  "/api/resources",
+  authenticateToken,
+  requireVerifiedEmail,
+  validateImageSize,
+  async (req, res) => {
   const { title, description, ownerId, image } = req.body;
   const authenticatedUserId = (req as any).user.uid;
 
+  // Sanitize user inputs
+  const sanitizedTitle = sanitizeString(title, 200);
+  const sanitizedDescription = sanitizeString(description, 2000);
+
   // Validate input
-  const validation = validateResourceInput({ title, description, ownerId });
+  const validation = validateResourceInput({
+    title: sanitizedTitle,
+    description: sanitizedDescription,
+    ownerId,
+    image,
+  });
   if (!validation.valid) {
     return res.status(400).json({ error: validation.errors.join(", ") });
   }
@@ -286,19 +378,29 @@ app.post("/api/resources", authenticateToken, async (req, res) => {
       });
     }
 
-    // Create resource
+    // Create resource with sanitized data
     const resource = await prisma.resource.create({
-      data: { title, description, ownerId, image },
+      data: {
+        title: sanitizedTitle,
+        description: sanitizedDescription,
+        ownerId,
+        image,
+      },
     });
     res.status(201).json(resource);
   } catch (error) {
-    console.error("Error creating resource:", error);
+    logger.error("Error creating resource", error, { path: req.path, userId: (req as any).user.uid });
     res.status(500).json({ error: "Failed to create resource" });
   }
 });
 
 // Update a resource by id
-app.put("/api/resources/:id", authenticateToken, async (req, res) => {
+app.put(
+  "/api/resources/:id",
+  authenticateToken,
+  requireVerifiedEmail,
+  validateImageSize,
+  async (req, res) => {
   const id = req.params.id;
   const { title, description } = req.body;
   const authenticatedUserId = (req as any).user.uid;
@@ -365,13 +467,17 @@ app.put("/api/resources/:id", authenticateToken, async (req, res) => {
     });
     res.json(updated);
   } catch (error) {
-    console.error("Error updating resource:", error);
+    logger.error("Error updating resource", error, { path: req.path, resourceId: id });
     res.status(404).json({ error: "Resource not found" });
   }
 });
 
 // Delete a resource by id
-app.delete("/api/resources/:id", authenticateToken, async (req, res) => {
+app.delete(
+  "/api/resources/:id",
+  authenticateToken,
+  requireVerifiedEmail,
+  async (req, res) => {
   const id = req.params.id;
   const authenticatedUserId = (req as any).user.uid;
 
@@ -398,26 +504,41 @@ app.delete("/api/resources/:id", authenticateToken, async (req, res) => {
     await prisma.resource.delete({ where: { id } });
     res.status(204).end();
   } catch (error) {
-    console.error("Error deleting resource:", error);
+    logger.error("Error deleting resource", error, { path: req.path, resourceId: id });
     res.status(500).json({ error: "Failed to delete resource" });
   }
 });
 
 // --- GROUPS API ---
 // Create a group
-app.post("/api/groups", authenticateToken, async (req, res) => {
+app.post(
+  "/api/groups",
+  authenticateToken,
+  requireVerifiedEmail,
+  async (req, res) => {
   const { name, createdById } = req.body;
+  const authenticatedUserId = (req as any).user.uid;
+
+  // Sanitize input
+  const sanitizedName = sanitizeString(name, 100);
 
   // Validate input
-  const validation = validateGroupInput({ name, createdById });
+  const validation = validateGroupInput({ name: sanitizedName, createdById });
   if (!validation.valid) {
     return res.status(400).json({ error: validation.errors.join(", ") });
+  }
+
+  // Ensure user can only create groups for themselves
+  if (createdById !== authenticatedUserId) {
+    return res
+      .status(403)
+      .json({ error: "You can only create groups for yourself" });
   }
 
   try {
     const group = await prisma.group.create({
       data: {
-        name,
+        name: sanitizedName,
         createdById,
         members: {
           create: { userId: createdById }, // Add creator as first member, we'll update role later
@@ -438,7 +559,7 @@ app.post("/api/groups", authenticateToken, async (req, res) => {
 
     res.status(201).json(group);
   } catch (error) {
-    console.error("Error creating group:", error);
+    logger.error("Error creating group", error, { path: req.path, userId: (req as any).user.uid });
     res.status(500).json({ error: "Failed to create group" });
   }
 });
@@ -457,10 +578,10 @@ app.post(
       });
       res.status(201).json(member);
     } catch (error) {
-      console.error("Error adding member:", error);
+      logger.error("Error adding member", error, { path: req.path, groupId, userId });
       res.status(500).json({ error: "Failed to add member" });
     }
-  }
+  },
 );
 
 // List groups for a user
@@ -518,18 +639,63 @@ app.get(
       console.error("Error fetching group resources:", error);
       res.status(500).json({ error: "Failed to fetch group resources" });
     }
-  }
+  },
 );
 
 // Share a resource with a group
 app.post(
   "/api/resources/:resourceId/share",
   authenticateToken,
+  requireVerifiedEmail,
   async (req, res) => {
     const { resourceId } = req.params;
     const { groupId } = req.body;
+    const authenticatedUserId = (req as any).user.uid;
+
     if (!groupId) return res.status(400).json({ error: "groupId required" });
+
     try {
+      // Verify resource exists and user owns it
+      const resource = await prisma.resource.findUnique({
+        where: { id: resourceId },
+        select: { ownerId: true },
+      });
+
+      if (!resource) {
+        return res.status(404).json({ error: "Resource not found" });
+      }
+
+      if (resource.ownerId !== authenticatedUserId) {
+        return res
+          .status(403)
+          .json({ error: "You can only share your own resources" });
+      }
+
+      // Verify user is a member of the group
+      const groupMember = await prisma.groupMember.findFirst({
+        where: {
+          groupId,
+          userId: authenticatedUserId,
+        },
+      });
+
+      if (!groupMember) {
+        return res
+          .status(403)
+          .json({ error: "You must be a member of this group" });
+      }
+
+      // Check if already shared
+      const existingSharing = await prisma.resourceSharing.findFirst({
+        where: { resourceId, groupId },
+      });
+
+      if (existingSharing) {
+        return res
+          .status(400)
+          .json({ error: "Resource already shared with this group" });
+      }
+
       const sharing = await prisma.resourceSharing.create({
         data: { resourceId, groupId },
       });
@@ -538,7 +704,7 @@ app.post(
       console.error("Error sharing resource:", error);
       res.status(500).json({ error: "Failed to share resource" });
     }
-  }
+  },
 );
 
 // Get group members
@@ -561,7 +727,11 @@ app.get("/api/groups/:groupId/members", authenticateToken, async (req, res) => {
 });
 
 // Invite user to group (by email)
-app.post("/api/groups/:groupId/invite", authenticateToken, async (req, res) => {
+app.post(
+  "/api/groups/:groupId/invite",
+  authenticateToken,
+  requireVerifiedEmail,
+  async (req, res) => {
   const { groupId } = req.params;
   const { email, invitedBy } = req.body;
 
@@ -662,11 +832,15 @@ app.delete(
       console.error("Error removing user from group:", error);
       res.status(500).json({ error: "Failed to remove user from group" });
     }
-  }
+  },
 );
 
 // Update group (for avatar, name, etc.)
-app.put("/api/groups/:groupId", authenticateToken, async (req, res) => {
+app.put(
+  "/api/groups/:groupId",
+  authenticateToken,
+  requireVerifiedEmail,
+  async (req, res) => {
   const { groupId } = req.params;
   const { name, avatar, description, userId } = req.body;
 
@@ -744,7 +918,11 @@ app.put("/api/groups/:groupId", authenticateToken, async (req, res) => {
 });
 
 // Delete a group (only group creator can delete)
-app.delete("/api/groups/:groupId", authenticateToken, async (req, res) => {
+app.delete(
+  "/api/groups/:groupId",
+  authenticateToken,
+  requireVerifiedEmail,
+  async (req, res) => {
   const { groupId } = req.params;
   const { userId } = req.body;
 
@@ -916,7 +1094,7 @@ app.put(
       console.error("Error transferring group ownership:", error);
       res.status(500).json({ error: "Failed to transfer group ownership" });
     }
-  }
+  },
 );
 
 // Get group details with permissions
@@ -1065,7 +1243,7 @@ app.delete(
       console.error("Error removing group member:", error);
       res.status(500).json({ error: "Failed to remove group member" });
     }
-  }
+  },
 );
 
 // Update member role (assign/remove admin rights)
@@ -1172,11 +1350,16 @@ app.put(
       console.error("Error updating member role:", error);
       res.status(500).json({ error: "Failed to update member role" });
     }
-  }
+  },
 );
 
-// Debug endpoint to list all users (for development/troubleshooting)
-app.get("/api/debug/users", async (req, res) => {
+// Debug endpoint to list all users (for development only - DISABLED IN PRODUCTION)
+app.get("/api/debug/users", authenticateToken, async (req, res) => {
+  // Only allow in development mode
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).json({ error: "Endpoint not available" });
+  }
+
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -1335,7 +1518,7 @@ app.get(
             ...sharing.group,
             memberCount,
           };
-        })
+        }),
       );
 
       res.json(groupsWithCounts);
@@ -1343,7 +1526,7 @@ app.get(
       console.error("Error fetching resource groups:", error);
       res.status(500).json({ error: "Failed to fetch resource groups" });
     }
-  }
+  },
 );
 
 // Add resource to a group
@@ -1414,7 +1597,7 @@ app.post(
       console.error("Error adding resource to group:", error);
       res.status(500).json({ error: "Failed to add resource to group" });
     }
-  }
+  },
 );
 
 // Remove resource from a group
@@ -1457,7 +1640,7 @@ app.delete(
       console.error("Error removing resource from group:", error);
       res.status(500).json({ error: "Failed to remove resource from group" });
     }
-  }
+  },
 );
 
 // Get user's groups (for sharing existing resources)
@@ -1489,7 +1672,7 @@ app.get("/api/users/:userId/groups", authenticateToken, async (req, res) => {
           ...membership.group,
           memberCount,
         };
-      })
+      }),
     );
 
     res.json(groupsWithCounts);
@@ -1505,6 +1688,7 @@ app.get("/api/users/:userId/groups", authenticateToken, async (req, res) => {
 app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
   const { resourceId, borrowerId, groupId, message, startDate, endDate } =
     req.body;
+  const authenticatedUserId = (req as any).user.uid;
 
   // Validate required fields (groupId is now optional)
   if (!resourceId || !borrowerId || !startDate || !endDate) {
@@ -1513,6 +1697,16 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
       required: ["resourceId", "borrowerId", "startDate", "endDate"],
     });
   }
+
+  // Ensure user can only create requests for themselves
+  if (borrowerId !== authenticatedUserId) {
+    return res
+      .status(403)
+      .json({ error: "You can only create borrow requests for yourself" });
+  }
+
+  // Sanitize message input
+  const sanitizedMessage = message ? sanitizeString(message, 500) : null;
 
   try {
     // Parse and validate dates
@@ -1660,7 +1854,7 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
         resourceId,
         borrowerId,
         ownerId: resource.ownerId,
-        message: message || null,
+        message: sanitizedMessage,
         startDate: start,
         endDate: end,
         status: "PENDING",
@@ -1804,7 +1998,7 @@ app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
           ...request,
           group: sharedGroup?.group || null,
         };
-      })
+      }),
     );
 
     res.json({
@@ -2001,7 +2195,7 @@ app.post(
       console.error("Error accepting borrow request:", error);
       res.status(500).json({ error: "Failed to accept borrow request" });
     }
-  }
+  },
 );
 
 // Decline a borrow request (owner only)
@@ -2083,7 +2277,7 @@ app.post(
       console.error("Error declining borrow request:", error);
       res.status(500).json({ error: "Failed to decline borrow request" });
     }
-  }
+  },
 );
 
 // Cancel a borrow request (borrower only)
@@ -2173,7 +2367,7 @@ app.post(
       console.error("Error cancelling borrow request:", error);
       res.status(500).json({ error: "Failed to cancel borrow request" });
     }
-  }
+  },
 );
 
 // Update a borrow request (borrower can update their pending requests)
@@ -2334,7 +2528,7 @@ app.delete("/api/borrow-requests/:id", authenticateToken, async (req, res) => {
     if (borrowRequest.loan) {
       console.log(
         "[DEBUG] Deleting associated loan first:",
-        borrowRequest.loan.id
+        borrowRequest.loan.id,
       );
       // Delete the loan first (this should only happen for completed/returned loans)
       await prisma.loan.delete({
@@ -2449,7 +2643,7 @@ app.post(
       console.error("Error requesting loan return:", error);
       res.status(500).json({ error: "Failed to request loan return" });
     }
-  }
+  },
 );
 
 // Confirm return of a loan (lender/owner only)
@@ -2550,7 +2744,7 @@ app.post(
       console.error("Error confirming return:", error);
       res.status(500).json({ error: "Failed to confirm return" });
     }
-  }
+  },
 );
 
 // Mark item as returned by owner (direct return without borrower request)
@@ -2643,7 +2837,7 @@ app.post(
       console.error("Error marking item as returned:", error);
       res.status(500).json({ error: "Failed to mark item as returned" });
     }
-  }
+  },
 );
 
 // Confirm return of a loan (lender/owner only)
@@ -2765,7 +2959,7 @@ app.post(
       console.error("Error confirming loan return:", error);
       res.status(500).json({ error: "Failed to confirm loan return" });
     }
-  }
+  },
 );
 
 app.listen(PORT, () => {
