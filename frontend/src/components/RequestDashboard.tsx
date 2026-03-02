@@ -320,28 +320,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     return `${months} month${months !== 1 ? "s" : ""} ago`;
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      APPROVED: "bg-green-100 text-green-800 border-green-200",
-      REJECTED: "bg-red-100 text-red-800 border-red-200",
-      CANCELLED: "bg-gray-100 text-gray-800 border-gray-200",
-    };
-
-    return (
-      <span
-        className={`px-3 py-1 rounded-full text-xs font-semibold border ${
-          styles[status as keyof typeof styles] || styles.PENDING
-        }`}
-      >
-        {status}
-      </span>
-    );
-  };
-
   const renderRequest = (request: BorrowRequest, isOwner: boolean) => {
     const isPending = request.status === "PENDING";
-    const isActionable = isPending && !actionLoading;
 
     return (
       <div
