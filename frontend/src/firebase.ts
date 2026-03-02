@@ -5,6 +5,7 @@ import {
   setPersistence,
   browserSessionPersistence,
 } from "firebase/auth";
+import { logError } from "./utils/errorHandler";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,30 +19,49 @@ const firebaseConfig = {
 
 // Check if Firebase config is present
 if (!firebaseConfig.apiKey) {
-  console.error(
-    "❌ Firebase configuration missing! Please create a .env file in the frontend directory with:",
-  );
-  console.error("VITE_FIREBASE_API_KEY=your_api_key");
-  console.error("VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain");
-  console.error("VITE_FIREBASE_PROJECT_ID=your_project_id");
-  console.error("VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket");
-  console.error("VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id");
-  console.error("VITE_FIREBASE_APP_ID=your_app_id");
+  const errorMessage = "Firebase configuration missing! Check your .env file.";
+  logError("Firebase Config", errorMessage);
+  throw new Error(errorMessage);
 }
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
+// Track persistence initialization status
+let persistenceInitialized = false;
+let persistenceError: Error | null = null;
+
 // Set session-only persistence (clears on browser close)
 setPersistence(auth, browserSessionPersistence)
   .then(() => {
-    console.log("✅ Firebase auth persistence set to session-only");
+    persistenceInitialized = true;
+    if (import.meta.env.DEV) {
+      console.log("✅ Firebase auth persistence set to session-only");
+    }
   })
   .catch((error) => {
-    console.error("❌ Error setting auth persistence:", error);
-    // If persistence fails, sign out user for security
-    auth.signOut();
-    alert(
-      "Failed to configure secure authentication. Please refresh and try again.",
+    persistenceError = error;
+    logError("Firebase Auth Persistence", error);
+    
+    // Sign out user for security
+    auth.signOut().catch((signOutError) => {
+      logError("Firebase Sign Out", signOutError);
+    });
+    
+    // Store error state for the app to handle
+    sessionStorage.setItem(
+      "firebase_init_error",
+      "Authentication system initialization failed. Please refresh the page."
     );
   });
+
+// Export helper to check persistence status
+export function checkFirebasePersistence(): {
+  initialized: boolean;
+  error: Error | null;
+} {
+  return {
+    initialized: persistenceInitialized,
+    error: persistenceError,
+  };
+}
