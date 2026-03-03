@@ -6,6 +6,21 @@ import GearCard from "../components/GearCard";
 import ManageGroupsModal from "../components/ManageGroupsModal";
 import AddGearToGroupModal from "../components/AddGearToGroupModal";
 import BorrowRequestModal from "../components/BorrowRequestModal";
+import axios from "axios";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  Users,
+  ArrowLeft,
+  UserPlus,
+  Trash2,
+  Package,
+  Plus,
+  X,
+  Mail,
+  Shield,
+  Crown,
+  User as UserIcon,
+} from "lucide-react";
 
 interface User {
   id: string;
@@ -179,7 +194,7 @@ export default function GroupDetail() {
       fetchGroupDetails();
       try {
         window.dispatchEvent(
-          new CustomEvent("resource:deleted", { detail: { id: resourceId } })
+          new CustomEvent("resource:deleted", { detail: { id: resourceId } }),
         );
       } catch (_err) {
         console.debug("[GroupDetail] dispatch resource:deleted failed", _err);
@@ -212,7 +227,7 @@ export default function GroupDetail() {
         window.dispatchEvent(
           new CustomEvent("resource:updated", {
             detail: { resource: resp.data },
-          })
+          }),
         );
       } catch (_err) {
         console.debug("[GroupDetail] dispatch resource:updated failed", _err);
@@ -240,7 +255,7 @@ export default function GroupDetail() {
   const handleUpdateRole = async (
     memberId: string,
     newRole: string,
-    memberName: string
+    memberName: string,
   ) => {
     try {
       const response = await apiClient.put(
@@ -248,7 +263,7 @@ export default function GroupDetail() {
         {
           requesterId: user?.uid,
           role: newRole,
-        }
+        },
       );
 
       if (response.data.success) {
@@ -270,7 +285,7 @@ export default function GroupDetail() {
 
     if (
       !confirm(
-        `Are you sure you want to delete "${group.name}"? This action cannot be undone and will remove all shared gear from this group.`
+        `Are you sure you want to delete "${group.name}"? This action cannot be undone and will remove all shared gear from this group.`,
       )
     ) {
       return;
@@ -295,10 +310,12 @@ export default function GroupDetail() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-sage-50 via-white to-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Loading group details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-sage-200 border-t-sage-600 mx-auto mb-4"></div>
+          <p className="mt-4 text-gray-600 font-medium">
+            Loading group details...
+          </p>
         </div>
         {/* Manage groups modal for resources */}
         {manageResourceId && user && (
@@ -319,13 +336,19 @@ export default function GroupDetail() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 text-lg mb-4">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-sage-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="text-center bg-white rounded-3xl shadow-sm border border-red-100 p-12 max-w-md">
+          <div className="mb-4 flex justify-center">
+            <div className="bg-red-100 p-4 rounded-full">
+              <X className="w-10 h-10 text-red-600" />
+            </div>
+          </div>
+          <p className="text-red-600 text-lg mb-6 font-semibold">{error}</p>
           <Link
             to="/groups"
-            className="text-emerald-600 hover:text-emerald-700 underline"
+            className="inline-flex items-center gap-2 text-sage-600 hover:text-sage-700 font-medium transition-colors"
           >
+            <ArrowLeft className="w-4 h-4" />
             Back to Groups
           </Link>
         </div>
@@ -335,13 +358,21 @@ export default function GroupDetail() {
 
   if (!group) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-slate-600">Group not found</p>
+      <div className="min-h-screen bg-gradient-to-br from-sage-50 via-white to-slate-50 flex items-center justify-center">
+        <div className="text-center bg-white rounded-3xl shadow-sm border border-gray-200 p-12 max-w-md">
+          <div className="mb-4 flex justify-center">
+            <div className="bg-gray-100 p-4 rounded-full">
+              <Users className="w-10 h-10 text-gray-400" />
+            </div>
+          </div>
+          <p className="text-gray-600 text-lg mb-6 font-semibold">
+            Group not found
+          </p>
           <Link
             to="/groups"
-            className="text-emerald-600 hover:text-emerald-700 underline"
+            className="inline-flex items-center gap-2 text-sage-600 hover:text-sage-700 font-medium transition-colors"
           >
+            <ArrowLeft className="w-4 h-4" />
             Back to Groups
           </Link>
         </div>
@@ -355,44 +386,63 @@ export default function GroupDetail() {
   const canManageMembers = isOwner;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-sage-50 via-white to-slate-50">
       <div className="max-w-6xl mx-auto px-4 py-8 pb-48 lg:pb-8">
         {/* Header */}
         <div className="mb-8">
           <Link
             to="/groups"
-            className="text-emerald-600 hover:text-emerald-700 mb-4 inline-flex items-center"
+            className="text-sage-600 hover:text-sage-700 mb-6 inline-flex items-center gap-2 font-medium transition-colors"
           >
-            ← Back to Groups
+            <ArrowLeft className="w-4 h-4" />
+            Back to Groups
           </Link>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white rounded-3xl shadow-sm border border-sage-100 p-8"
+          >
             <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-5">
                 {group.avatar ? (
                   <img
                     src={group.avatar}
                     alt={group.name}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-slate-200"
+                    className="w-20 h-20 rounded-2xl object-cover border-2 border-sage-200"
                   />
                 ) : (
-                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                  <div className="w-20 h-20 bg-gradient-to-br from-sage-400 to-sage-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-sm">
                     {group.name.charAt(0).toUpperCase()}
                   </div>
                 )}
 
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
                     {group.name}
                   </h1>
                   {group.description && (
-                    <p className="text-slate-600 mt-1">{group.description}</p>
+                    <p className="text-gray-600 mb-3">{group.description}</p>
                   )}
-                  <div className="flex items-center space-x-4 mt-2 text-sm text-slate-500">
-                    <span>{group.memberCount} members</span>
-                    <span>{group.sharedResourcesCount} shared items</span>
-                    <span className="capitalize text-emerald-600 font-medium">
-                      Your role: {userRole}
+                  <div className="flex items-center gap-5 text-sm text-gray-500">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4" />
+                      {group.memberCount} members
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Package className="w-4 h-4" />
+                      {group.sharedResourcesCount} shared items
+                    </span>
+                    <span className="flex items-center gap-1.5 capitalize text-sage-600 font-semibold">
+                      {userRole === "owner" ? (
+                        <Crown className="w-4 h-4" />
+                      ) : userRole === "admin" ? (
+                        <Shield className="w-4 h-4" />
+                      ) : (
+                        <UserIcon className="w-4 h-4" />
+                      )}
+                      {userRole}
                     </span>
                   </div>
                 </div>
@@ -402,8 +452,9 @@ export default function GroupDetail() {
                 {group.userPermissions.canInvite && (
                   <button
                     onClick={() => setShowInviteForm(!showInviteForm)}
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="bg-sage-600 text-white px-5 py-2.5 rounded-xl hover:bg-sage-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
                   >
+                    <UserPlus className="w-4 h-4" />
                     Invite Member
                   </button>
                 )}
@@ -411,8 +462,9 @@ export default function GroupDetail() {
                 {group.userPermissions.canDelete && (
                   <button
                     onClick={deleteGroup}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                    className="bg-red-600 text-white px-5 py-2.5 rounded-xl hover:bg-red-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
                   >
+                    <Trash2 className="w-4 h-4" />
                     Delete Group
                   </button>
                 )}
@@ -420,207 +472,285 @@ export default function GroupDetail() {
             </div>
 
             {/* Invite Form */}
-            {showInviteForm && (
-              <div className="mt-6 pt-6 border-t border-slate-200">
-                <form onSubmit={handleInvite} className="flex gap-2">
-                  <input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="Enter email address"
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    disabled={inviting}
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                  >
-                    {inviting ? "Inviting..." : "Invite"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowInviteForm(false);
-                      setInviteEmail("");
-                    }}
-                    className="bg-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-400 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
+            <AnimatePresence>
+              {showInviteForm && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="mt-6 pt-6 border-t border-sage-100 overflow-hidden"
+                >
+                  <form onSubmit={handleInvite} className="flex gap-3">
+                    <div className="flex-1 relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="Enter email address"
+                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-sage-500 focus:border-sage-500 transition-all"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={inviting}
+                      className="bg-sage-600 text-white px-6 py-3 rounded-xl hover:bg-sage-700 disabled:opacity-50 transition-colors font-medium flex items-center gap-2"
+                    >
+                      {inviting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Inviting...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4" />
+                          Invite
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowInviteForm(false);
+                        setInviteEmail("");
+                      }}
+                      className="bg-gray-100 text-gray-700 px-5 py-3 rounded-xl hover:bg-gray-200 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-6">
           {/* Members Section */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">
-                Members ({group.memberCount})
-              </h2>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="bg-white rounded-3xl shadow-sm border border-sage-100 p-6"
+            >
+              <div className="flex items-center gap-3 mb-5">
+                <div className="bg-sage-100 p-2 rounded-xl">
+                  <Users className="w-5 h-5 text-sage-700" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Members ({group.memberCount})
+                </h2>
+              </div>
 
               <div className="space-y-3">
-                {group.members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                        {(member.user.name || member.user.email)
-                          .charAt(0)
-                          .toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {member.user.name || member.user.email}
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          {member.user.email}
-                        </p>
-                        <span
-                          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            member.role === "owner"
-                              ? "bg-purple-100 text-purple-700"
-                              : member.role === "admin"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {member.role}
-                        </span>
-                      </div>
-                    </div>
-
-                    {canManageMembers &&
-                      member.userId !== user?.uid &&
-                      member.role !== "owner" && (
-                        <div className="flex items-center space-x-2">
-                          {/* Role toggle for non-owners */}
-                          <select
-                            value={member.role}
-                            onChange={(e) =>
-                              handleUpdateRole(
-                                member.userId,
-                                e.target.value,
-                                member.user.name || member.user.email
-                              )
-                            }
-                            className="text-xs border border-slate-300 rounded px-2 py-1"
-                          >
-                            <option value="member">Member</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                          <button
-                            onClick={() =>
-                              handleRemoveMember(
-                                member.userId,
-                                member.user.name || member.user.email
-                              )
-                            }
-                            className="text-red-600 hover:text-red-700 text-sm"
-                            title="Remove member"
-                          >
-                            ✕
-                          </button>
+                <AnimatePresence mode="popLayout">
+                  {group.members.map((member, index) => (
+                    <motion.div
+                      key={member.id}
+                      layout
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.2, delay: index * 0.05 }}
+                      className="flex items-center justify-between p-4 bg-gradient-to-r from-sage-50 to-transparent rounded-2xl hover:from-sage-100 transition-all"
+                    >
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="w-11 h-11 bg-gradient-to-br from-sage-400 to-sage-600 rounded-xl flex items-center justify-center text-white font-semibold text-sm shadow-sm flex-shrink-0">
+                          {(member.user.name || member.user.email)
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
-                      )}
-                  </div>
-                ))}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">
+                            {member.user.name || member.user.email}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {member.user.email}
+                          </p>
+                          <div className="mt-1.5">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide ${
+                                member.role === "owner"
+                                  ? "bg-purple-100 text-purple-700"
+                                  : member.role === "admin"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-gray-100 text-gray-700"
+                              }`}
+                            >
+                              {member.role === "owner" ? (
+                                <Crown className="w-3 h-3" />
+                              ) : member.role === "admin" ? (
+                                <Shield className="w-3 h-3" />
+                              ) : (
+                                <UserIcon className="w-3 h-3" />
+                              )}
+                              {member.role}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {canManageMembers &&
+                        member.userId !== user?.uid &&
+                        member.role !== "owner" && (
+                          <div className="flex items-center space-x-2 flex-shrink-0 ml-3">
+                            {/* Role toggle for non-owners */}
+                            <select
+                              value={member.role}
+                              onChange={(e) =>
+                                handleUpdateRole(
+                                  member.userId,
+                                  e.target.value,
+                                  member.user.name || member.user.email,
+                                )
+                              }
+                              className="text-xs border-2 border-gray-200 rounded-lg px-2 py-1.5 font-medium focus:border-sage-400 focus:outline-none"
+                            >
+                              <option value="member">Member</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                            <button
+                              onClick={() =>
+                                handleRemoveMember(
+                                  member.userId,
+                                  member.user.name || member.user.email,
+                                )
+                              }
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                              title="Remove member"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Shared Gear Section */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="bg-white rounded-3xl shadow-sm border border-sage-100 p-6"
+            >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Shared Gear ({group.sharedResourcesCount})
-                </h2>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="bg-sage-100 p-2 rounded-xl">
+                    <Package className="w-5 h-5 text-sage-700" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Shared Gear ({group.sharedResourcesCount})
+                  </h2>
+                </div>
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => setShowAddGearModal(true)}
-                    className="bg-sky-600 text-white px-3 py-2 rounded-lg hover:bg-sky-700 transition-colors text-sm"
+                    className="bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2 shadow-sm"
                   >
+                    <Plus className="w-4 h-4" />
                     Add Gear
                   </button>
                   <Link
                     to="/post"
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+                    className="bg-sage-600 text-white px-4 py-2.5 rounded-xl hover:bg-sage-700 transition-colors text-sm font-medium flex items-center gap-2 shadow-sm"
                   >
+                    <Plus className="w-4 h-4" />
                     Share New Gear
                   </Link>
                 </div>
               </div>
 
               {group.resources.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl">📦</span>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-center py-16"
+                >
+                  <div className="mb-5 flex justify-center">
+                    <div className="bg-sage-100 p-6 rounded-full">
+                      <Package
+                        className="w-12 h-12 text-sage-600"
+                        strokeWidth={1.5}
+                      />
+                    </div>
                   </div>
-                  <h3 className="text-lg font-medium text-slate-900 mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
                     No shared gear yet
                   </h3>
-                  <p className="text-slate-600 mb-4">
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
                     Members can share their gear with this group to make it
                     available to everyone.
                   </p>
                   <Link
                     to="/post"
-                    className="inline-block bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors"
+                    className="inline-flex items-center gap-2 bg-sage-600 text-white px-6 py-3 rounded-xl hover:bg-sage-700 transition-colors font-medium shadow-sm"
                   >
+                    <Plus className="w-4 h-4" />
                     Share Your First Item
                   </Link>
-                </div>
+                </motion.div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6 mb-32">
-                  {group.resources.map(({ resource }) => (
-                    <div key={resource.id} className="relative">
-                      <GearCard
-                        id={resource.id}
-                        title={resource.title}
-                        description={resource.description}
-                        image={resource.image}
-                        showActions={resource.ownerId === user?.uid}
-                        onDelete={
-                          resource.ownerId === user?.uid
-                            ? handleDeleteResource
-                            : undefined
-                        }
-                        onEdit={
-                          resource.ownerId === user?.uid
-                            ? handleEditResource
-                            : undefined
-                        }
-                        onManageGroups={
-                          resource.ownerId === user?.uid
-                            ? () => {
-                                setManageResourceId(resource.id);
-                                setShowManageModal(true);
-                              }
-                            : undefined
-                        }
-                        onRequestBorrow={
-                          resource.ownerId !== user?.uid
-                            ? handleRequestBorrow
-                            : undefined
-                        }
-                      />
-                      {/* Owner info overlay */}
-                      <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-xs text-slate-600">
-                        <span className="font-medium">
+                  <AnimatePresence mode="popLayout">
+                    {group.resources.map(({ resource }, index) => (
+                      <motion.div
+                        key={resource.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.2, delay: index * 0.03 }}
+                        className="relative"
+                      >
+                        <GearCard
+                          id={resource.id}
+                          title={resource.title}
+                          description={resource.description}
+                          image={resource.image}
+                          showActions={resource.ownerId === user?.uid}
+                          onDelete={
+                            resource.ownerId === user?.uid
+                              ? handleDeleteResource
+                              : undefined
+                          }
+                          onEdit={
+                            resource.ownerId === user?.uid
+                              ? handleEditResource
+                              : undefined
+                          }
+                          onManageGroups={
+                            resource.ownerId === user?.uid
+                              ? () => {
+                                  setManageResourceId(resource.id);
+                                  setShowManageModal(true);
+                                }
+                              : undefined
+                          }
+                          onRequestBorrow={
+                            resource.ownerId !== user?.uid
+                              ? handleRequestBorrow
+                              : undefined
+                          }
+                        />
+                        {/* Owner info overlay */}
+                        <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
                           {resource.owner.name || resource.owner.email}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
               )}
-            </div>
+            </motion.div>
           </div>
         </div>
         {showAddGearModal && group && user && (

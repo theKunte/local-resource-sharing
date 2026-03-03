@@ -3,7 +3,8 @@ import axios from "axios";
 import apiClient from "../utils/apiClient";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
-import { cropImageToSquare } from "../utils/cropImageToSquare";
+import { motion, AnimatePresence } from "motion/react";
+import { Users, Plus, Eye, UserPlus, DoorOpen, Edit, X } from "lucide-react";
 
 interface Group {
   id: string;
@@ -62,7 +63,7 @@ export default function Groups() {
           response.data.map(async (group: Group) => {
             try {
               const membersResponse = await apiClient.get(
-                `/api/groups/${group.id}/members`
+                `/api/groups/${group.id}/members`,
               );
               return {
                 ...group,
@@ -72,11 +73,11 @@ export default function Groups() {
             } catch (error) {
               console.error(
                 `Error loading members for group ${group.id}:`,
-                error
+                error,
               );
               return { ...group, members: [], memberCount: 0 };
             }
-          })
+          }),
         );
 
         setGroups(groupsWithDetails);
@@ -102,7 +103,7 @@ export default function Groups() {
         response.data.map(async (group: Group) => {
           try {
             const membersResponse = await apiClient.get(
-              `/api/groups/${group.id}/members`
+              `/api/groups/${group.id}/members`,
             );
             return {
               ...group,
@@ -112,11 +113,11 @@ export default function Groups() {
           } catch (error) {
             console.error(
               `Error loading members for group ${group.id}:`,
-              error
+              error,
             );
             return { ...group, members: [], memberCount: 0 };
           }
-        })
+        }),
       );
 
       setGroups(groupsWithDetails);
@@ -162,7 +163,7 @@ export default function Groups() {
         {
           email: inviteEmail.trim().toLowerCase(), // Normalize email
           invitedBy: user!.uid,
-        }
+        },
       );
 
       setInviteEmail("");
@@ -223,33 +224,6 @@ export default function Groups() {
       alert("Failed to leave group. Please try again.");
     }
   };
-  const [updatingAvatar, setUpdatingAvatar] = useState<string | null>(null);
-
-  const updateGroupAvatar = async (
-    groupId: string,
-    avatarFile: File | null
-  ) => {
-    try {
-      setUpdatingAvatar(groupId);
-      let avatar = null;
-      if (avatarFile) {
-        avatar = await cropImageToSquare(avatarFile, 128);
-      }
-
-      await apiClient.put(`/api/groups/${groupId}`, {
-        avatar,
-        userId: user!.uid,
-      });
-
-      // Reload groups to reflect the change
-      await loadGroups();
-    } catch (error) {
-      console.error("Error updating group avatar:", error);
-      alert("Failed to update group avatar. Please try again.");
-    } finally {
-      setUpdatingAvatar(null);
-    }
-  };
 
   const updateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,18 +254,12 @@ export default function Groups() {
     }
   };
 
-  // helper to shorten long group names for display
-  const truncate = (s: string | undefined, n = 28) => {
-    if (!s) return "";
-    return s.length > n ? s.slice(0, n - 1) + "…" : s;
-  };
-
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-sage-50 via-white to-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mb-4"></div>
-          <p className="text-gray-600">Loading your groups...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-sage-200 border-t-sage-600 mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading your groups...</p>
         </div>
       </div>
     );
@@ -300,15 +268,38 @@ export default function Groups() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <div className="min-h-screen bg-gradient-to-br from-sage-50 via-white to-slate-50">
+      {/* DEBUG */}
+      {selectedGroup && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            background: "red",
+            color: "white",
+            padding: "10px",
+            zIndex: 99999999,
+            fontSize: "20px",
+            fontWeight: "bold",
+          }}
+        >
+          MODAL SHOULD BE VISIBLE - Group: {selectedGroup.name}
+        </div>
+      )}
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white py-12 mb-8">
+      <div className="bg-white border-b border-sage-100 py-12 mb-8">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <div className="mb-4">
-            <span className="text-5xl">👥</span>
+          <div className="mb-6 flex justify-center">
+            <div className="bg-sage-100 p-6 rounded-full">
+              <Users className="w-12 h-12 text-sage-700" strokeWidth={1.5} />
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Your Groups</h1>
-          <p className="text-xl text-emerald-100 max-w-2xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">
+            Your Groups
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Manage your trusted circles and share gear safely with friends
           </p>
         </div>
@@ -319,233 +310,357 @@ export default function Groups() {
         <div className="mb-8 text-center">
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
+            className="bg-sage-600 hover:bg-sage-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm inline-flex items-center gap-2"
           >
-            <span className="mr-2">➕</span>
+            <Plus className="w-5 h-5" />
             Create New Group
           </button>
         </div>
 
         {/* Create Group Form */}
-        {showCreateForm && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Create a New Group
-            </h3>
-            <form onSubmit={createGroup} className="flex gap-4">
-              <input
-                type="text"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder="e.g., Seattle Hiking Friends, College Roommates"
-                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none"
-                required
-              />
-              <button
-                type="submit"
-                disabled={creating}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
-              >
-                {creating ? "Creating..." : "Create"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-            </form>
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {showCreateForm && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-3xl shadow-sm border border-sage-100 p-6 mb-8"
+            >
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Create a New Group
+              </h3>
+              <form onSubmit={createGroup} className="flex gap-4">
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  placeholder="e.g., Seattle Hiking Friends, College Roommates"
+                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-sage-500 focus:outline-none"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="bg-sage-600 hover:bg-sage-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50"
+                >
+                  {creating ? "Creating..." : "Create"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm(false)}
+                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Groups Grid */}
         {groups.length === 0 ? (
-          <div className="text-center py-12 px-6 bg-white rounded-xl border-2 border-dashed border-gray-200">
-            <span className="text-5xl mb-4 block">👥</span>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.2 }}
+            className="text-center py-16 px-6 bg-white rounded-3xl border-2 border-dashed border-sage-200"
+          >
+            <div className="mb-4 flex justify-center">
+              <div className="bg-sage-100 p-6 rounded-full">
+                <Users className="w-12 h-12 text-sage-600" strokeWidth={1.5} />
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
               No groups yet
             </h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-gray-600 mb-6">
               Create your first group to start sharing gear with trusted
               friends!
             </p>
-          </div>
+          </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {" "}
-            {groups.map((group) => (
-              <div
-                key={group.id}
-                className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-4"
-              >
-                <div className="p-6">
-                  <div className="flex items-center mb-4">
-                    {" "}
-                    <div className="relative mr-4">
-                      {" "}
-                      <div
-                        className={`w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden cursor-pointer relative ${
-                          updatingAvatar === group.id ? "opacity-50" : ""
-                        }`}
-                        onClick={() => navigate(`/groups/${group.id}`)}
-                        onContextMenu={(e) => {
-                          if (group.createdById === user.uid && group.avatar) {
-                            e.preventDefault();
-                            if (confirm("Remove group avatar?")) {
-                              updateGroupAvatar(group.id, null);
-                            }
-                          }
-                        }}
-                        title={`Open ${group.name}`}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            navigate(`/groups/${group.id}`);
-                          }
-                        }}
-                      >
-                        {updatingAvatar === group.id && (
-                          <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          </div>
-                        )}
-                        {group.avatar ? (
-                          <img
-                            src={group.avatar}
-                            alt={`${group.name} Avatar`}
-                            className="w-full h-full object-cover rounded-full"
-                          />
-                        ) : (
-                          <span>{group.name.charAt(0).toUpperCase()}</span>
-                        )}
-                      </div>{" "}
-                      {group.createdById === user.uid && (
-                        <label
-                          className={`absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-600 hover:bg-emerald-700 rounded-full flex items-center justify-center cursor-pointer transition-colors shadow-lg ${
-                            updatingAvatar === group.id
-                              ? "opacity-50 cursor-not-allowed"
-                              : ""
-                          }`}
-                        >
-                          <span className="text-white text-xs">📷</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            disabled={updatingAvatar === group.id}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0] || null;
-                              if (file && updatingAvatar !== group.id) {
-                                updateGroupAvatar(group.id, file);
-                              }
-                            }}
-                          />
-                        </label>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">
-                        {truncate(group.name)}
-                      </h3>
-                      <p className="text-gray-500 text-sm">
-                        {group.memberCount} member
-                        {group.memberCount !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence mode="popLayout">
+              {groups.map((group) => {
+                // Determine user's role in this group
+                const isOwner = group.createdById === user?.uid;
+                const userRole = isOwner ? "OWNER" : "MEMBER";
 
-                  {/* Members List */}
-                  <div className="mb-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                      Members:
-                    </h4>
-                    <div className="space-y-1">
-                      {group.members?.slice(0, 3).map((member) => (
-                        <div
-                          key={member.id}
-                          className="text-sm text-gray-600 flex items-center"
-                        >
-                          <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></span>
-                          {member.user.name || member.user.email}
-                          {member.user.id === user.uid && " (You)"}
+                return (
+                  <motion.div
+                    key={group.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
+                  >
+                    <div className="p-6">
+                      {/* Group Header with Role Badge */}
+                      <div className="flex items-start justify-between mb-4">
+                        <h3 className="text-xl font-bold text-gray-900 flex-1 pr-3">
+                          {group.name}
+                        </h3>
+                        <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-700">
+                          {userRole}
+                        </span>
+                      </div>
+
+                      {/* Member Count */}
+                      <div className="flex items-center gap-2 text-gray-500 mb-4">
+                        <Users className="w-4 h-4" />
+                        <span className="text-sm">
+                          {group.memberCount} member
+                          {group.memberCount !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+
+                      {/* Members List */}
+                      <div className="mb-5">
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                          Members:
+                        </h4>
+                        <div className="space-y-2">
+                          {group.members?.slice(0, 3).map((member) => (
+                            <div
+                              key={member.id}
+                              className="text-sm text-gray-700 flex items-center"
+                            >
+                              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-2.5"></span>
+                              <span className="truncate">
+                                {member.user.name || member.user.email}
+                                {member.user.id === user.uid && " (You)"}
+                              </span>
+                            </div>
+                          ))}
+                          {group.memberCount! > 3 && (
+                            <div className="text-sm text-gray-500 ml-4">
+                              +{group.memberCount! - 3} more...
+                            </div>
+                          )}
                         </div>
-                      ))}
-                      {group.memberCount! > 3 && (
-                        <div className="text-sm text-gray-500">
-                          +{group.memberCount! - 3} more...
-                        </div>
-                      )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="space-y-2.5">
+                        <button
+                          onClick={() => navigate(`/groups/${group.id}`)}
+                          className="w-full bg-cyan-100 hover:bg-cyan-200 text-cyan-700 px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View Group
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            console.log("Invite Friends clicked:", group);
+                            setSelectedGroup(group);
+                          }}
+                          className="w-full bg-cyan-100 hover:bg-cyan-200 text-cyan-700 px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          Invite Friends
+                        </button>
+
+                        {group.createdById !== user.uid && (
+                          <button
+                            onClick={() => leaveGroup(group.id, group.name)}
+                            className="w-full bg-pink-100 hover:bg-pink-200 text-pink-700 px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                          >
+                            <DoorOpen className="w-4 h-4" />
+                            Leave Group
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => navigate(`/groups/${group.id}`)}
-                      className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors"
-                    >
-                      <span className="mr-1">👁️</span>
-                      View Group
-                    </button>
-
-                    <button
-                      onClick={() => setSelectedGroup(group)}
-                      className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2 rounded-lg font-medium transition-colors"
-                    >
-                      <span className="mr-1">✉️</span>
-                      Invite Friends
-                    </button>
-
-                    {group.createdById !== user.uid && (
-                      <button
-                        onClick={() => leaveGroup(group.id, group.name)}
-                        className="w-full bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-medium transition-colors"
-                      >
-                        <span className="mr-1">🚪</span>
-                        Leave Group
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
+      </div>
 
-        {/* Invite Modal */}
-        {selectedGroup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Invite to "{selectedGroup.name}"
-              </h3>
-              <form onSubmit={inviteToGroup} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
+      {/* Invite Modal */}
+      {selectedGroup && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px",
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+          }}
+          onClick={() => {
+            console.log("Backdrop clicked");
+            setSelectedGroup(null);
+            setInviteEmail("");
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: "40px",
+              padding: "32px",
+              maxWidth: "400px",
+              width: "100%",
+              position: "relative",
+              border: "3px solid #06b6d4",
+            }}
+            onClick={(e) => {
+              console.log("Modal clicked");
+              e.stopPropagation();
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  width: "64px",
+                  height: "64px",
+                  backgroundColor: "#ecfeff",
+                  borderRadius: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#0891b2",
+                  marginBottom: "24px",
+                }}
+              >
+                <UserPlus size={32} />
+              </div>
+              <h2
+                style={{
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  color: "#0f172a",
+                  marginBottom: "8px",
+                }}
+              >
+                Invite to Group
+              </h2>
+              <p
+                style={{
+                  color: "#64748b",
+                  fontSize: "14px",
+                  marginBottom: "32px",
+                }}
+              >
+                Invite your friends to{" "}
+                <span style={{ fontWeight: "bold", color: "#0f172a" }}>
+                  {selectedGroup.name}
+                </span>{" "}
+                to start sharing gear.
+              </p>
+
+              <form onSubmit={inviteToGroup} style={{ width: "100%" }}>
+                <div style={{ position: "relative", marginBottom: "16px" }}>
+                  <Users
+                    style={{
+                      position: "absolute",
+                      left: "16px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#94a3b8",
+                    }}
+                    size={18}
+                  />
                   <input
+                    id="invite-email"
+                    name="inviteEmail"
                     type="email"
+                    placeholder="Friend's email address"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="friend@example.com"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none"
+                    autoComplete="email"
+                    autoFocus
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "16px",
+                      padding: "16px 16px 16px 48px",
+                      fontSize: "14px",
+                      outline: "none",
+                    }}
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    ⚠️ Important: They must have signed up with this exact email
-                    address using Google authentication
-                  </p>
                 </div>
-                <div className="flex gap-3">
+
+                {selectedGroup.members && selectedGroup.members.length > 1 && (
+                  <div style={{ textAlign: "left", marginBottom: "16px" }}>
+                    <h4
+                      style={{
+                        fontSize: "10px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        fontWeight: "bold",
+                        color: "#94a3b8",
+                        marginBottom: "12px",
+                        paddingLeft: "4px",
+                      }}
+                    >
+                      Suggested:
+                    </h4>
+                    <div
+                      style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
+                    >
+                      {selectedGroup.members
+                        .filter((m) => m.user.id !== user?.uid)
+                        .slice(0, 3)
+                        .map((member) => (
+                          <button
+                            key={member.id}
+                            type="button"
+                            onClick={() => setInviteEmail(member.user.email)}
+                            style={{
+                              padding: "6px 12px",
+                              backgroundColor: "#f8fafc",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: "8px",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              color: "#475569",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {member.user.name ||
+                              member.user.email.split("@")[0]}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ paddingTop: "16px" }}>
                   <button
                     type="submit"
                     disabled={inviting}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#22d3ee",
+                      color: "white",
+                      padding: "16px",
+                      borderRadius: "16px",
+                      fontWeight: "600",
+                      border: "none",
+                      cursor: inviting ? "not-allowed" : "pointer",
+                      opacity: inviting ? 0.5 : 1,
+                      marginBottom: "12px",
+                    }}
                   >
-                    {inviting ? "Sending..." : "Send Invite"}
+                    {inviting ? "Sending Invitation..." : "Send Invitation"}
                   </button>
                   <button
                     type="button"
@@ -553,7 +668,16 @@ export default function Groups() {
                       setSelectedGroup(null);
                       setInviteEmail("");
                     }}
-                    className="px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                    style={{
+                      width: "100%",
+                      color: "#64748b",
+                      padding: "8px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                    }}
                   >
                     Cancel
                   </button>
@@ -561,62 +685,94 @@ export default function Groups() {
               </form>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Edit Group Modal */}
-        {editingGroup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Edit Group
-              </h3>
-              <form onSubmit={updateGroup} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Group Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editGroupName}
-                    onChange={(e) => setEditGroupName(e.target.value)}
-                    placeholder="e.g., Seattle Hiking Friends"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={editGroupDescription}
-                    onChange={(e) => setEditGroupDescription(e.target.value)}
-                    placeholder="Optional group description"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none"
-                    rows={3}
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    type="submit"
-                    disabled={updating}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
-                  >
-                    {updating ? "Updating..." : "Update Group"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingGroup(null)}
-                    className="px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+      {/* Edit Group Modal */}
+      {editingGroup && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm"
+          style={{ zIndex: 9999 }}
+          onClick={() => setEditingGroup(null)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Edit Group</h3>
+              <button
+                onClick={() => setEditingGroup(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
+            <form onSubmit={updateGroup} className="space-y-5">
+              <div>
+                <label
+                  htmlFor="group-name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Group Name
+                </label>
+                <input
+                  id="group-name"
+                  type="text"
+                  value={editGroupName}
+                  onChange={(e) => setEditGroupName(e.target.value)}
+                  placeholder="e.g., Seattle Hiking Friends"
+                  autoFocus
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-sage-500 focus:ring-2 focus:ring-sage-200 focus:outline-none transition-colors bg-white text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="group-description"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="group-description"
+                  value={editGroupDescription}
+                  onChange={(e) => setEditGroupDescription(e.target.value)}
+                  placeholder="Optional group description"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-sage-500 focus:ring-2 focus:ring-sage-200 focus:outline-none transition-colors bg-white text-gray-900"
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="flex-1 bg-sage-600 hover:bg-sage-700 text-white py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {updating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4" />
+                      Update Group
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingGroup(null)}
+                  className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
