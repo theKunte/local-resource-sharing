@@ -4,6 +4,18 @@ export default {
   theme: {
     extend: {
       colors: {
+        sage: {
+          50: "#f4f7f4",
+          100: "#e9eee9",
+          200: "#d3ddd3",
+          300: "#b8c8b8",
+          400: "#9cb19c",
+          500: "#819a81",
+          600: "#667e66",
+          700: "#4d5f4d",
+          800: "#333f33",
+          900: "#1a201a",
+        },
         primary: {
           50: "#f0f7ff",
           100: "#e0effe",
