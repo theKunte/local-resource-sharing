@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Clock, ChevronRight, Filter, Check, X, Edit, Trash2, Package } from "lucide-react";
+import {
+  Clock,
+  ChevronRight,
+  Filter,
+  Check,
+  X,
+  Edit,
+  Trash2,
+  Package,
+} from "lucide-react";
 import apiClient from "../utils/apiClient";
 
 interface BorrowRequest {
@@ -47,9 +56,15 @@ interface RequestDashboardProps {
   userId: string;
 }
 
-type StatusFilter = "all" | "active" | "completed";
+type StatusFilter = "all" | "pending" | "borrowed" | "returned";
 
-const StatusBadge = ({ status, loanStatus }: { status: string; loanStatus?: string }) => {
+const StatusBadge = ({
+  status,
+  loanStatus,
+}: {
+  status: string;
+  loanStatus?: string;
+}) => {
   let displayText = status;
   let colorClasses = "bg-gray-100 text-gray-700 border-gray-200";
 
@@ -62,7 +77,10 @@ const StatusBadge = ({ status, loanStatus }: { status: string; loanStatus?: stri
   } else if (status === "APPROVED" && loanStatus === "RETURNED") {
     displayText = "Returned";
     colorClasses = "bg-sage-600 text-white border-sage-700";
-  } else if (status === "APPROVED" && loanStatus === "PENDING_RETURN_CONFIRMATION") {
+  } else if (
+    status === "APPROVED" &&
+    loanStatus === "PENDING_RETURN_CONFIRMATION"
+  ) {
     displayText = "Pending Return";
     colorClasses = "bg-purple-100 text-purple-700 border-purple-200";
   } else if (status === "REJECTED") {
@@ -74,7 +92,9 @@ const StatusBadge = ({ status, loanStatus }: { status: string; loanStatus?: stri
   }
 
   return (
-    <span className={`px-3 py-1 rounded-lg text-xs font-semibold border ${colorClasses}`}>
+    <span
+      className={`px-3 py-1 rounded-lg text-xs font-semibold border ${colorClasses}`}
+    >
       {displayText}
     </span>
   );
@@ -110,7 +130,8 @@ const RequestCard: React.FC<{
   const isPending = request.status === "PENDING";
   const isApproved = request.status === "APPROVED";
   const isActive = isApproved && request.loan?.status === "ACTIVE";
-  const isPendingReturn = isApproved && request.loan?.status === "PENDING_RETURN_CONFIRMATION";
+  const isPendingReturn =
+    isApproved && request.loan?.status === "PENDING_RETURN_CONFIRMATION";
   const isReturned = isApproved && request.loan?.status === "RETURNED";
 
   const getStatusMessage = () => {
@@ -132,7 +153,10 @@ const RequestCard: React.FC<{
       className="bg-white rounded-3xl p-6 shadow-sm mb-4 border border-gray-100 hover:shadow-md transition-shadow"
     >
       <div className="flex justify-between items-start mb-4">
-        <StatusBadge status={request.status} loanStatus={request.loan?.status} />
+        <StatusBadge
+          status={request.status}
+          loanStatus={request.loan?.status}
+        />
         <div className="flex items-center gap-1.5 text-slate-400 text-sm">
           <span>{formatDate(request.createdAt)}</span>
           <Clock size={16} />
@@ -199,7 +223,9 @@ const RequestCard: React.FC<{
           </div>
         )}
 
-        <p className="text-xs text-slate-400 italic mb-4">{getStatusMessage()}</p>
+        <p className="text-xs text-slate-400 italic mb-4">
+          {getStatusMessage()}
+        </p>
 
         {/* Action Buttons */}
         <div className="flex gap-2 flex-wrap">
@@ -252,7 +278,9 @@ const RequestCard: React.FC<{
               className="flex items-center gap-1.5 px-4 py-2 bg-sage-600 text-white rounded-xl text-sm font-semibold hover:bg-sage-700 disabled:opacity-50 transition-colors"
             >
               <Package size={16} />
-              {actionLoading === request.id ? "Processing..." : "Mark as Returned"}
+              {actionLoading === request.id
+                ? "Processing..."
+                : "Mark as Returned"}
             </button>
           )}
 
@@ -263,7 +291,9 @@ const RequestCard: React.FC<{
               className="flex items-center gap-1.5 px-4 py-2 bg-purple-100 text-purple-700 rounded-xl text-sm font-semibold hover:bg-purple-200 disabled:opacity-50 transition-colors"
             >
               <Package size={16} />
-              {actionLoading === request.loan.id ? "Processing..." : "I Returned This"}
+              {actionLoading === request.loan.id
+                ? "Processing..."
+                : "I Returned This"}
             </button>
           )}
 
@@ -274,20 +304,24 @@ const RequestCard: React.FC<{
               className="flex items-center gap-1.5 px-4 py-2 bg-sage-600 text-white rounded-xl text-sm font-semibold hover:bg-sage-700 disabled:opacity-50 transition-colors"
             >
               <Check size={16} />
-              {actionLoading === request.id ? "Confirming..." : "Confirm Return"}
+              {actionLoading === request.id
+                ? "Confirming..."
+                : "Confirm Return"}
             </button>
           )}
 
-          {!isOwner && (request.status === "REJECTED" || request.status === "CANCELLED") && (
-            <button
-              onClick={() => onDelete(request.id)}
-              disabled={actionLoading === request.id}
-              className="flex items-center gap-1.5 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-200 disabled:opacity-50 transition-colors"
-            >
-              <Trash2 size={16} />
-              Delete
-            </button>
-          )}
+          {!isOwner &&
+            (request.status === "REJECTED" ||
+              request.status === "CANCELLED") && (
+              <button
+                onClick={() => onDelete(request.id)}
+                disabled={actionLoading === request.id}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-200 disabled:opacity-50 transition-colors"
+              >
+                <Trash2 size={16} />
+                Delete
+              </button>
+            )}
         </div>
       </div>
     </motion.div>
@@ -295,14 +329,14 @@ const RequestCard: React.FC<{
 };
 
 const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
-  const [activeTab, setActiveTab] = useState<"incoming" | "outgoing">("incoming");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [incomingRequests, setIncomingRequests] = useState<BorrowRequest[]>([]);
-  const [outgoingRequests, setOutgoingRequests] = useState<BorrowRequest[]>([]);
+  const [allRequests, setAllRequests] = useState<BorrowRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [editingRequest, setEditingRequest] = useState<BorrowRequest | null>(null);
+  const [editingRequest, setEditingRequest] = useState<BorrowRequest | null>(
+    null,
+  );
   const [editForm, setEditForm] = useState({
     startDate: "",
     endDate: "",
@@ -318,19 +352,22 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     setLoading(true);
     setError(null);
     try {
-      // Load incoming requests (as owner)
-      const incomingResponse = await apiClient.get(
-        `/api/borrow-requests?userId=${userId}&role=owner`,
-      );
-      const incomingData = incomingResponse.data.requests || incomingResponse.data;
-      setIncomingRequests(Array.isArray(incomingData) ? incomingData : []);
+      // Load all requests (both incoming and outgoing)
+      const [incomingResponse, outgoingResponse] = await Promise.all([
+        apiClient.get(`/api/borrow-requests?userId=${userId}&role=owner`),
+        apiClient.get(`/api/borrow-requests?userId=${userId}&role=borrower`),
+      ]);
 
-      // Load outgoing requests (as borrower)
-      const outgoingResponse = await apiClient.get(
-        `/api/borrow-requests?userId=${userId}&role=borrower`,
-      );
-      const outgoingData = outgoingResponse.data.requests || outgoingResponse.data;
-      setOutgoingRequests(Array.isArray(outgoingData) ? outgoingData : []);
+      const incomingData =
+        incomingResponse.data.requests || incomingResponse.data;
+      const outgoingData =
+        outgoingResponse.data.requests || outgoingResponse.data;
+
+      const incoming = Array.isArray(incomingData) ? incomingData : [];
+      const outgoing = Array.isArray(outgoingData) ? outgoingData : [];
+
+      // Combine both arrays
+      setAllRequests([...incoming, ...outgoing]);
     } catch (error) {
       console.error("Error loading requests:", error);
       setError("Failed to load requests. Please try again.");
@@ -349,7 +386,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const handleAccept = async (requestId: string) => {
     setActionLoading(requestId);
     try {
-      await apiClient.post(`/api/borrow-requests/${requestId}/accept`, { userId });
+      await apiClient.post(`/api/borrow-requests/${requestId}/accept`, {
+        userId,
+      });
       await loadRequests();
       alert("Request accepted successfully!");
     } catch (error: any) {
@@ -365,7 +404,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await apiClient.post(`/api/borrow-requests/${requestId}/decline`, { userId });
+      await apiClient.post(`/api/borrow-requests/${requestId}/decline`, {
+        userId,
+      });
       await loadRequests();
       alert("Request declined");
     } catch (error: any) {
@@ -381,7 +422,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await apiClient.post(`/api/borrow-requests/${requestId}/cancel`, { userId });
+      await apiClient.post(`/api/borrow-requests/${requestId}/cancel`, {
+        userId,
+      });
       await loadRequests();
       alert("Request cancelled");
     } catch (error: any) {
@@ -424,7 +467,11 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   };
 
   const handleDelete = async (requestId: string) => {
-    if (!confirm("Are you sure you want to delete this request? This action cannot be undone."))
+    if (
+      !confirm(
+        "Are you sure you want to delete this request? This action cannot be undone.",
+      )
+    )
       return;
 
     setActionLoading(requestId);
@@ -452,9 +499,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     setActionLoading(requestId);
     try {
-      await apiClient.post(`/api/borrow-requests/${requestId}/mark-returned`, { userId });
+      await apiClient.post(`/api/borrow-requests/${requestId}/mark-returned`, {
+        userId,
+      });
       await loadRequests();
-      alert("Item marked as returned successfully! The item is now available in your groups.");
+      alert(
+        "Item marked as returned successfully! The item is now available in your groups.",
+      );
     } catch (error: any) {
       console.error("Error marking as returned:", error);
       alert(error.response?.data?.error || "Failed to mark as returned");
@@ -492,7 +543,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
   const handleConfirmReturn = async (loanId: string, requestId: string) => {
     if (
-      !confirm("Confirm that you received the item back? This will make it available again.")
+      !confirm(
+        "Confirm that you received the item back? This will make it available again.",
+      )
     )
       return;
 
@@ -500,7 +553,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     try {
       await apiClient.post(`/api/loans/${loanId}/confirm-return`, { userId });
       await loadRequests();
-      alert("Return confirmed! The item is now available in your groups again.");
+      alert(
+        "Return confirmed! The item is now available in your groups again.",
+      );
     } catch (error: any) {
       console.error("Error confirming return:", error);
       alert(
@@ -523,35 +578,51 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
   const filterRequests = (requests: BorrowRequest[]) => {
     if (statusFilter === "all") return requests;
-    
-    if (statusFilter === "active") {
+
+    if (statusFilter === "pending") {
+      return requests.filter((req) => req.status === "PENDING");
+    }
+
+    if (statusFilter === "borrowed") {
       return requests.filter(
-        (req) => req.status === "PENDING" || (req.status === "APPROVED" && req.loan?.status === "ACTIVE")
+        (req) => req.status === "APPROVED" && req.loan?.status === "ACTIVE",
       );
     }
-    
-    if (statusFilter === "completed") {
+
+    if (statusFilter === "returned") {
       return requests.filter(
-        (req) =>
-          req.status === "REJECTED" ||
-          req.status === "CANCELLED" ||
-          (req.status === "APPROVED" && req.loan?.status === "RETURNED")
+        (req) => req.status === "APPROVED" && req.loan?.status === "RETURNED",
       );
     }
-    
+
     return requests;
   };
 
-  const currentRequests = activeTab === "incoming" ? incomingRequests : outgoingRequests;
-  const filteredRequests = filterRequests(currentRequests);
+  const filteredRequests = filterRequests(allRequests);
 
-  const statusFilterTabs: { value: StatusFilter; label: string }[] = [
-    { value: "all", label: "All" },
-    { value: "active", label: "Active" },
-    { value: "completed", label: "Completed" },
+  // Calculate counts for each status
+  const pendingCount = allRequests.filter(
+    (req) => req.status === "PENDING",
+  ).length;
+  const borrowedCount = allRequests.filter(
+    (req) => req.status === "APPROVED" && req.loan?.status === "ACTIVE",
+  ).length;
+  const returnedCount = allRequests.filter(
+    (req) => req.status === "APPROVED" && req.loan?.status === "RETURNED",
+  ).length;
+
+  const statusFilterTabs: {
+    value: StatusFilter;
+    label: string;
+    count: number;
+  }[] = [
+    { value: "all", label: "All", count: allRequests.length },
+    { value: "pending", label: "Pending", count: pendingCount },
+    { value: "borrowed", label: "Borrowed", count: borrowedCount },
+    { value: "returned", label: "Returned", count: returnedCount },
   ];
 
-  if (loading && currentRequests.length === 0) {
+  if (loading && allRequests.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-slate-400">Loading requests...</div>
@@ -561,33 +632,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      {/* Tab Navigation */}
-      <div className="mb-6">
-        <div className="bg-white/50 p-1 rounded-2xl flex gap-1">
-          <button
-            onClick={() => setActiveTab("incoming")}
-            className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-              activeTab === "incoming"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            Incoming ({incomingRequests.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("outgoing")}
-            className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-              activeTab === "outgoing"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            Outgoing ({outgoingRequests.length})
-          </button>
-        </div>
-      </div>
-
-      {/* Status Filter */}
+      {/* Status Filter Tabs */}
       <div className="mb-6">
         <div className="bg-white/50 p-1 rounded-2xl flex gap-1">
           {statusFilterTabs.map((tab) => (
@@ -600,7 +645,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {tab.label}
+              {tab.label} ({tab.count})
             </button>
           ))}
         </div>
@@ -620,7 +665,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             <RequestCard
               key={request.id}
               request={request}
-              isOwner={activeTab === "incoming"}
+              isOwner={request.ownerId === userId}
               onAccept={handleAccept}
               onDecline={handleDecline}
               onCancel={handleCancel}
@@ -643,11 +688,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
               <Filter size={24} className="text-sage-600" />
             </div>
             <p className="font-medium text-lg">No {statusFilter} requests</p>
-            <p className="text-sm mt-1">
-              {activeTab === "incoming"
-                ? "You have no incoming borrow requests"
-                : "You haven't made any borrow requests yet"}
-            </p>
+            <p className="text-sm mt-1">No requests found</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -669,8 +710,10 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
               className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-2xl font-bold text-slate-900 mb-4">Edit Request</h3>
-              
+              <h3 className="text-2xl font-bold text-slate-900 mb-4">
+                Edit Request
+              </h3>
+
               <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -679,11 +722,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                   <input
                     type="date"
                     value={editForm.startDate}
-                    onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, startDate: e.target.value })
+                    }
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sage-500"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     End Date
@@ -691,18 +736,22 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                   <input
                     type="date"
                     value={editForm.endDate}
-                    onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, endDate: e.target.value })
+                    }
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sage-500"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Message (Optional)
                   </label>
                   <textarea
                     value={editForm.message}
-                    onChange={(e) => setEditForm({ ...editForm, message: e.target.value })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, message: e.target.value })
+                    }
                     rows={3}
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sage-500 resize-none"
                     placeholder="Add a note to the owner..."
@@ -716,7 +765,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                   disabled={actionLoading === editingRequest.id}
                   className="flex-1 py-3 bg-sage-600 text-white rounded-xl font-semibold hover:bg-sage-700 disabled:opacity-50 transition-colors"
                 >
-                  {actionLoading === editingRequest.id ? "Saving..." : "Save Changes"}
+                  {actionLoading === editingRequest.id
+                    ? "Saving..."
+                    : "Save Changes"}
                 </button>
                 <button
                   onClick={() => setEditingRequest(null)}

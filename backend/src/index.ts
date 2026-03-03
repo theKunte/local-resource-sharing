@@ -10,11 +10,6 @@ import {
   validateGroupInput,
   sanitizeString,
 } from "./utils/validation";
-import { logger } from "./utils/logger";
-import {
-  validateRequestSize,
-  validateImageSize,
-} from "./middleware/requestValidation";
 
 dotenv.config();
 
@@ -31,9 +26,9 @@ const missingEnvVars = requiredEnvVars.filter(
 );
 
 if (missingEnvVars.length > 0) {
-  logger.error("Missing required environment variables", {
-    missing: missingEnvVars,
-  });
+  console.error("❌ Missing required environment variables:");
+  missingEnvVars.forEach((varName) => console.error(`   - ${varName}`));
+  console.error("\nPlease create a .env file based on .env.example");
   process.exit(1);
 }
 
@@ -51,10 +46,9 @@ if (!admin.apps.length) {
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
       }),
     });
-    logger.info("Firebase Admin initialized successfully");
+    console.log("✅ Firebase Admin initialized");
   } catch (error) {
-    logger.error("Firebase Admin initialization error", { error });
-    process.exit(1);
+    console.error("❌ Firebase Admin initialization error:", error);
   }
 }
 
@@ -114,7 +108,6 @@ const limiter = rateLimit({
 
 app.use("/api/", limiter);
 app.use(express.json({ limit: "5mb" })); // Allow large payloads for images
-app.use(validateRequestSize()); // Validate request size
 
 // Authentication Middleware
 async function authenticateToken(
@@ -126,10 +119,6 @@ async function authenticateToken(
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      logger.security("Authentication failed - no token", {
-        path: req.path,
-        method: req.method,
-      });
       return res.status(401).json({ error: "No authorization token provided" });
     }
 
@@ -148,10 +137,11 @@ async function authenticateToken(
     next();
   } catch (error) {
     // Log error securely without exposing details to client
-    logger.security("Token verification failed", {
-      path: req.path,
-      method: req.method,
-      error: error instanceof Error ? error.message : "Unknown error",
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("Token verification failed:", {
+      error: errorMessage,
+      timestamp: new Date().toISOString(),
     });
     return res.status(403).json({ error: "Invalid or expired token" });
   }
@@ -270,7 +260,7 @@ app.get("/api/resources", authenticateToken, async (req, res) => {
     const resources = Array.from(uniqueResources.values());
     res.json(resources);
   } catch (error) {
-    logger.error("Error fetching resources", error, { path: req.path });
+    console.error("Error fetching resources:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -292,19 +282,14 @@ app.get(
 
       res.json({ resourceId: id, pendingRequestsCount: count });
     } catch (error) {
-      logger.error("Error fetching pending requests count", error, { path: req.path, resourceId: id });
+      console.error("Error fetching pending requests count:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   },
 );
 
 // Post a new resource to the database
-app.post(
-  "/api/resources",
-  authenticateToken,
-  requireVerifiedEmail,
-  validateImageSize,
-  async (req, res) => {
+app.post("/api/resources", authenticateToken, async (req, res) => {
   const { title, description, ownerId, image } = req.body;
   const authenticatedUserId = (req as any).user.uid;
 
@@ -386,18 +371,13 @@ app.post(
     });
     res.status(201).json(resource);
   } catch (error) {
-    logger.error("Error creating resource", error, { path: req.path, userId: (req as any).user.uid });
+    console.error("Error creating resource:", error);
     res.status(500).json({ error: "Failed to create resource" });
   }
 });
 
 // Update a resource by id
-app.put(
-  "/api/resources/:id",
-  authenticateToken,
-  requireVerifiedEmail,
-  validateImageSize,
-  async (req, res) => {
+app.put("/api/resources/:id", authenticateToken, async (req, res) => {
   const id = req.params.id;
   const { title, description } = req.body;
   const authenticatedUserId = (req as any).user.uid;
@@ -464,17 +444,13 @@ app.put(
     });
     res.json(updated);
   } catch (error) {
-    logger.error("Error updating resource", error, { path: req.path, resourceId: id });
+    console.error("Error updating resource:", error);
     res.status(404).json({ error: "Resource not found" });
   }
 });
 
 // Delete a resource by id
-app.delete(
-  "/api/resources/:id",
-  authenticateToken,
-  requireVerifiedEmail,
-  async (req, res) => {
+app.delete("/api/resources/:id", authenticateToken, async (req, res) => {
   const id = req.params.id;
   const authenticatedUserId = (req as any).user.uid;
 
@@ -501,18 +477,14 @@ app.delete(
     await prisma.resource.delete({ where: { id } });
     res.status(204).end();
   } catch (error) {
-    logger.error("Error deleting resource", error, { path: req.path, resourceId: id });
+    console.error("Error deleting resource:", error);
     res.status(500).json({ error: "Failed to delete resource" });
   }
 });
 
 // --- GROUPS API ---
 // Create a group
-app.post(
-  "/api/groups",
-  authenticateToken,
-  requireVerifiedEmail,
-  async (req, res) => {
+app.post("/api/groups", authenticateToken, async (req, res) => {
   const { name, createdById } = req.body;
   const authenticatedUserId = (req as any).user.uid;
 
@@ -556,7 +528,7 @@ app.post(
 
     res.status(201).json(group);
   } catch (error) {
-    logger.error("Error creating group", error, { path: req.path, userId: (req as any).user.uid });
+    console.error("Error creating group:", error);
     res.status(500).json({ error: "Failed to create group" });
   }
 });
@@ -575,7 +547,7 @@ app.post(
       });
       res.status(201).json(member);
     } catch (error) {
-      logger.error("Error adding member", error, { path: req.path, groupId, userId });
+      console.error("Error adding member:", error);
       res.status(500).json({ error: "Failed to add member" });
     }
   },
@@ -615,7 +587,7 @@ app.get("/api/groups", authenticateToken, async (req, res) => {
 
     res.json(groupsWithRole);
   } catch (error) {
-    logger.error("Error fetching groups", error, { userId, path: req.path });
+    console.error("Error fetching groups:", error);
     res.status(500).json({ error: "Failed to fetch groups" });
   }
 });
@@ -633,7 +605,7 @@ app.get(
       });
       res.json(shared.map((s) => s.resource));
     } catch (error) {
-      logger.error("Error fetching group resources", error, { groupId, path: req.path });
+      console.error("Error fetching group resources:", error);
       res.status(500).json({ error: "Failed to fetch group resources" });
     }
   },
@@ -643,7 +615,6 @@ app.get(
 app.post(
   "/api/resources/:resourceId/share",
   authenticateToken,
-  requireVerifiedEmail,
   async (req, res) => {
     const { resourceId } = req.params;
     const { groupId } = req.body;
@@ -698,7 +669,7 @@ app.post(
       });
       res.status(201).json(sharing);
     } catch (error) {
-      logger.error("Error sharing resource", error, { resourceId, groupId, path: req.path });
+      console.error("Error sharing resource:", error);
       res.status(500).json({ error: "Failed to share resource" });
     }
   },
@@ -718,17 +689,13 @@ app.get("/api/groups/:groupId/members", authenticateToken, async (req, res) => {
     });
     res.json(members);
   } catch (error) {
-    logger.error("Error fetching group members", error, { groupId, path: req.path });
+    console.error("Error fetching group members:", error);
     res.status(500).json({ error: "Failed to fetch group members" });
   }
 });
 
 // Invite user to group (by email)
-app.post(
-  "/api/groups/:groupId/invite",
-  authenticateToken,
-  requireVerifiedEmail,
-  async (req, res) => {
+app.post("/api/groups/:groupId/invite", authenticateToken, async (req, res) => {
   const { groupId } = req.params;
   const { email, invitedBy } = req.body;
 
@@ -805,7 +772,7 @@ app.post(
       message: `Successfully added ${existingUser.email} to the group`,
     });
   } catch (error) {
-    logger.error("Error inviting user to group", error, { groupId, email: req.body.email, path: req.path });
+    console.error("Error inviting user to group:", error);
     res.status(500).json({ error: "Failed to invite user to group" });
   }
 });
@@ -826,18 +793,14 @@ app.delete(
       });
       res.status(204).end();
     } catch (error) {
-      logger.error("Error removing user from group", error, { groupId, userId, path: req.path });
+      console.error("Error removing user from group:", error);
       res.status(500).json({ error: "Failed to remove user from group" });
     }
   },
 );
 
 // Update group (for avatar, name, etc.)
-app.put(
-  "/api/groups/:groupId",
-  authenticateToken,
-  requireVerifiedEmail,
-  async (req, res) => {
+app.put("/api/groups/:groupId", authenticateToken, async (req, res) => {
   const { groupId } = req.params;
   const { name, avatar, description, userId } = req.body;
 
@@ -909,17 +872,13 @@ app.put(
       message: "Group updated successfully",
     });
   } catch (error) {
-    logger.error("Error updating group", error, { groupId, path: req.path });
+    console.error("Error updating group:", error);
     res.status(500).json({ error: "Failed to update group" });
   }
 });
 
 // Delete a group (only group creator can delete)
-app.delete(
-  "/api/groups/:groupId",
-  authenticateToken,
-  requireVerifiedEmail,
-  async (req, res) => {
+app.delete("/api/groups/:groupId", authenticateToken, async (req, res) => {
   const { groupId } = req.params;
   const { userId } = req.body;
 
@@ -981,7 +940,7 @@ app.delete(
       message: `Group "${group.name}" has been deleted successfully`,
     });
   } catch (error) {
-    logger.error("Error deleting group", error, { groupId, path: req.path });
+    console.error("Error deleting group:", error);
     res.status(500).json({ error: "Failed to delete group" });
   }
 });
@@ -1088,7 +1047,7 @@ app.put(
         }`,
       });
     } catch (error) {
-      logger.error("Error transferring group ownership", error, { groupId, currentOwnerId, newOwnerId, path: req.path });
+      console.error("Error transferring group ownership:", error);
       res.status(500).json({ error: "Failed to transfer group ownership" });
     }
   },
@@ -1157,7 +1116,7 @@ app.get("/api/groups/:groupId/details", authenticateToken, async (req, res) => {
       userPermissions: permissions,
     });
   } catch (error) {
-    logger.error("Error fetching group details", error, { groupId, userId, path: req.path });
+    console.error("Error fetching group details:", error);
     res.status(500).json({ error: "Failed to fetch group details" });
   }
 });
@@ -1237,7 +1196,7 @@ app.delete(
         message: `${userName} has been ${action} the group`,
       });
     } catch (error) {
-      logger.error("Error removing group member", error, { groupId, userId: req.body.userId, path: req.path });
+      console.error("Error removing group member:", error);
       res.status(500).json({ error: "Failed to remove group member" });
     }
   },
@@ -1344,7 +1303,7 @@ app.put(
         message: `Successfully updated ${targetUserId}'s role to ${role}`,
       });
     } catch (error) {
-      logger.error("Error updating member role", error, { groupId, targetUserId, role, path: req.path });
+      console.error("Error updating member role:", error);
       res.status(500).json({ error: "Failed to update member role" });
     }
   },
@@ -1367,7 +1326,7 @@ app.get("/api/debug/users", authenticateToken, async (req, res) => {
     });
     res.json(users);
   } catch (error) {
-    logger.error("Error fetching users", error, { path: req.path });
+    console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
   }
 });
@@ -1431,7 +1390,7 @@ app.post("/api/auth/register", async (req, res) => {
       message: "User registered/updated successfully",
     });
   } catch (error) {
-    logger.error("Error registering user", error, { uid, path: req.path });
+    console.error("Error registering user:", error);
     res.status(500).json({ error: "Failed to register user" });
   }
 });
@@ -1458,7 +1417,7 @@ app.put("/api/auth/fix-user-email", async (req, res) => {
       message: `Updated email for user ${uid} to ${email}`,
     });
   } catch (error) {
-    logger.error("Error updating user email", error, { uid, path: req.path });
+    console.error("Error updating user email:", error);
     res.status(500).json({ error: "Failed to update user email" });
   }
 });
@@ -1520,7 +1479,7 @@ app.get(
 
       res.json(groupsWithCounts);
     } catch (error) {
-      logger.error("Error fetching resource groups", error, { resourceId, userId, path: req.path });
+      console.error("Error fetching resource groups:", error);
       res.status(500).json({ error: "Failed to fetch resource groups" });
     }
   },
@@ -1591,7 +1550,7 @@ app.post(
 
       res.json({ success: true, message: "Resource added to group" });
     } catch (error) {
-      logger.error("Error adding resource to group", error, { resourceId, groupId, path: req.path });
+      console.error("Error adding resource to group:", error);
       res.status(500).json({ error: "Failed to add resource to group" });
     }
   },
@@ -1634,7 +1593,7 @@ app.delete(
 
       res.json({ success: true, message: "Resource removed from group" });
     } catch (error) {
-      logger.error("Error removing resource from group", error, { resourceId, groupId, path: req.path });
+      console.error("Error removing resource from group:", error);
       res.status(500).json({ error: "Failed to remove resource from group" });
     }
   },
@@ -1674,7 +1633,7 @@ app.get("/api/users/:userId/groups", authenticateToken, async (req, res) => {
 
     res.json(groupsWithCounts);
   } catch (error) {
-    logger.error("Error fetching user groups", error, { userId, path: req.path });
+    console.error("Error fetching user groups:", error);
     res.status(500).json({ error: "Failed to fetch user groups" });
   }
 });
@@ -1888,7 +1847,7 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
       message: "Borrow request created successfully",
     });
   } catch (error) {
-    logger.error("Error creating borrow request", error, { resourceId, borrowerId, path: req.path });
+    console.error("Error creating borrow request:", error);
     res.status(500).json({ error: "Failed to create borrow request" });
   }
 });
@@ -1899,7 +1858,7 @@ app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
   const role = req.query.role as "owner" | "borrower" | undefined;
   const status = req.query.status as string | undefined;
 
-  logger.info("GET /api/borrow-requests", { userId, role, status });
+  console.log("[DEBUG] GET /api/borrow-requests", { userId, role, status });
 
   if (!userId) {
     return res.status(400).json({ error: "userId is required" });
@@ -2004,7 +1963,7 @@ app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
       count: requestsWithGroups.length,
     });
   } catch (error) {
-    logger.error("Error fetching borrow requests", error, { userId, role, status, path: req.path });
+    console.error("Error fetching borrow requests:", error);
     res.status(500).json({ error: "Failed to fetch borrow requests" });
   }
 });
@@ -2189,7 +2148,7 @@ app.post(
         autoDeclinedRequests: result.declinedCount,
       });
     } catch (error) {
-      logger.error("Error accepting borrow request", error, { requestId: id, userId, path: req.path });
+      console.error("Error accepting borrow request:", error);
       res.status(500).json({ error: "Failed to accept borrow request" });
     }
   },
@@ -2271,7 +2230,7 @@ app.post(
         borrowRequest: updatedRequest,
       });
     } catch (error) {
-      logger.error("Error declining borrow request", error, { requestId: id, userId, path: req.path });
+      console.error("Error declining borrow request:", error);
       res.status(500).json({ error: "Failed to decline borrow request" });
     }
   },
@@ -2361,7 +2320,7 @@ app.post(
         borrowRequest: updatedRequest,
       });
     } catch (error) {
-      logger.error("Error cancelling borrow request", error, { requestId: id, userId, path: req.path });
+      console.error("Error cancelling borrow request:", error);
       res.status(500).json({ error: "Failed to cancel borrow request" });
     }
   },
@@ -2467,7 +2426,7 @@ app.put("/api/borrow-requests/:id", authenticateToken, async (req, res) => {
       borrowRequest: updatedRequest,
     });
   } catch (error) {
-    logger.error("Error updating borrow request", error, { requestId: id, userId, path: req.path });
+    console.error("Error updating borrow request:", error);
     res.status(500).json({ error: "Failed to update borrow request" });
   }
 });
@@ -2494,7 +2453,7 @@ app.delete("/api/borrow-requests/:id", authenticateToken, async (req, res) => {
       return res.status(404).json({ error: "Borrow request not found" });
     }
 
-    logger.info("Delete borrow request", {
+    console.log("[DEBUG] Delete request:", {
       requestId: id,
       status: borrowRequest.status,
       hasLoan: !!borrowRequest.loan,
@@ -2523,7 +2482,10 @@ app.delete("/api/borrow-requests/:id", authenticateToken, async (req, res) => {
 
     // Check if there's an associated loan - if so, delete it first
     if (borrowRequest.loan) {
-      logger.info("Deleting associated loan", { loanId: borrowRequest.loan.id });
+      console.log(
+        "[DEBUG] Deleting associated loan first:",
+        borrowRequest.loan.id,
+      );
       // Delete the loan first (this should only happen for completed/returned loans)
       await prisma.loan.delete({
         where: { id: borrowRequest.loan.id },
@@ -2540,7 +2502,7 @@ app.delete("/api/borrow-requests/:id", authenticateToken, async (req, res) => {
       message: "Borrow request deleted",
     });
   } catch (error) {
-    logger.error("Error deleting borrow request", error, { requestId: id, userId, path: req.path });
+    console.error("Error deleting borrow request:", error);
     res.status(500).json({ error: "Failed to delete borrow request" });
   }
 });
@@ -2634,7 +2596,7 @@ app.post(
         loan: updatedLoan,
       });
     } catch (error) {
-      logger.error("Error requesting loan return", error, { loanId: id, userId, path: req.path });
+      console.error("Error requesting loan return:", error);
       res.status(500).json({ error: "Failed to request loan return" });
     }
   },
@@ -2735,7 +2697,7 @@ app.post(
         loan: result.loan,
       });
     } catch (error) {
-      logger.error("Error confirming return", error, { loanId: id, userId, path: req.path });
+      console.error("Error confirming return:", error);
       res.status(500).json({ error: "Failed to confirm return" });
     }
   },
@@ -2828,7 +2790,7 @@ app.post(
         loan: result.loan,
       });
     } catch (error) {
-      logger.error("Error marking item as returned", error, { requestId: id, userId, path: req.path });
+      console.error("Error marking item as returned:", error);
       res.status(500).json({ error: "Failed to mark item as returned" });
     }
   },
@@ -2950,12 +2912,12 @@ app.post(
         resource: result.resource,
       });
     } catch (error) {
-      logger.error("Error confirming loan return", error, { loanId: id, userId, path: req.path });
+      console.error("Error confirming loan return:", error);
       res.status(500).json({ error: "Failed to confirm loan return" });
     }
   },
 );
 
 app.listen(PORT, () => {
-  logger.info(`Backend server running on http://localhost:${PORT}`);
+  console.log(`Backend server running on http://localhost:${PORT}`);
 });
