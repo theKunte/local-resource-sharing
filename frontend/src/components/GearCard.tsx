@@ -256,7 +256,7 @@ const GearCard: React.FC<GearCardProps> = ({
                 }
               }}
               disabled={!!isBorrowed}
-              className={`flex-1 text-sm font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 shadow-sm ${
+              className={`flex-1 text-xs font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-sm ${
                 isBorrowed
                   ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                   : "bg-primary-500 hover:bg-primary-600 text-white hover:shadow-md active:scale-95"
@@ -281,7 +281,7 @@ const GearCard: React.FC<GearCardProps> = ({
                       currentLoan,
                     } as Resource)
                   }
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md active:scale-95"
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 hover:shadow-md active:scale-95"
                 >
                   Edit
                 </button>
@@ -289,7 +289,7 @@ const GearCard: React.FC<GearCardProps> = ({
               {onDelete && (
                 <button
                   onClick={() => onDelete(id)}
-                  className="flex-1 bg-danger-100 hover:bg-danger-200 text-danger-700 text-sm font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md active:scale-95"
+                  className="flex-1 bg-danger-100 hover:bg-danger-200 text-danger-700 text-xs font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 hover:shadow-md active:scale-95"
                 >
                   Delete
                 </button>

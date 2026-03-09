@@ -220,7 +220,7 @@ const Login = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                className="w-full py-3 px-4 bg-cyan-400 hover:bg-cyan-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
               >
                 Sign In
               </button>
@@ -229,7 +229,7 @@ const Login = () => {
               <div className="text-center">
                 <a
                   href="#"
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-sm text-cyan-600 hover:text-cyan-700 font-medium"
                 >
                   Forgot your password?
                 </a>
@@ -242,7 +242,7 @@ const Login = () => {
                 New to GearShare?{" "}
                 <Link
                   to="/signup"
-                  className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                  className="text-cyan-600 hover:text-cyan-700 font-semibold transition-colors"
                 >
                   Create an account
                 </Link>

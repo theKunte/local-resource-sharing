@@ -146,8 +146,8 @@ export default function ManageGroupsModal({
           >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="bg-sage-100 p-2.5 rounded-xl">
-                  <Users className="w-5 h-5 text-sage-700" />
+                <div className="bg-cyan-100 p-2.5 rounded-xl">
+                  <Users className="w-5 h-5 text-cyan-700" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">
                   Manage Groups
@@ -165,7 +165,7 @@ export default function ManageGroupsModal({
             </p>
             {loading ? (
               <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-sage-200 border-t-sage-600 mb-3"></div>
+                <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-cyan-200 border-t-cyan-600 mb-3"></div>
                 <p className="text-gray-600 font-medium">Loading groups...</p>
               </div>
             ) : (
@@ -181,7 +181,7 @@ export default function ManageGroupsModal({
                       transition={{ duration: 0.15 }}
                       className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
                         selected.has(g.id)
-                          ? "bg-sage-50 border-2 border-sage-300 shadow-sm"
+                          ? "bg-cyan-50 border-2 border-cyan-300 shadow-sm"
                           : "bg-gray-50 border-2 border-transparent hover:bg-gray-100"
                       }`}
                     >
@@ -195,7 +195,7 @@ export default function ManageGroupsModal({
                         <div
                           className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
                             selected.has(g.id)
-                              ? "bg-sage-600 border-sage-600"
+                              ? "bg-cyan-600 border-cyan-600"
                               : "bg-white border-gray-300"
                           }`}
                         >
@@ -212,7 +212,7 @@ export default function ManageGroupsModal({
                           <span
                             className={`font-semibold truncate ${
                               selected.has(g.id)
-                                ? "text-sage-900"
+                                ? "text-cyan-900"
                                 : "text-gray-900"
                             }`}
                           >
@@ -221,7 +221,7 @@ export default function ManageGroupsModal({
                           <span
                             className={`text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${
                               selected.has(g.id)
-                                ? "bg-sage-100 text-sage-700"
+                                ? "bg-cyan-100 text-cyan-700"
                                 : "bg-gray-200 text-gray-600"
                             }`}
                           >
@@ -261,7 +261,7 @@ export default function ManageGroupsModal({
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-6 py-2.5 rounded-xl bg-sage-600 text-white hover:bg-sage-700 disabled:opacity-60 font-semibold transition-colors flex items-center gap-2"
+                className="px-6 py-2.5 rounded-xl bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-60 font-semibold transition-colors flex items-center gap-2"
               >
                 {saving ? (
                   <>

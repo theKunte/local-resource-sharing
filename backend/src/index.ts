@@ -458,7 +458,7 @@ app.delete("/api/resources/:id", authenticateToken, async (req, res) => {
     // Verify resource exists
     const resource = await prisma.resource.findUnique({
       where: { id },
-      select: { ownerId: true },
+      select: { ownerId: true, currentLoanId: true },
     });
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
@@ -471,10 +471,26 @@ app.delete("/api/resources/:id", authenticateToken, async (req, res) => {
         .json({ error: "You don't have permission to delete this resource" });
     }
 
-    // Remove any sharing records first to avoid foreign key constraint errors
+    // Check if resource is currently borrowed
+    if (resource.currentLoanId) {
+      return res.status(400).json({ 
+        error: "Cannot delete resource while it is currently borrowed. Please wait for it to be returned." 
+      });
+    }
+
+    // Clean up all related records to avoid foreign key constraint errors
+    // 1. Delete any loans (including past loans)
+    await prisma.loan.deleteMany({ where: { resourceId: id } });
+
+    // 2. Delete any borrow requests
+    await prisma.borrowRequest.deleteMany({ where: { resourceId: id } });
+
+    // 3. Remove any sharing records
     await prisma.resourceSharing.deleteMany({ where: { resourceId: id } });
 
+    // 4. Finally, delete the resource itself
     await prisma.resource.delete({ where: { id } });
+    
     res.status(204).end();
   } catch (error) {
     console.error("Error deleting resource:", error);

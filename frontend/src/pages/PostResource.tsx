@@ -171,23 +171,23 @@ export default function PostResource() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 pb-20">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-cyan-50 to-slate-50 pb-20">
         {/* Hero Skeleton */}
-        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white py-8 sm:py-12 mb-6 sm:mb-8">
+        <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-8 sm:py-12 mb-6 sm:mb-8">
           <div className="max-w-4xl mx-auto px-4 text-center">
             <div className="mb-3 sm:mb-4">
-              <div className="inline-block w-12 h-12 sm:w-16 sm:h-16 bg-emerald-500 rounded-full animate-pulse"></div>
+              <div className="inline-block w-12 h-12 sm:w-16 sm:h-16 bg-cyan-400 rounded-full animate-pulse"></div>
             </div>
-            <div className="h-9 sm:h-12 md:h-14 bg-emerald-500 rounded-lg mx-auto max-w-md mb-3 sm:mb-4 animate-pulse"></div>
-            <div className="h-6 sm:h-8 bg-emerald-500 rounded-lg mx-auto max-w-lg animate-pulse opacity-70"></div>
+            <div className="h-9 sm:h-12 md:h-14 bg-cyan-400 rounded-lg mx-auto max-w-md mb-3 sm:mb-4 animate-pulse"></div>
+            <div className="h-6 sm:h-8 bg-cyan-400 rounded-lg mx-auto max-w-lg animate-pulse opacity-70"></div>
           </div>
         </div>
         {/* Form Skeleton */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 sm:p-6">
-              <div className="h-7 sm:h-8 bg-emerald-400 rounded-lg max-w-xs mb-2 animate-pulse"></div>
-              <div className="h-4 sm:h-5 bg-emerald-400 rounded-lg max-w-md animate-pulse opacity-70"></div>
+            <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 p-4 sm:p-6">
+              <div className="h-7 sm:h-8 bg-cyan-400 rounded-lg max-w-xs mb-2 animate-pulse"></div>
+              <div className="h-4 sm:h-5 bg-cyan-400 rounded-lg max-w-md animate-pulse opacity-70"></div>
             </div>
             <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
               {[1, 2, 3].map((i) => (
@@ -203,14 +203,14 @@ export default function PostResource() {
     );
   if (!user) return null;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-cyan-50 to-slate-50 pb-20">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white py-8 sm:py-12 mb-6 sm:mb-8">
+      <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-8 sm:py-12 mb-6 sm:mb-8">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
             Share Your Adventure Gear
           </h1>
-          <p className="text-base sm:text-xl text-emerald-100 max-w-2xl mx-auto px-4">
+          <p className="text-base sm:text-xl text-cyan-100 max-w-2xl mx-auto px-4">
             Help fellow adventurers discover amazing gear and build a community
             of trust
           </p>
@@ -221,8 +221,8 @@ export default function PostResource() {
         {/* Progress Indicator - Hidden on mobile */}
         <div className="mb-6 sm:mb-8 hidden sm:block">
           <div className="flex items-center justify-center space-x-4 text-sm font-medium">
-            <div className="flex items-center text-emerald-600">
-              <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+            <div className="flex items-center text-cyan-600">
+              <div className="w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
                 1
               </div>
               <span className="ml-2">Gear Details</span>
@@ -240,11 +240,11 @@ export default function PostResource() {
         {/* Main Form Card */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           {/* Card Header */}
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 sm:p-6 text-white">
+          <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 p-4 sm:p-6 text-white">
             <h2 className="text-xl sm:text-2xl font-bold flex items-center">
               Tell us about your gear
             </h2>
-            <p className="text-emerald-100 mt-1 sm:mt-2 text-sm sm:text-base">
+            <p className="text-cyan-100 mt-1 sm:mt-2 text-sm sm:text-base">
               The more details you share, the more likely someone will want to
               borrow it!
             </p>
@@ -270,7 +270,7 @@ export default function PostResource() {
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 placeholder="e.g., REI Half Dome Tent"
-                className="w-full px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-200 rounded-lg sm:rounded-xl text-gray-800 placeholder-gray-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-200 text-base sm:text-lg group-hover:border-gray-300"
+                className="w-full px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-200 rounded-lg sm:rounded-xl text-gray-800 placeholder-gray-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 focus:outline-none transition-all duration-200 text-base sm:text-lg group-hover:border-gray-300"
               />
               <p className="text-xs sm:text-sm text-gray-600 mt-2 flex items-center">
                 Include brand and model
@@ -293,7 +293,7 @@ export default function PostResource() {
                 rows={5}
                 maxLength={MAX_DESCRIPTION_LENGTH}
                 placeholder="Share details about condition, capacity, and special features..."
-                className="w-full px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-200 rounded-lg sm:rounded-xl text-gray-800 placeholder-gray-500 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-200 text-base sm:text-lg resize-none group-hover:border-gray-300"
+                className="w-full px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-200 rounded-lg sm:rounded-xl text-gray-800 placeholder-gray-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100 focus:outline-none transition-all duration-200 text-base sm:text-lg resize-none group-hover:border-gray-300"
               />
               <div className="flex justify-between items-center mt-2">
                 <p className="text-xs sm:text-sm text-gray-600 flex items-center">
@@ -323,7 +323,7 @@ export default function PostResource() {
               </label>
 
               {!imagePreview ? (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg sm:rounded-xl p-6 sm:p-8 text-center hover:border-emerald-400 transition-colors duration-200 group-hover:border-gray-400">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg sm:rounded-xl p-6 sm:p-8 text-center hover:border-cyan-400 transition-colors duration-200 group-hover:border-gray-400">
                   <div className="mb-3 sm:mb-4"></div>
                   <input
                     type="file"
@@ -335,7 +335,7 @@ export default function PostResource() {
                   />
                   <label
                     htmlFor="image-upload"
-                    className="cursor-pointer inline-block bg-emerald-500 hover:bg-emerald-600 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold transition-colors duration-200 text-sm sm:text-base"
+                    className="cursor-pointer inline-block bg-cyan-400 hover:bg-cyan-500 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold transition-colors duration-200 text-sm sm:text-base"
                   >
                     Choose Photo
                   </label>
@@ -370,7 +370,7 @@ export default function PostResource() {
                   <div className="mt-3 text-center">
                     <label
                       htmlFor="image-upload"
-                      className="cursor-pointer text-emerald-600 hover:text-emerald-700 font-medium text-sm sm:text-base"
+                      className="cursor-pointer text-cyan-600 hover:text-cyan-700 font-medium text-sm sm:text-base"
                     >
                       Change photo
                     </label>
@@ -450,7 +450,7 @@ export default function PostResource() {
                         onClick={() =>
                           setSelectedGroups(new Set(groups.map((g) => g.id)))
                         }
-                        className="text-xs text-emerald-600 hover:text-emerald-700 underline"
+                        className="text-xs text-cyan-600 hover:text-cyan-700 underline"
                       >
                         Select All
                       </button>
@@ -482,7 +482,7 @@ export default function PostResource() {
                             }
                             setSelectedGroups(newSelected);
                           }}
-                          className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                          className="w-4 h-4 text-cyan-600 focus:ring-cyan-400 border-gray-300 rounded"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
@@ -494,7 +494,7 @@ export default function PostResource() {
                               {group.memberCount !== 1 ? "s" : ""}
                             </span>
                           </div>
-                          <span className="text-xs text-emerald-600 capitalize">
+                          <span className="text-xs text-cyan-600 capitalize">
                             Your role: {group.userRole}
                           </span>
                         </div>
@@ -516,7 +516,7 @@ export default function PostResource() {
             </div>
 
             {/* Action Section */}
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-emerald-100">
+            <div className="bg-cyan-50 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-cyan-200">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <div>
                   <h3 className="font-semibold text-gray-800 text-base sm:text-lg">
@@ -533,7 +533,7 @@ export default function PostResource() {
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-lg sm:rounded-xl shadow-lg transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base sm:text-lg"
+                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-lg sm:rounded-xl shadow-lg transition-all duration-200 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base sm:text-lg"
                 disabled={submitting}
               >
                 {submitting ? (
