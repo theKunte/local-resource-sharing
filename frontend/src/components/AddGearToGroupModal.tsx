@@ -38,22 +38,14 @@ export default function AddGearToGroupModal({
       setLoading(true);
       try {
         const [resMy, resShared] = await Promise.all([
-          apiClient.get(
-            `/api/resources?ownerId=${encodeURIComponent(
-              userId
-            )}`
-          ),
-          apiClient.get(
-            `/api/groups/${encodeURIComponent(
-              groupId
-            )}/resources`
-          ),
+          apiClient.get(`/api/resources?ownerId=${encodeURIComponent(userId)}`),
+          apiClient.get(`/api/groups/${encodeURIComponent(groupId)}/resources`),
         ]);
         // Debug logs to help ensure the right data is returned
         console.debug("[AddGearToGroupModal] myGear count:", resMy.data.length);
         console.debug(
           "[AddGearToGroupModal] shared resources count:",
-          resShared.data.length
+          resShared.data.length,
         );
         setMyGear(resMy.data || []);
         const sharedData = (resShared.data || []) as SharedResourceRow[];
@@ -73,9 +65,9 @@ export default function AddGearToGroupModal({
     try {
       const res = await apiClient.post(
         `/api/resources/${encodeURIComponent(
-          resourceId
+          resourceId,
         )}/groups/${encodeURIComponent(groupId)}`,
-        { userId }
+        { userId },
       );
       console.debug("[AddGearToGroupModal] add response status:", res.status);
       // update locally
@@ -89,7 +81,7 @@ export default function AddGearToGroupModal({
         window.dispatchEvent(
           new CustomEvent("resource:updated", {
             detail: { resource: { id: resourceId } },
-          })
+          }),
         );
       } catch (_err) {
         console.debug("[AddGearToGroupModal] dispatch failed", _err);
@@ -162,7 +154,7 @@ export default function AddGearToGroupModal({
                       handleAdd(g.id);
                     }}
                     disabled={savingId === g.id}
-                    className="bg-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700 disabled:opacity-60"
+                    className="bg-cyan-400 text-white px-3 py-1 rounded-lg hover:bg-cyan-500 disabled:opacity-60"
                   >
                     {savingId === g.id ? "Adding..." : "Add"}
                   </button>

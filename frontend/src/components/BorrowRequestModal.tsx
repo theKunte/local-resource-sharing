@@ -201,7 +201,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
                 }));
               }}
               min={today}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
                 validationErrors.startDate
                   ? "border-red-300 bg-red-50"
                   : "border-gray-300"
@@ -235,7 +235,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
                 }));
               }}
               min={startDate || today}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
                 validationErrors.endDate
                   ? "border-red-300 bg-red-50"
                   : "border-gray-300"
@@ -263,7 +263,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
               placeholder="Add a note to the owner about your request..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
               disabled={submitting}
             />
           </div>
@@ -280,7 +280,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-cyan-400 text-white rounded-lg hover:bg-cyan-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={submitting}
             >
               {submitting ? "Sending..." : "Send Request"}

@@ -99,7 +99,7 @@ export default function Home() {
       {/* Inline status/toast banner */}
       {statusMessage && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="flex items-center gap-3 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="flex items-center gap-3 bg-cyan-400 text-white px-4 py-2 rounded-lg shadow-lg">
             <span className="text-sm font-medium">{statusMessage}</span>
             <button
               onClick={() => setStatusMessage(null)}
@@ -144,7 +144,7 @@ export default function Home() {
 
             {loadingCommunityGear ? (
               <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
                 <p className="text-gray-500 mt-2">Loading community gear...</p>
               </div>
             ) : communityGear.length === 0 ? (

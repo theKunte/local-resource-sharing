@@ -76,7 +76,7 @@ const StatusBadge = ({
     colorClasses = "bg-blue-100 text-blue-700 border-blue-200";
   } else if (status === "APPROVED" && loanStatus === "RETURNED") {
     displayText = "Returned";
-    colorClasses = "bg-sage-600 text-white border-sage-700";
+    colorClasses = "bg-cyan-600 text-white border-cyan-700";
   } else if (
     status === "APPROVED" &&
     loanStatus === "PENDING_RETURN_CONFIRMATION"
@@ -234,7 +234,7 @@ const RequestCard: React.FC<{
               <button
                 onClick={() => onAccept(request.id)}
                 disabled={actionLoading === request.id}
-                className="flex items-center gap-1.5 px-4 py-2 bg-sage-600 text-white rounded-xl text-sm font-semibold hover:bg-sage-700 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 disabled:opacity-50 transition-colors"
               >
                 <Check size={16} />
                 {actionLoading === request.id ? "Accepting..." : "Accept"}
@@ -275,7 +275,7 @@ const RequestCard: React.FC<{
             <button
               onClick={() => onMarkReturned(request.id)}
               disabled={actionLoading === request.id}
-              className="flex items-center gap-1.5 px-4 py-2 bg-sage-600 text-white rounded-xl text-sm font-semibold hover:bg-sage-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 disabled:opacity-50 transition-colors"
             >
               <Package size={16} />
               {actionLoading === request.id
@@ -301,7 +301,7 @@ const RequestCard: React.FC<{
             <button
               onClick={() => onConfirmReturn(request.loan!.id, request.id)}
               disabled={actionLoading === request.id}
-              className="flex items-center gap-1.5 px-4 py-2 bg-sage-600 text-white rounded-xl text-sm font-semibold hover:bg-sage-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 disabled:opacity-50 transition-colors"
             >
               <Check size={16} />
               {actionLoading === request.id
@@ -684,8 +684,8 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-20 text-slate-400 bg-white rounded-3xl border border-gray-100"
           >
-            <div className="w-16 h-16 bg-sage-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
-              <Filter size={24} className="text-sage-600" />
+            <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
+              <Filter size={24} className="text-cyan-600" />
             </div>
             <p className="font-medium text-lg">No {statusFilter} requests</p>
             <p className="text-sm mt-1">No requests found</p>
@@ -725,7 +725,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                     onChange={(e) =>
                       setEditForm({ ...editForm, startDate: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sage-500"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400"
                   />
                 </div>
 
@@ -739,7 +739,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                     onChange={(e) =>
                       setEditForm({ ...editForm, endDate: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sage-500"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400"
                   />
                 </div>
 
@@ -753,7 +753,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                       setEditForm({ ...editForm, message: e.target.value })
                     }
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sage-500 resize-none"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
                     placeholder="Add a note to the owner..."
                   />
                 </div>
@@ -763,7 +763,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
                 <button
                   onClick={handleUpdateRequest}
                   disabled={actionLoading === editingRequest.id}
-                  className="flex-1 py-3 bg-sage-600 text-white rounded-xl font-semibold hover:bg-sage-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 py-3 bg-cyan-600 text-white rounded-xl font-semibold hover:bg-cyan-700 disabled:opacity-50 transition-colors"
                 >
                   {actionLoading === editingRequest.id
                     ? "Saving..."
