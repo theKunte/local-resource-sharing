@@ -202,6 +202,17 @@ app.get("/api/resources", authenticateToken, async (req, res) => {
               },
             },
           },
+          sharedWith: {
+            include: {
+              group: {
+                select: {
+                  id: true,
+                  name: true,
+                  avatar: true,
+                },
+              },
+            },
+          },
         },
       });
       return res.json(resources);
@@ -473,8 +484,9 @@ app.delete("/api/resources/:id", authenticateToken, async (req, res) => {
 
     // Check if resource is currently borrowed
     if (resource.currentLoanId) {
-      return res.status(400).json({ 
-        error: "Cannot delete resource while it is currently borrowed. Please wait for it to be returned." 
+      return res.status(400).json({
+        error:
+          "Cannot delete resource while it is currently borrowed. Please wait for it to be returned.",
       });
     }
 
@@ -490,7 +502,7 @@ app.delete("/api/resources/:id", authenticateToken, async (req, res) => {
 
     // 4. Finally, delete the resource itself
     await prisma.resource.delete({ where: { id } });
-    
+
     res.status(204).end();
   } catch (error) {
     console.error("Error deleting resource:", error);

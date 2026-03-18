@@ -70,9 +70,10 @@ export default function MyGear() {
     } catch (error: any) {
       console.error("Error deleting resource:", error);
       logError("MyGear - handleDeleteResource", error);
-      
+
       // Show specific error message from backend
-      const errorMessage = error.response?.data?.error || "Failed to delete resource";
+      const errorMessage =
+        error.response?.data?.error || "Failed to delete resource";
       setStatusMessage(errorMessage);
       setTimeout(() => setStatusMessage(null), 5000);
     }
@@ -128,13 +129,13 @@ export default function MyGear() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28">
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Gear</h1>
-          <p className="text-gray-600">
-            Manage your uploaded items and share them with groups
+        <div className="mb-6">
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">My Gear</h1>
+          <p className="text-slate-600">
+            Manage your personal collection and sharing settings.
           </p>
         </div>
 
@@ -145,37 +146,47 @@ export default function MyGear() {
           </div>
         )}
 
-        {/* Stats */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-3xl font-bold text-primary-600">
-              {myGear.length}
+        {/* Stats Card */}
+        <div className="mb-6 bg-white/80 backdrop-blur-sm p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Total Collection
+              </div>
+              <div className="text-4xl font-bold text-slate-900">
+                {myGear.length}
+              </div>
             </div>
-            <div className="text-gray-600 mt-1">Total Items</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-3xl font-bold text-success-600">
-              {myGear.filter((g) => g.status !== "BORROWED").length}
+            <div className="flex gap-8">
+              <div className="text-center">
+                <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-2">
+                  Available
+                </div>
+                <div className="text-3xl font-bold text-emerald-600">
+                  {myGear.filter((g) => g.status !== "BORROWED").length}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">
+                  Borrowed
+                </div>
+                <div className="text-3xl font-bold text-amber-600">
+                  {myGear.filter((g) => g.status === "BORROWED").length}
+                </div>
+              </div>
             </div>
-            <div className="text-gray-600 mt-1">Available</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-3xl font-bold text-warning-600">
-              {myGear.filter((g) => g.status === "BORROWED").length}
-            </div>
-            <div className="text-gray-600 mt-1">Borrowed</div>
           </div>
         </div>
 
         {/* Gear Grid */}
         {loadingGear ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600"></div>
           </div>
         ) : myGear.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-[2rem] border border-slate-100 shadow-sm">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12 text-slate-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -187,15 +198,15 @@ export default function MyGear() {
                 d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
               />
             </svg>
-            <h3 className="mt-2 text-lg font-medium text-gray-900">
+            <h3 className="mt-2 text-lg font-medium text-slate-900">
               No gear yet
             </h3>
-            <p className="mt-1 text-gray-500">
+            <p className="mt-1 text-slate-500">
               Get started by sharing your first item
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+          <div className="space-y-6 pb-20">
             {myGear.map((gear) => (
               <GearCard
                 key={gear.id}

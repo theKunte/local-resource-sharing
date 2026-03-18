@@ -66,34 +66,34 @@ const StatusBadge = ({
   loanStatus?: string;
 }) => {
   let displayText = status;
-  let colorClasses = "bg-gray-100 text-gray-700 border-gray-200";
+  let colorClasses = "bg-slate-100 text-slate-700 border-slate-200";
 
   if (status === "PENDING") {
     displayText = "Pending";
-    colorClasses = "bg-amber-100 text-amber-700 border-amber-200";
+    colorClasses = "bg-amber-500/90 text-white border-amber-600";
   } else if (status === "APPROVED" && loanStatus === "ACTIVE") {
     displayText = "Borrowed";
-    colorClasses = "bg-blue-100 text-blue-700 border-blue-200";
+    colorClasses = "bg-blue-500/90 text-white border-blue-600";
   } else if (status === "APPROVED" && loanStatus === "RETURNED") {
     displayText = "Returned";
-    colorClasses = "bg-cyan-600 text-white border-cyan-700";
+    colorClasses = "bg-sage-600/90 text-white border-sage-700";
   } else if (
     status === "APPROVED" &&
     loanStatus === "PENDING_RETURN_CONFIRMATION"
   ) {
     displayText = "Pending Return";
-    colorClasses = "bg-purple-100 text-purple-700 border-purple-200";
+    colorClasses = "bg-purple-500/90 text-white border-purple-600";
   } else if (status === "REJECTED") {
     displayText = "Rejected";
-    colorClasses = "bg-red-100 text-red-700 border-red-200";
+    colorClasses = "bg-red-500/90 text-white border-red-600";
   } else if (status === "CANCELLED") {
     displayText = "Cancelled";
-    colorClasses = "bg-gray-100 text-gray-700 border-gray-200";
+    colorClasses = "bg-slate-700/90 text-white border-slate-800";
   }
 
   return (
     <span
-      className={`px-3 py-1 rounded-lg text-xs font-semibold border ${colorClasses}`}
+      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border backdrop-blur-md shadow-sm ${colorClasses}`}
     >
       {displayText}
     </span>
@@ -150,178 +150,189 @@ const RequestCard: React.FC<{
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="bg-white rounded-3xl p-6 shadow-sm mb-4 border border-gray-100 hover:shadow-md transition-shadow"
+      className="bg-white/80 backdrop-blur-sm rounded-[2rem] shadow-sm mb-4 border border-white/20 overflow-visible relative"
     >
-      <div className="flex justify-between items-start mb-4">
-        <StatusBadge
-          status={request.status}
-          loanStatus={request.loan?.status}
-        />
-        <div className="flex items-center gap-1.5 text-slate-400 text-sm">
-          <span>{formatDate(request.createdAt)}</span>
-          <Clock size={16} />
-        </div>
-      </div>
+      <div className="p-6">
+        <div className="flex gap-4">
+          {request.resource.image && (
+            <div className="w-32 h-32 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 relative">
+              <img
+                src={request.resource.image}
+                alt={request.resource.title}
+                className="w-full h-full object-cover"
+              />
+              {/* Status badge floating on image */}
+              <div className="absolute top-2 left-2">
+                <StatusBadge
+                  status={request.status}
+                  loanStatus={request.loan?.status}
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-xl font-bold text-slate-900 line-clamp-1 flex-1 pr-2">
+                {request.resource.title}
+              </h3>
+              {/* Date badge on the right */}
+              <div className="flex items-center gap-1.5 text-slate-400 text-xs flex-shrink-0 bg-slate-50 px-2.5 py-1.5 rounded-lg">
+                <Clock size={14} />
+                <span className="whitespace-nowrap">
+                  {formatDate(request.createdAt)}
+                </span>
+              </div>
+            </div>
+            <p className="text-slate-400 text-sm mb-4 line-clamp-2">
+              {request.resource.description}
+            </p>
 
-      <div className="flex gap-4">
-        {request.resource.image && (
-          <div className="w-32 h-32 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100">
-            <img
-              src={request.resource.image}
-              alt={request.resource.title}
-              className="w-full h-full object-cover"
-            />
+            <div className="space-y-2">
+              <div className="flex text-[11px] uppercase tracking-wider font-semibold">
+                <span className="text-slate-400 w-20 flex-shrink-0">
+                  {isOwner ? "Borrower" : "Owner"}
+                </span>
+                <span className="text-slate-700 truncate">
+                  {isOwner
+                    ? request.borrower.name || request.borrower.email
+                    : request.owner.name || request.owner.email}
+                </span>
+              </div>
+              {request.group && (
+                <div className="flex text-[11px] uppercase tracking-wider font-semibold">
+                  <span className="text-slate-400 w-20 flex-shrink-0">
+                    Group
+                  </span>
+                  <span className="text-slate-700 truncate">
+                    {request.group.name}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <h3 className="text-xl font-bold text-slate-900 truncate mb-0.5">
-            {request.resource.title}
-          </h3>
-          <p className="text-slate-400 text-sm mb-4 truncate">
-            {request.resource.description}
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-slate-50">
+          <div className="flex flex-col gap-1 mb-3">
+            <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">
+              Borrow Period
+            </span>
+            <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+              <span>{formatDate(request.startDate)}</span>
+              <ChevronRight size={14} className="text-slate-300" />
+              <span>{formatDate(request.endDate)}</span>
+            </div>
+          </div>
+
+          {request.message && (
+            <div className="mb-3">
+              <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 block mb-1">
+                Message
+              </span>
+              <p className="text-xs text-slate-600 italic">{request.message}</p>
+            </div>
+          )}
+
+          <p className="text-xs text-slate-400 italic mb-4">
+            {getStatusMessage()}
           </p>
 
-          <div className="space-y-2">
-            <div className="flex text-[11px] uppercase tracking-wider font-semibold">
-              <span className="text-slate-400 w-20">
-                {isOwner ? "Borrower" : "Owner"}
-              </span>
-              <span className="text-slate-700">
-                {isOwner
-                  ? request.borrower.name || request.borrower.email
-                  : request.owner.name || request.owner.email}
-              </span>
-            </div>
-            {request.group && (
-              <div className="flex text-[11px] uppercase tracking-wider font-semibold">
-                <span className="text-slate-400 w-20">Group</span>
-                <span className="text-slate-700">{request.group.name}</span>
-              </div>
+          {/* Action Buttons */}
+          <div className="flex gap-2 flex-wrap">
+            {isOwner && isPending && (
+              <>
+                <button
+                  onClick={() => onAccept(request.id)}
+                  disabled={actionLoading === request.id}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 disabled:opacity-50 transition-colors"
+                >
+                  <Check size={16} />
+                  {actionLoading === request.id ? "Accepting..." : "Accept"}
+                </button>
+                <button
+                  onClick={() => onDecline(request.id)}
+                  disabled={actionLoading === request.id}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-200 disabled:opacity-50 transition-colors"
+                >
+                  <X size={16} />
+                  Decline
+                </button>
+              </>
             )}
-          </div>
-        </div>
-      </div>
 
-      <div className="mt-6 pt-4 border-t border-slate-50">
-        <div className="flex flex-col gap-1 mb-3">
-          <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">
-            Borrow Period
-          </span>
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
-            <span>{formatDate(request.startDate)}</span>
-            <ChevronRight size={14} className="text-slate-300" />
-            <span>{formatDate(request.endDate)}</span>
-          </div>
-        </div>
+            {!isOwner && isPending && (
+              <>
+                <button
+                  onClick={() => onEdit(request)}
+                  disabled={actionLoading === request.id}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-200 disabled:opacity-50 transition-colors"
+                >
+                  <Edit size={16} />
+                  Edit
+                </button>
+                <button
+                  onClick={() => onCancel(request.id)}
+                  disabled={actionLoading === request.id}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                >
+                  <X size={16} />
+                  Cancel
+                </button>
+              </>
+            )}
 
-        {request.message && (
-          <div className="mb-3">
-            <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400 block mb-1">
-              Message
-            </span>
-            <p className="text-xs text-slate-600 italic">{request.message}</p>
-          </div>
-        )}
-
-        <p className="text-xs text-slate-400 italic mb-4">
-          {getStatusMessage()}
-        </p>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2 flex-wrap">
-          {isOwner && isPending && (
-            <>
+            {isOwner && isActive && (
               <button
-                onClick={() => onAccept(request.id)}
+                onClick={() => onMarkReturned(request.id)}
+                disabled={actionLoading === request.id}
+                className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 disabled:opacity-50 transition-colors"
+              >
+                <Package size={16} />
+                {actionLoading === request.id
+                  ? "Processing..."
+                  : "Mark as Returned"}
+              </button>
+            )}
+
+            {!isOwner && isActive && request.loan && (
+              <button
+                onClick={() => onInitiateReturn(request.loan!.id)}
+                disabled={actionLoading === request.loan.id}
+                className="flex items-center gap-1.5 px-4 py-2 bg-purple-100 text-purple-700 rounded-xl text-sm font-semibold hover:bg-purple-200 disabled:opacity-50 transition-colors"
+              >
+                <Package size={16} />
+                {actionLoading === request.loan.id
+                  ? "Processing..."
+                  : "I Returned This"}
+              </button>
+            )}
+
+            {isOwner && isPendingReturn && request.loan && (
+              <button
+                onClick={() => onConfirmReturn(request.loan!.id, request.id)}
                 disabled={actionLoading === request.id}
                 className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 disabled:opacity-50 transition-colors"
               >
                 <Check size={16} />
-                {actionLoading === request.id ? "Accepting..." : "Accept"}
-              </button>
-              <button
-                onClick={() => onDecline(request.id)}
-                disabled={actionLoading === request.id}
-                className="flex items-center gap-1.5 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-200 disabled:opacity-50 transition-colors"
-              >
-                <X size={16} />
-                Decline
-              </button>
-            </>
-          )}
-
-          {!isOwner && isPending && (
-            <>
-              <button
-                onClick={() => onEdit(request)}
-                disabled={actionLoading === request.id}
-                className="flex items-center gap-1.5 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-200 disabled:opacity-50 transition-colors"
-              >
-                <Edit size={16} />
-                Edit
-              </button>
-              <button
-                onClick={() => onCancel(request.id)}
-                disabled={actionLoading === request.id}
-                className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 disabled:opacity-50 transition-colors"
-              >
-                <X size={16} />
-                Cancel
-              </button>
-            </>
-          )}
-
-          {isOwner && isActive && (
-            <button
-              onClick={() => onMarkReturned(request.id)}
-              disabled={actionLoading === request.id}
-              className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 disabled:opacity-50 transition-colors"
-            >
-              <Package size={16} />
-              {actionLoading === request.id
-                ? "Processing..."
-                : "Mark as Returned"}
-            </button>
-          )}
-
-          {!isOwner && isActive && request.loan && (
-            <button
-              onClick={() => onInitiateReturn(request.loan!.id)}
-              disabled={actionLoading === request.loan.id}
-              className="flex items-center gap-1.5 px-4 py-2 bg-purple-100 text-purple-700 rounded-xl text-sm font-semibold hover:bg-purple-200 disabled:opacity-50 transition-colors"
-            >
-              <Package size={16} />
-              {actionLoading === request.loan.id
-                ? "Processing..."
-                : "I Returned This"}
-            </button>
-          )}
-
-          {isOwner && isPendingReturn && request.loan && (
-            <button
-              onClick={() => onConfirmReturn(request.loan!.id, request.id)}
-              disabled={actionLoading === request.id}
-              className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 disabled:opacity-50 transition-colors"
-            >
-              <Check size={16} />
-              {actionLoading === request.id
-                ? "Confirming..."
-                : "Confirm Return"}
-            </button>
-          )}
-
-          {!isOwner &&
-            (request.status === "REJECTED" ||
-              request.status === "CANCELLED") && (
-              <button
-                onClick={() => onDelete(request.id)}
-                disabled={actionLoading === request.id}
-                className="flex items-center gap-1.5 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-200 disabled:opacity-50 transition-colors"
-              >
-                <Trash2 size={16} />
-                Delete
+                {actionLoading === request.id
+                  ? "Confirming..."
+                  : "Confirm Return"}
               </button>
             )}
+
+            {!isOwner &&
+              (request.status === "REJECTED" ||
+                request.status === "CANCELLED") && (
+                <button
+                  onClick={() => onDelete(request.id)}
+                  disabled={actionLoading === request.id}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-200 disabled:opacity-50 transition-colors"
+                >
+                  <Trash2 size={16} />
+                  Delete
+                </button>
+              )}
+          </div>
         </div>
       </div>
     </motion.div>
@@ -634,7 +645,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     <div className="w-full max-w-4xl mx-auto">
       {/* Status Filter Tabs */}
       <div className="mb-6">
-        <div className="bg-white/50 p-1 rounded-2xl flex gap-1">
+        <div className="bg-white/40 backdrop-blur-sm p-1 rounded-2xl flex gap-1 border border-white/60">
           {statusFilterTabs.map((tab) => (
             <button
               key={tab.value}
@@ -642,7 +653,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
               className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                 statusFilter === tab.value
                   ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               {tab.label} ({tab.count})
@@ -682,10 +693,10 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center py-20 text-slate-400 bg-white rounded-3xl border border-gray-100"
+            className="flex flex-col items-center justify-center py-20 text-slate-400 bg-white/60 backdrop-blur-sm rounded-[2rem] border border-white/20"
           >
-            <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
-              <Filter size={24} className="text-cyan-600" />
+            <div className="w-16 h-16 bg-sage-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
+              <Filter size={24} className="text-sage-600" />
             </div>
             <p className="font-medium text-lg">No {statusFilter} requests</p>
             <p className="text-sm mt-1">No requests found</p>
