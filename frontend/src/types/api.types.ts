@@ -41,6 +41,16 @@ export interface Resource {
   currentLoanId?: string;
   owner?: Owner;
   currentLoan?: CurrentLoan;
+  sharedWith?: Array<{
+    id: string;
+    resourceId: string;
+    groupId: string;
+    group: {
+      id: string;
+      name: string;
+      avatar?: string;
+    };
+  }>;
 }
 
 // Group types

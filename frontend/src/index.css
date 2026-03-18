@@ -1,17 +1,15 @@
-@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap");
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
 
-/* Fun, friendly, and local vibe enhancements */
+/* Modern, clean styling */
 html,
 body {
   min-height: 100vh;
   width: 100%;
   padding: 0;
   margin: 0;
-  font-family: "Fredoka", "Inter", system-ui, sans-serif;
-  background: linear-gradient(135deg, #fffbf7 0%, #f1e5e8 100%);
+  font-family: "Inter", system-ui, sans-serif;
+  background: rgb(248 250 252);
   overflow-x: hidden;
 }
 
@@ -29,168 +27,21 @@ body {
   }
 }
 
-/* Header navigation row fix */
-.header-nav-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  flex-wrap: nowrap;
+/* Scrollbar styling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
-.header-nav-right {
-  margin-left: 3rem;
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-/* Add a playful shadow and rounded corners to cards and sections */
-.card,
-.bg-white,
-.rounded-3xl,
-.rounded-xl {
-  /* margin: 2rem; */ /* Removed to prevent overflow */
-  border-radius: 0.5rem !important;
-  box-shadow: 0 4px 24px 0 rgba(114, 167, 134, 0.1),
-    0 1.5px 6px 0 rgba(161, 82, 157, 0.08);
-  transition: box-shadow 0.2s, transform 0.2s;
-  /* Optionally add padding for inner spacing */
-  margin: 1.4rem;
-}
-.card:hover,
-.bg-white:hover {
-  box-shadow: 0 8px 32px 0 rgba(34, 197, 94, 0.18),
-    0 3px 12px 0 rgba(95, 114, 145, 0.16);
-  transform: translateY(-2px) scale(1.02);
-}
-
-/* Fun accent for headers */
-h1,
-h2,
-h3 {
-  font-family: "Fredoka", "Inter", system-ui, sans-serif;
-  letter-spacing: 0.01em;
-  color: #0a0204;
-  text-shadow: 0 2px 8px #dae6ec44;
-  text-align: center; /* Center all main headings */
-}
-
-/* Button styles for a playful look */
-button,
-.btn,
-.bg-blue-500 {
-  border-radius: 0.5rem !important;
-  background: linear-gradient(90deg, #248a8a 0%, #6ccfe0 100%);
-  color: #fff !important;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  box-shadow: 0 2px 8px 0 #38bdf855;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-}
-button:hover,
-.btn:hover,
-.bg-blue-600:hover {
-  background: linear-gradient(90deg, #1b1d7a 0%, #38bdf8 100%);
-  box-shadow: 0 4px 16px 0 #34d39955;
-  transform: scale(1.03);
-}
-
-/* Add a subtle border to input fields for a friendly look */
-input,
-textarea {
-  box-sizing: border-box;
-  border-radius: 0.5rem !important;
-  border: 2px solid #bae6fd;
-  background: #fff;
-  transition: border 0.2s, box-shadow 0.2s;
-  max-width: 100%;
-}
-input:focus,
-textarea:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px #bae6fd88;
-}
-
-/* Add a fun accent to links */
-a {
-  color: #0ea5e9;
-  transition: color 0.2s;
-}
-a:hover {
-  color: #22d3ee;
-  text-decoration: underline wavy #34d399;
-}
-
-/* Add a little bounce to icons and emojis */
-.emoji,
-.icon,
-.tool-emoji {
-  display: inline-block;
-  transition: transform 0.2s;
-}
-.emoji:hover,
-.icon:hover,
-.tool-emoji:hover {
-  transform: scale(1.2) rotate(-8deg);
-}
-
-/* Responsive padding for main content */
+/* Responsive utilities */
 @media (max-width: 640px) {
   .max-w-5xl,
   .max-w-3xl,
   .max-w-md {
-    padding-left: 0.8rem !important;
-    padding-right: 0.8rem !important;
-  }
-}
-
-/* Mobile-first responsive utilities */
-@media (max-width: 640px) {
-  /* Reduce card margins on mobile */
-  .card,
-  .bg-white,
-  .rounded-3xl,
-  .rounded-xl {
-    margin: 0.5rem !important;
-  }
-
-  /* Ensure grid containers don't overflow */
-  .grid {
-    padding: 0;
-    margin: 0;
-    gap: 0.3rem !important;
-  }
-
-  /* Make sure images don't cause horizontal scroll */
-  img {
-    max-width: 100% !important;
-    height: auto !important;
-    object-fit: contain !important;
-  }
-}
-
-/* Line clamp utilities for text truncation */
-.line-clamp-2 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
-.line-clamp-3 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-}
-
-/* Ensure consistent responsive grid spacing */
-@media (min-width: 640px) {
-  .grid {
-    gap: 1.5rem !important;
-  }
-}
-
-@media (min-width: 1024px) {
-  .grid {
-    gap: 2rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
   }
 }
