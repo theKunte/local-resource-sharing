@@ -107,7 +107,30 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
       alert("Borrow request sent successfully!");
     } catch (err) {
       logError("BorrowRequestModal", err);
-      setError(getErrorMessage(err));
+
+      // Check if it's a duplicate request error
+      const apiError = err as any;
+      if (
+        apiError.response?.status === 409 &&
+        apiError.response?.data?.existingRequest
+      ) {
+        const existing = apiError.response.data.existingRequest;
+        const startDateFormatted = new Date(
+          existing.startDate,
+        ).toLocaleDateString();
+        const endDateFormatted = new Date(
+          existing.endDate,
+        ).toLocaleDateString();
+        const statusText =
+          existing.status === "PENDING" ? "pending" : "approved";
+
+        setError(
+          `You already have a ${statusText} request for this item from ${startDateFormatted} to ${endDateFormatted}. ` +
+            `Please wait for the owner's response or cancel your existing request before creating a new one.`,
+        );
+      } else {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setSubmitting(false);
     }

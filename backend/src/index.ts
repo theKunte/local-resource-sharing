@@ -34,7 +34,27 @@ if (missingEnvVars.length > 0) {
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const prisma = new PrismaClient();
+
+// Optimized Prisma Client with query logging and connection pool configuration
+const prisma = new PrismaClient({
+  log:
+    process.env.NODE_ENV === "development"
+      ? ["query", "error", "warn"]
+      : ["error"],
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
+
+// Test database connection on startup
+prisma.$connect()
+  .then(() => console.log("✅ Database connected"))
+  .catch((error) => {
+    console.error("❌ Database connection failed:", error);
+    process.exit(1);
+  });
 
 // Initialize Firebase Admin SDK for token verification
 if (!admin.apps.length) {
@@ -109,7 +129,7 @@ const limiter = rateLimit({
 app.use("/api/", limiter);
 app.use(express.json({ limit: "5mb" })); // Allow large payloads for images
 
-// Authentication Middleware
+// Authentication Middleware with timeout protection
 async function authenticateToken(
   req: express.Request,
   res: express.Response,
@@ -124,14 +144,21 @@ async function authenticateToken(
 
     const token = authHeader.split("Bearer ")[1];
 
-    // Verify the token with Firebase Admin
-    const decodedToken = await admin.auth().verifyIdToken(token, true); // checkRevoked = true
+    // Verify the token with Firebase Admin with timeout protection
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Token verification timeout")), 10000);
+    });
+
+    const decodedToken = await Promise.race([
+      admin.auth().verifyIdToken(token, true), // checkRevoked = true
+      timeoutPromise,
+    ]);
 
     // Attach user info to request
     (req as any).user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      emailVerified: decodedToken.email_verified,
+      uid: (decodedToken as any).uid,
+      email: (decodedToken as any).email,
+      emailVerified: (decodedToken as any).email_verified,
     };
 
     next();
@@ -142,7 +169,17 @@ async function authenticateToken(
     console.error("Token verification failed:", {
       error: errorMessage,
       timestamp: new Date().toISOString(),
+      path: req.path,
     });
+
+    // Don't let the error crash the server
+    if (errorMessage.includes("timeout")) {
+      return res.status(503).json({ 
+        error: "Authentication service temporarily unavailable",
+        message: "Please try again in a moment"
+      });
+    }
+
     return res.status(403).json({ error: "Invalid or expired token" });
   }
 }
@@ -1829,8 +1866,46 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
       });
     }
 
-    // Note: Multiple pending requests are now allowed
-    // When owner accepts one, overlapping requests will be auto-declined
+    // Check for existing pending or approved requests from the same borrower for overlapping dates
+    const existingRequests = await prisma.borrowRequest.findMany({
+      where: {
+        resourceId,
+        borrowerId,
+        status: {
+          in: ["PENDING", "APPROVED"],
+        },
+        OR: [
+          {
+            // Existing request starts during requested period
+            AND: [{ startDate: { lte: end } }, { startDate: { gte: start } }],
+          },
+          {
+            // Existing request ends during requested period
+            AND: [{ endDate: { lte: end } }, { endDate: { gte: start } }],
+          },
+          {
+            // Existing request spans entire requested period
+            AND: [{ startDate: { lte: start } }, { endDate: { gte: end } }],
+          },
+        ],
+      },
+    });
+
+    if (existingRequests.length > 0) {
+      const existingRequest = existingRequests[0];
+      const requestType =
+        existingRequest.status === "PENDING" ? "pending" : "approved";
+      return res.status(409).json({
+        error: "Duplicate request",
+        message: `You already have a ${requestType} request for this item during these dates`,
+        existingRequest: {
+          id: existingRequest.id,
+          status: existingRequest.status,
+          startDate: existingRequest.startDate,
+          endDate: existingRequest.endDate,
+        },
+      });
+    }
 
     // Create the borrow request (using finalGroupId for validation but not storing it)
     const borrowRequest = await prisma.borrowRequest.create({
@@ -1885,8 +1960,16 @@ app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
   const userId = req.query.userId as string | undefined;
   const role = req.query.role as "owner" | "borrower" | undefined;
   const status = req.query.status as string | undefined;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Max 100 per request
 
-  console.log("[DEBUG] GET /api/borrow-requests", { userId, role, status });
+  console.log("[DEBUG] GET /api/borrow-requests", {
+    userId,
+    role,
+    status,
+    page,
+    limit,
+  });
 
   if (!userId) {
     return res.status(400).json({ error: "userId is required" });
@@ -1909,9 +1992,22 @@ app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
       whereClause.status = status.toUpperCase();
     }
 
+    // Get total count for pagination
+    const totalCount = await prisma.borrowRequest.count({ where: whereClause });
+
+    // Optimized query with pagination
     const borrowRequests = await prisma.borrowRequest.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        resourceId: true,
+        borrowerId: true,
+        ownerId: true,
+        status: true,
+        message: true,
+        startDate: true,
+        endDate: true,
+        createdAt: true,
         resource: {
           select: {
             id: true,
@@ -1919,6 +2015,19 @@ app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
             description: true,
             image: true,
             status: true,
+            sharedWith: {
+              select: {
+                groupId: true,
+                group: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    avatar: true,
+                  },
+                },
+              },
+            },
           },
         },
         borrower: {
@@ -1926,6 +2035,11 @@ app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
             id: true,
             email: true,
             name: true,
+            groupMembers: {
+              select: {
+                groupId: true,
+              },
+            },
           },
         },
         owner: {
@@ -1948,47 +2062,61 @@ app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
       orderBy: {
         createdAt: "desc",
       },
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
-    // Get group information for each request
-    const requestsWithGroups = await Promise.all(
-      borrowRequests.map(async (request) => {
-        // Find which group this resource is shared with for this borrower
-        const userGroups = await prisma.groupMember.findMany({
-          where: { userId: request.borrowerId },
-          select: { groupId: true },
-        });
+    // Optimized transform: use Set for faster lookups
+    const requestsWithGroups = borrowRequests.map((request) => {
+      const borrowerGroupIds = new Set(
+        request.borrower.groupMembers.map((gm) => gm.groupId),
+      );
 
-        const groupIds = userGroups.map((ug) => ug.groupId);
+      // Find first matching group (stops at first match)
+      const sharedGroup = request.resource.sharedWith.find((sharing) =>
+        borrowerGroupIds.has(sharing.groupId),
+      );
 
-        const sharedGroup = await prisma.resourceSharing.findFirst({
-          where: {
-            resourceId: request.resourceId,
-            groupId: { in: groupIds },
-          },
-          include: {
-            group: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
-                avatar: true,
-              },
-            },
-          },
-        });
+      return {
+        id: request.id,
+        resourceId: request.resourceId,
+        borrowerId: request.borrowerId,
+        ownerId: request.ownerId,
+        status: request.status,
+        message: request.message,
+        startDate: request.startDate,
+        endDate: request.endDate,
+        createdAt: request.createdAt,
+        resource: {
+          id: request.resource.id,
+          title: request.resource.title,
+          description: request.resource.description,
+          image: request.resource.image,
+          status: request.resource.status,
+        },
+        borrower: {
+          id: request.borrower.id,
+          email: request.borrower.email,
+          name: request.borrower.name,
+        },
+        owner: request.owner,
+        loan: request.loan,
+        group: sharedGroup?.group || null,
+      };
+    });
 
-        return {
-          ...request,
-          group: sharedGroup?.group || null,
-        };
-      }),
-    );
+    // Add cache headers for better performance
+    res.setHeader("Cache-Control", "private, max-age=10"); // Cache for 10 seconds
 
     res.json({
       success: true,
       requests: requestsWithGroups,
-      count: requestsWithGroups.length,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
     });
   } catch (error) {
     console.error("Error fetching borrow requests:", error);
@@ -2166,6 +2294,9 @@ app.post(
         });
 
         return { loan, updatedRequest, declinedCount: declinedRequests.count };
+      }, {
+        maxWait: 5000, // 5 seconds max wait for transaction to start
+        timeout: 10000, // 10 seconds max transaction time
       });
 
       res.json({
@@ -2948,4 +3079,44 @@ app.post(
 
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
+});
+
+// Global error handlers to prevent crashes
+process.on("uncaughtException", (error) => {
+  console.error("❌ Uncaught Exception:", error);
+  console.error("Stack:", error.stack);
+  console.error("Time:", new Date().toISOString());
+  
+  // For critical errors, gracefully shutdown
+  if (error.message && (
+    error.message.includes("FATAL") ||
+    error.message.includes("Cannot read properties of null") ||
+    error.message.includes("ECONNREFUSED")
+  )) {
+    console.error("Critical error detected, initiating graceful shutdown...");
+    prisma.$disconnect().finally(() => process.exit(1));
+  }
+  // Otherwise, log and continue
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ Unhandled Rejection at:", promise);
+  console.error("Reason:", reason);
+  console.error("Time:", new Date().toISOString());
+  
+  // Don't crash on promise rejections - log and continue
+  // The specific route handler's try-catch should handle these
+});
+
+// Graceful shutdown
+process.on("SIGTERM", async () => {
+  console.log("SIGTERM received, closing server gracefully...");
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  console.log("\nSIGINT received, closing server gracefully...");
+  await prisma.$disconnect();
+  process.exit(0);
 });

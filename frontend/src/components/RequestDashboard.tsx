@@ -354,57 +354,158 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     message: "",
   });
 
-  const loadRequests = async () => {
-    if (!userId) {
-      console.error("RequestDashboard: userId is required");
-      return;
+  // Advanced deduplication and caching
+  const loadingRef = React.useRef(false);
+  const cacheRef = React.useRef<{
+    data: BorrowRequest[];
+    timestamp: number;
+  } | null>(null);
+  const pendingRequestRef = React.useRef<Promise<void> | null>(null);
+  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const CACHE_TTL = 10000; // 10 seconds cache
+
+  const loadRequests = React.useCallback(
+    async (forceRefresh = false) => {
+      if (!userId) {
+        console.error("RequestDashboard: userId is required");
+        return;
+      }
+
+      // Return cached data if still valid and not forcing refresh
+      if (!forceRefresh && cacheRef.current) {
+        const age = Date.now() - cacheRef.current.timestamp;
+        if (age < CACHE_TTL) {
+          console.log("[Cache] Using cached data");
+          setAllRequests(cacheRef.current.data);
+          return;
+        }
+      }
+
+      // If already loading, return the pending promise
+      if (pendingRequestRef.current) {
+        console.log("[Dedup] Reusing pending request");
+        return pendingRequestRef.current;
+      }
+
+      // Prevent duplicate calls
+      if (loadingRef.current) {
+        console.log("[RequestDashboard] Skipping duplicate request");
+        return;
+      }
+
+      loadingRef.current = true;
+      setLoading(true);
+      setError(null);
+
+      const requestPromise = (async () => {
+        try {
+          // Add cache-busting parameter when forcing refresh to bypass apiClient deduplication
+          const cacheBuster = forceRefresh ? `&_t=${Date.now()}` : '';
+          
+          // Load all requests (both incoming and outgoing)
+          const [incomingResponse, outgoingResponse] = await Promise.all([
+            apiClient.get(`/api/borrow-requests?userId=${userId}&role=owner${cacheBuster}`),
+            apiClient.get(
+              `/api/borrow-requests?userId=${userId}&role=borrower${cacheBuster}`,
+            ),
+          ]);
+
+          const incomingData =
+            incomingResponse.data.requests || incomingResponse.data;
+          const outgoingData =
+            outgoingResponse.data.requests || outgoingResponse.data;
+
+          const incoming = Array.isArray(incomingData) ? incomingData : [];
+          const outgoing = Array.isArray(outgoingData) ? outgoingData : [];
+
+          const combinedData = [...incoming, ...outgoing];
+
+          // Update cache
+          cacheRef.current = {
+            data: combinedData,
+            timestamp: Date.now(),
+          };
+
+          setAllRequests(combinedData);
+        } catch (error) {
+          console.error("Error loading requests:", error);
+          setError("Failed to load requests. Please try again.");
+        } finally {
+          setLoading(false);
+          loadingRef.current = false;
+          pendingRequestRef.current = null;
+        }
+      })();
+
+      pendingRequestRef.current = requestPromise;
+      return requestPromise;
+    },
+    [userId],
+  );
+
+  // Debounced refresh - prevents rapid successive calls
+  const debouncedLoadRequests = React.useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
+    debounceTimerRef.current = setTimeout(() => {
+      loadRequests(true);
+    }, 500);
+  }, [loadRequests]);
 
-    setLoading(true);
-    setError(null);
-    try {
-      // Load all requests (both incoming and outgoing)
-      const [incomingResponse, outgoingResponse] = await Promise.all([
-        apiClient.get(`/api/borrow-requests?userId=${userId}&role=owner`),
-        apiClient.get(`/api/borrow-requests?userId=${userId}&role=borrower`),
-      ]);
+  // Optimistic update helper
+  const updateRequestOptimistically = React.useCallback(
+    (requestId: string, updates: Partial<BorrowRequest>) => {
+      setAllRequests((prev) =>
+        prev.map((req) =>
+          req.id === requestId ? { ...req, ...updates } : req,
+        ),
+      );
+    },
+    [],
+  );
 
-      const incomingData =
-        incomingResponse.data.requests || incomingResponse.data;
-      const outgoingData =
-        outgoingResponse.data.requests || outgoingResponse.data;
-
-      const incoming = Array.isArray(incomingData) ? incomingData : [];
-      const outgoing = Array.isArray(outgoingData) ? outgoingData : [];
-
-      // Combine both arrays
-      setAllRequests([...incoming, ...outgoing]);
-    } catch (error) {
-      console.error("Error loading requests:", error);
-      setError("Failed to load requests. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Remove request optimistically
+  const removeRequestOptimistically = React.useCallback((requestId: string) => {
+    setAllRequests((prev) => prev.filter((req) => req.id !== requestId));
+  }, []);
 
   useEffect(() => {
     if (userId) {
       loadRequests();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+
+    // Cleanup debounce timer
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [userId, loadRequests]);
 
   const handleAccept = async (requestId: string) => {
     setActionLoading(requestId);
+
     try {
-      await apiClient.post(`/api/borrow-requests/${requestId}/accept`, {
-        userId,
-      });
-      await loadRequests();
+      const response = await apiClient.post(
+        `/api/borrow-requests/${requestId}/accept`,
+        {
+          userId,
+        },
+      );
+
+      // Clear cache and force immediate refresh to get accurate state
+      cacheRef.current = null;
+      await loadRequests(true);
+      
       alert("Request accepted successfully!");
     } catch (error: any) {
       console.error("Error accepting request:", error);
-      alert(error.response?.data?.error || "Failed to accept request");
+      // Clear cache and reload on error to get correct state
+      cacheRef.current = null;
+      await loadRequests(true);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to accept request";
+      alert(errorMessage);
     } finally {
       setActionLoading(null);
     }
@@ -414,14 +515,18 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     if (!confirm("Are you sure you want to decline this request?")) return;
 
     setActionLoading(requestId);
+
     try {
       await apiClient.post(`/api/borrow-requests/${requestId}/decline`, {
         userId,
       });
-      await loadRequests();
+      cacheRef.current = null;
+      await loadRequests(true);
       alert("Request declined");
     } catch (error: any) {
       console.error("Error declining request:", error);
+      cacheRef.current = null;
+      await loadRequests(true);
       alert(error.response?.data?.error || "Failed to decline request");
     } finally {
       setActionLoading(null);
@@ -432,14 +537,18 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     if (!confirm("Are you sure you want to cancel this request?")) return;
 
     setActionLoading(requestId);
+
     try {
       await apiClient.post(`/api/borrow-requests/${requestId}/cancel`, {
         userId,
       });
-      await loadRequests();
+      cacheRef.current = null;
+      await loadRequests(true);
       alert("Request cancelled");
     } catch (error: any) {
       console.error("Error cancelling request:", error);
+      cacheRef.current = null;
+      await loadRequests(true);
       alert(error.response?.data?.error || "Failed to cancel request");
     } finally {
       setActionLoading(null);
@@ -459,6 +568,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     if (!editingRequest) return;
 
     setActionLoading(editingRequest.id);
+
     try {
       await apiClient.put(`/api/borrow-requests/${editingRequest.id}`, {
         userId,
@@ -466,11 +576,14 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
         endDate: editForm.endDate,
         message: editForm.message,
       });
-      await loadRequests();
+      cacheRef.current = null;
+      await loadRequests(true);
       setEditingRequest(null);
       alert("Request updated successfully!");
     } catch (error: any) {
       console.error("Error updating request:", error);
+      cacheRef.current = null;
+      await loadRequests(true);
       alert(error.response?.data?.error || "Failed to update request");
     } finally {
       setActionLoading(null);
@@ -486,14 +599,19 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       return;
 
     setActionLoading(requestId);
+
     try {
       await apiClient.delete(`/api/borrow-requests/${requestId}`, {
         data: { userId },
       });
-      await loadRequests();
+      // Clear cache and reload to refresh list
+      cacheRef.current = null;
+      await loadRequests(true);
       alert("Request deleted");
     } catch (error: any) {
       console.error("Error deleting request:", error);
+      cacheRef.current = null;
+      await loadRequests(true);
       alert(error.response?.data?.error || "Failed to delete request");
     } finally {
       setActionLoading(null);
@@ -509,17 +627,24 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       return;
 
     setActionLoading(requestId);
+
     try {
       await apiClient.post(`/api/borrow-requests/${requestId}/mark-returned`, {
         userId,
       });
-      await loadRequests();
+      // Clear cache and force immediate refresh to ensure UI is in sync
+      cacheRef.current = null;
+      await loadRequests(true);
       alert(
         "Item marked as returned successfully! The item is now available in your groups.",
       );
     } catch (error: any) {
       console.error("Error marking as returned:", error);
-      alert(error.response?.data?.error || "Failed to mark as returned");
+      // Clear cache and reload to get actual state
+      cacheRef.current = null;
+      await loadRequests(true);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to mark as returned";
+      alert(errorMessage);
     } finally {
       setActionLoading(null);
     }
@@ -534,14 +659,18 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       return;
 
     setActionLoading(loanId);
+
     try {
       await apiClient.post(`/api/loans/${loanId}/request-return`, { userId });
-      await loadRequests();
+      cacheRef.current = null;
+      await loadRequests(true);
       alert(
         "Return initiated! The owner will be notified to confirm they received the item back.",
       );
     } catch (error: any) {
       console.error("Error initiating return:", error);
+      cacheRef.current = null;
+      await loadRequests(true);
       alert(
         error.response?.data?.message ||
           error.response?.data?.error ||
@@ -561,14 +690,19 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       return;
 
     setActionLoading(requestId);
+
     try {
       await apiClient.post(`/api/loans/${loanId}/confirm-return`, { userId });
-      await loadRequests();
+      // Clear cache and force immediate refresh to ensure UI is in sync
+      cacheRef.current = null;
+      await loadRequests(true);
       alert(
         "Return confirmed! The item is now available in your groups again.",
       );
     } catch (error: any) {
       console.error("Error confirming return:", error);
+      cacheRef.current = null;
+      await loadRequests(true);
       alert(
         error.response?.data?.message ||
           error.response?.data?.error ||
