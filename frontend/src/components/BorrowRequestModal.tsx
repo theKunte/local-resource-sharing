@@ -48,10 +48,16 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
   const validateDates = (): boolean => {
     const errors: { startDate?: string; endDate?: string } = {};
 
+    // Parse date strings as local time (YYYY-MM-DD from input is UTC by default)
+    const parseLocalDate = (dateStr: string) => {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    };
+
     if (!startDate) {
       errors.startDate = "Start date is required";
     } else {
-      const start = new Date(startDate);
+      const start = parseLocalDate(startDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -63,8 +69,8 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
     if (!endDate) {
       errors.endDate = "End date is required";
     } else if (startDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      const start = parseLocalDate(startDate);
+      const end = parseLocalDate(endDate);
 
       if (end <= start) {
         errors.endDate = "End date must be after start date";

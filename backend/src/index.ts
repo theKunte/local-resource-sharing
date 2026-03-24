@@ -1732,15 +1732,21 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
 
   try {
     // Parse and validate dates
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const now = new Date();
+    // Parse date strings as local time to avoid UTC timezone offset issues
+    const parseDateParts = (dateStr: string) => {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const start = parseDateParts(startDate);
+    const end = parseDateParts(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return res.status(400).json({ error: "Invalid date format" });
     }
 
-    if (start < now) {
+    if (start < today) {
       return res
         .status(400)
         .json({ error: "Start date cannot be in the past" });

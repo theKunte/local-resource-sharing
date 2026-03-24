@@ -9,6 +9,7 @@ import {
   Edit,
   Trash2,
   Package,
+  AlertTriangle,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 
@@ -45,7 +46,7 @@ interface BorrowRequest {
   };
   loan?: {
     id: string;
-    status: "ACTIVE" | "PENDING_RETURN_CONFIRMATION" | "RETURNED";
+    status: "ACTIVE" | "PENDING_RETURN_CONFIRMATION" | "RETURNED" | "OVERDUE";
     startDate: string;
     endDate: string;
     returnedDate?: string;
@@ -56,23 +57,34 @@ interface RequestDashboardProps {
   userId: string;
 }
 
-type StatusFilter = "all" | "pending" | "lending" | "borrowed" | "returned";
+type StatusFilter = "all" | "pending" | "lending" | "borrowed" | "overdue" | "returned";
 
 const StatusBadge = ({
   status,
   loanStatus,
   isOwner,
+  loanEndDate,
 }: {
   status: string;
   loanStatus?: string;
   isOwner?: boolean;
+  loanEndDate?: string;
 }) => {
   let displayText = status;
   let colorClasses = "bg-slate-100 text-slate-700 border-slate-200";
 
+  const isOverdue =
+    status === "APPROVED" &&
+    (loanStatus === "ACTIVE" || loanStatus === "OVERDUE") &&
+    loanEndDate &&
+    new Date(loanEndDate) < new Date();
+
   if (status === "PENDING") {
     displayText = isOwner ? "Pending" : "Awaiting Owner";
     colorClasses = "bg-amber-500/90 text-white border-amber-600";
+  } else if (isOverdue) {
+    displayText = "Overdue";
+    colorClasses = "bg-red-600/90 text-white border-red-700 animate-pulse";
   } else if (status === "APPROVED" && loanStatus === "ACTIVE") {
     displayText = "Borrowed";
     colorClasses = "bg-blue-500/90 text-white border-blue-600";
@@ -131,16 +143,30 @@ const RequestCard: React.FC<{
 }) => {
   const isPending = request.status === "PENDING";
   const isApproved = request.status === "APPROVED";
-  const isActive = isApproved && request.loan?.status === "ACTIVE";
+  const isActive = isApproved && (request.loan?.status === "ACTIVE" || request.loan?.status === "OVERDUE");
   const isPendingReturn =
     isApproved && request.loan?.status === "PENDING_RETURN_CONFIRMATION";
   const isReturned = isApproved && request.loan?.status === "RETURNED";
+  const isOverdue =
+    isActive &&
+    request.loan?.endDate &&
+    new Date(request.loan.endDate) < new Date();
+
+  const getOverdueDays = () => {
+    if (!isOverdue || !request.loan?.endDate) return 0;
+    const diffMs = new Date().getTime() - new Date(request.loan.endDate).getTime();
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  };
 
   const getStatusMessage = () => {
     if (isPending) {
       return isOwner
         ? "Waiting for your approval"
         : `Waiting for ${request.owner.name || "the owner"} to respond`;
+    }
+    if (isOverdue) {
+      const days = getOverdueDays();
+      return `Overdue by ${days} day${days !== 1 ? "s" : ""} — please return or contact the ${isOwner ? "borrower" : "owner"}`;
     }
     if (isActive) return "Currently in use";
     if (isPendingReturn) return "Awaiting return confirmation";
@@ -173,6 +199,7 @@ const RequestCard: React.FC<{
                   status={request.status}
                   loanStatus={request.loan?.status}
                   isOwner={isOwner}
+                  loanEndDate={request.loan?.endDate}
                 />
               </div>
             </div>
@@ -248,7 +275,23 @@ const RequestCard: React.FC<{
           {!isOwner && isPending && (
             <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-3 py-2 text-xs">
               <Clock size={14} className="flex-shrink-0" />
-              <span>Your request has been sent. The owner will review and accept or decline it.</span>
+              <span>
+                Your request has been sent. The owner will review and accept or
+                decline it.
+              </span>
+            </div>
+          )}
+
+          {/* Overdue warning banner */}
+          {isOverdue && (
+            <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-800 rounded-xl px-3 py-2 text-xs">
+              <AlertTriangle size={14} className="flex-shrink-0" />
+              <span>
+                This item is overdue by <strong>{getOverdueDays()} day{getOverdueDays() !== 1 ? "s" : ""}</strong>.
+                {isOwner
+                  ? " Please follow up with the borrower."
+                  : " Please return the item as soon as possible."}
+              </span>
             </div>
           )}
 
@@ -435,7 +478,10 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
           const incoming = Array.isArray(incomingData) ? incomingData : [];
           const outgoing = Array.isArray(outgoingData) ? outgoingData : [];
 
-          const combinedData = [...incoming, ...outgoing];
+          const combinedData = [...incoming, ...outgoing].sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
 
           // Update cache
           cacheRef.current = {
@@ -820,6 +866,16 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       );
     }
 
+    if (statusFilter === "overdue") {
+      return requests.filter(
+        (req) =>
+          req.status === "APPROVED" &&
+          (req.loan?.status === "ACTIVE" || req.loan?.status === "OVERDUE") &&
+          req.loan?.endDate &&
+          new Date(req.loan.endDate) < new Date(),
+      );
+    }
+
     return requests;
   };
 
@@ -844,6 +900,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const returnedCount = allRequests.filter(
     (req) => req.status === "APPROVED" && req.loan?.status === "RETURNED",
   ).length;
+  const overdueCount = allRequests.filter(
+    (req) =>
+      req.status === "APPROVED" &&
+      (req.loan?.status === "ACTIVE" || req.loan?.status === "OVERDUE") &&
+      req.loan?.endDate &&
+      new Date(req.loan.endDate) < new Date(),
+  ).length;
 
   const statusFilterTabs: {
     value: StatusFilter;
@@ -854,6 +917,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     { value: "pending", label: "Pending", count: pendingCount },
     { value: "lending", label: "Lending", count: lendingCount },
     { value: "borrowed", label: "Borrowed", count: borrowedCount },
+    { value: "overdue", label: "Overdue", count: overdueCount },
     { value: "returned", label: "Returned", count: returnedCount },
   ];
 
