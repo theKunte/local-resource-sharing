@@ -49,7 +49,8 @@ const prisma = new PrismaClient({
 });
 
 // Test database connection on startup
-prisma.$connect()
+prisma
+  .$connect()
   .then(() => console.log("✅ Database connected"))
   .catch((error) => {
     console.error("❌ Database connection failed:", error);
@@ -174,9 +175,9 @@ async function authenticateToken(
 
     // Don't let the error crash the server
     if (errorMessage.includes("timeout")) {
-      return res.status(503).json({ 
+      return res.status(503).json({
         error: "Authentication service temporarily unavailable",
-        message: "Please try again in a moment"
+        message: "Please try again in a moment",
       });
     }
 
@@ -1889,10 +1890,52 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
           },
         ],
       },
+      include: {
+        loan: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+      },
     });
 
-    if (existingRequests.length > 0) {
-      const existingRequest = existingRequests[0];
+    // Filter to only active/pending requests (exclude completed loans)
+    const activeRequests = existingRequests.filter((req) => {
+      // PENDING requests are always considered active
+      if (req.status === "PENDING") return true;
+      // APPROVED requests are only active if they don't have a loan or the loan is still ACTIVE
+      if (req.status === "APPROVED") {
+        const isActive =
+          !req.loan ||
+          req.loan.status === "ACTIVE" ||
+          req.loan.status === "PENDING_RETURN_CONFIRMATION";
+        console.log("[DEBUG] APPROVED request filter:", {
+          requestId: req.id,
+          hasLoan: !!req.loan,
+          loanStatus: req.loan?.status,
+          isActive,
+        });
+        return isActive;
+      }
+      return false;
+    });
+
+    console.log("[DEBUG] Duplicate request check:", {
+      resourceId,
+      borrowerId,
+      totalExisting: existingRequests.length,
+      activeCount: activeRequests.length,
+      existingRequests: existingRequests.map((r) => ({
+        id: r.id,
+        status: r.status,
+        loanId: r.loan?.id,
+        loanStatus: r.loan?.status,
+      })),
+    });
+
+    if (activeRequests.length > 0) {
+      const existingRequest = activeRequests[0];
       const requestType =
         existingRequest.status === "PENDING" ? "pending" : "approved";
       return res.status(409).json({
@@ -2208,96 +2251,115 @@ app.post(
       }
 
       // Perform transaction: create loan, update request, update resource, decline overlapping requests
-      const result = await prisma.$transaction(async (tx) => {
-        // Create the loan
-        const loan = await tx.loan.create({
-          data: {
-            requestId: borrowRequest.id,
-            resourceId: borrowRequest.resourceId,
-            borrowerId: borrowRequest.borrowerId,
-            lenderId: borrowRequest.ownerId,
-            startDate: borrowRequest.startDate,
-            endDate: borrowRequest.endDate,
-            status: "ACTIVE",
-          },
-          include: {
-            borrower: {
-              select: { id: true, email: true, name: true },
+      const result = await prisma.$transaction(
+        async (tx) => {
+          // Double-check borrow request status within transaction (optimistic locking)
+          const currentRequest = await tx.borrowRequest.findUnique({
+            where: { id },
+            select: { status: true },
+          });
+
+          if (!currentRequest || currentRequest.status !== "PENDING") {
+            throw new Error(
+              "Request status changed. Please refresh and try again.",
+            );
+          }
+
+          // Create the loan
+          const loan = await tx.loan.create({
+            data: {
+              requestId: borrowRequest.id,
+              resourceId: borrowRequest.resourceId,
+              borrowerId: borrowRequest.borrowerId,
+              lenderId: borrowRequest.ownerId,
+              startDate: borrowRequest.startDate,
+              endDate: borrowRequest.endDate,
+              status: "ACTIVE",
             },
-            lender: {
-              select: { id: true, email: true, name: true },
-            },
-            resource: {
-              select: {
-                id: true,
-                title: true,
-                description: true,
-                image: true,
-                status: true,
+            include: {
+              borrower: {
+                select: { id: true, email: true, name: true },
+              },
+              lender: {
+                select: { id: true, email: true, name: true },
+              },
+              resource: {
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  image: true,
+                  status: true,
+                },
               },
             },
-          },
-        });
+          });
 
-        // Update the borrow request status
-        const updatedRequest = await tx.borrowRequest.update({
-          where: { id },
-          data: { status: "APPROVED" },
-          include: {
-            resource: true,
-            borrower: {
-              select: { id: true, email: true, name: true },
+          // Update the borrow request status
+          const updatedRequest = await tx.borrowRequest.update({
+            where: { id },
+            data: { status: "APPROVED" },
+            include: {
+              resource: true,
+              borrower: {
+                select: { id: true, email: true, name: true },
+              },
+              owner: {
+                select: { id: true, email: true, name: true },
+              },
             },
-            owner: {
-              select: { id: true, email: true, name: true },
+          });
+
+          // Update resource status to BORROWED
+          await tx.resource.update({
+            where: { id: borrowRequest.resourceId },
+            data: {
+              status: "BORROWED",
+              currentLoanId: loan.id,
             },
-          },
-        });
+          });
 
-        // Update resource status to BORROWED
-        await tx.resource.update({
-          where: { id: borrowRequest.resourceId },
-          data: {
-            status: "BORROWED",
-            currentLoanId: loan.id,
-          },
-        });
+          // Auto-decline overlapping pending requests
+          const declinedRequests = await tx.borrowRequest.updateMany({
+            where: {
+              resourceId: borrowRequest.resourceId,
+              id: { not: borrowRequest.id },
+              status: "PENDING",
+              OR: [
+                {
+                  AND: [
+                    { startDate: { lte: borrowRequest.endDate } },
+                    { startDate: { gte: borrowRequest.startDate } },
+                  ],
+                },
+                {
+                  AND: [
+                    { endDate: { lte: borrowRequest.endDate } },
+                    { endDate: { gte: borrowRequest.startDate } },
+                  ],
+                },
+                {
+                  AND: [
+                    { startDate: { lte: borrowRequest.startDate } },
+                    { endDate: { gte: borrowRequest.endDate } },
+                  ],
+                },
+              ],
+            },
+            data: { status: "REJECTED" },
+          });
 
-        // Auto-decline overlapping pending requests
-        const declinedRequests = await tx.borrowRequest.updateMany({
-          where: {
-            resourceId: borrowRequest.resourceId,
-            id: { not: borrowRequest.id },
-            status: "PENDING",
-            OR: [
-              {
-                AND: [
-                  { startDate: { lte: borrowRequest.endDate } },
-                  { startDate: { gte: borrowRequest.startDate } },
-                ],
-              },
-              {
-                AND: [
-                  { endDate: { lte: borrowRequest.endDate } },
-                  { endDate: { gte: borrowRequest.startDate } },
-                ],
-              },
-              {
-                AND: [
-                  { startDate: { lte: borrowRequest.startDate } },
-                  { endDate: { gte: borrowRequest.endDate } },
-                ],
-              },
-            ],
-          },
-          data: { status: "REJECTED" },
-        });
-
-        return { loan, updatedRequest, declinedCount: declinedRequests.count };
-      }, {
-        maxWait: 5000, // 5 seconds max wait for transaction to start
-        timeout: 10000, // 10 seconds max transaction time
-      });
+          return {
+            loan,
+            updatedRequest,
+            declinedCount: declinedRequests.count,
+          };
+        },
+        {
+          maxWait: 5000, // 5 seconds max wait for transaction to start
+          timeout: 10000, // 10 seconds max transaction time
+        },
+      );
 
       res.json({
         success: true,
@@ -2308,7 +2370,11 @@ app.post(
       });
     } catch (error) {
       console.error("Error accepting borrow request:", error);
-      res.status(500).json({ error: "Failed to accept borrow request" });
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to accept borrow request";
+      res.status(500).json({ error: errorMessage });
     }
   },
 );
@@ -2723,40 +2789,67 @@ app.post(
         });
       }
 
-      // Update loan status to PENDING_RETURN_CONFIRMATION
-      const updatedLoan = await prisma.loan.update({
-        where: { id },
-        data: {
-          status: "PENDING_RETURN_CONFIRMATION",
-          returnedDate: new Date(), // Track when borrower initiated return
-        },
-        include: {
-          resource: {
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              image: true,
-              status: true,
+      // Use transaction to prevent race conditions
+      const result = await prisma.$transaction(
+        async (tx) => {
+          // Double-check loan status within transaction (optimistic locking)
+          const currentLoan = await tx.loan.findUnique({
+            where: { id },
+            select: { status: true },
+          });
+
+          if (!currentLoan || currentLoan.status !== "ACTIVE") {
+            throw new Error(
+              "Loan status changed. Please refresh and try again.",
+            );
+          }
+
+          // Update loan status to PENDING_RETURN_CONFIRMATION
+          const updatedLoan = await tx.loan.update({
+            where: { id },
+            data: {
+              status: "PENDING_RETURN_CONFIRMATION",
+              returnedDate: new Date(), // Track when borrower initiated return
             },
-          },
-          borrower: {
-            select: { id: true, email: true, name: true },
-          },
-          lender: {
-            select: { id: true, email: true, name: true },
-          },
+            include: {
+              resource: {
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  image: true,
+                  status: true,
+                },
+              },
+              borrower: {
+                select: { id: true, email: true, name: true },
+              },
+              lender: {
+                select: { id: true, email: true, name: true },
+              },
+            },
+          });
+
+          return { loan: updatedLoan };
         },
-      });
+        {
+          maxWait: 5000,
+          timeout: 10000,
+        },
+      );
 
       res.json({
         success: true,
         message: "Return requested successfully. Awaiting owner confirmation.",
-        loan: updatedLoan,
+        loan: result.loan,
       });
     } catch (error) {
       console.error("Error requesting loan return:", error);
-      res.status(500).json({ error: "Failed to request loan return" });
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to request loan return";
+      res.status(500).json({ error: errorMessage });
     }
   },
 );
@@ -2821,34 +2914,55 @@ app.post(
       }
 
       // Perform transaction: update loan status, update resource status, clear currentLoanId
-      const result = await prisma.$transaction(async (tx) => {
-        // Update loan: set status to RETURNED (returnedDate already set)
-        const updatedLoan = await tx.loan.update({
-          where: { id },
-          data: {
-            status: "RETURNED",
-          },
-          include: {
-            borrower: {
-              select: { id: true, email: true, name: true },
-            },
-            lender: {
-              select: { id: true, email: true, name: true },
-            },
-          },
-        });
+      const result = await prisma.$transaction(
+        async (tx) => {
+          // Double-check loan status within transaction (optimistic locking)
+          const currentLoan = await tx.loan.findUnique({
+            where: { id },
+            select: { status: true, resourceId: true },
+          });
 
-        // Update resource: set status to AVAILABLE and clear currentLoanId
-        await tx.resource.update({
-          where: { id: loan.resourceId },
-          data: {
-            status: "AVAILABLE",
-            currentLoanId: null,
-          },
-        });
+          if (
+            !currentLoan ||
+            currentLoan.status !== "PENDING_RETURN_CONFIRMATION"
+          ) {
+            throw new Error(
+              "Loan status changed. Please refresh and try again.",
+            );
+          }
 
-        return { loan: updatedLoan };
-      });
+          // Update loan: set status to RETURNED (returnedDate already set)
+          const updatedLoan = await tx.loan.update({
+            where: { id },
+            data: {
+              status: "RETURNED",
+            },
+            include: {
+              borrower: {
+                select: { id: true, email: true, name: true },
+              },
+              lender: {
+                select: { id: true, email: true, name: true },
+              },
+            },
+          });
+
+          // Update resource: set status to AVAILABLE and clear currentLoanId
+          await tx.resource.update({
+            where: { id: currentLoan.resourceId },
+            data: {
+              status: "AVAILABLE",
+              currentLoanId: null,
+            },
+          });
+
+          return { loan: updatedLoan };
+        },
+        {
+          maxWait: 5000,
+          timeout: 10000,
+        },
+      );
 
       res.json({
         success: true,
@@ -2857,7 +2971,9 @@ app.post(
       });
     } catch (error) {
       console.error("Error confirming return:", error);
-      res.status(500).json({ error: "Failed to confirm return" });
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to confirm return";
+      res.status(500).json({ error: errorMessage });
     }
   },
 );
@@ -2913,35 +3029,53 @@ app.post(
       }
 
       // Perform transaction: update loan status, update resource status, clear currentLoanId
-      const result = await prisma.$transaction(async (tx) => {
-        // Update loan: set status to RETURNED and set returnedDate
-        const updatedLoan = await tx.loan.update({
-          where: { id: borrowRequest.loan!.id },
-          data: {
-            status: "RETURNED",
-            returnedDate: new Date(),
-          },
-          include: {
-            borrower: {
-              select: { id: true, email: true, name: true },
-            },
-            lender: {
-              select: { id: true, email: true, name: true },
-            },
-          },
-        });
+      const result = await prisma.$transaction(
+        async (tx) => {
+          // Double-check loan status within transaction (optimistic locking)
+          const currentLoan = await tx.loan.findUnique({
+            where: { id: borrowRequest.loan!.id },
+            select: { status: true },
+          });
 
-        // Update resource: set status to AVAILABLE and clear currentLoanId
-        await tx.resource.update({
-          where: { id: borrowRequest.resourceId },
-          data: {
-            status: "AVAILABLE",
-            currentLoanId: null,
-          },
-        });
+          if (!currentLoan || currentLoan.status !== "ACTIVE") {
+            throw new Error(
+              "Loan status changed. Please refresh and try again.",
+            );
+          }
 
-        return { loan: updatedLoan };
-      });
+          // Update loan: set status to RETURNED and set returnedDate
+          const updatedLoan = await tx.loan.update({
+            where: { id: borrowRequest.loan!.id },
+            data: {
+              status: "RETURNED",
+              returnedDate: new Date(),
+            },
+            include: {
+              borrower: {
+                select: { id: true, email: true, name: true },
+              },
+              lender: {
+                select: { id: true, email: true, name: true },
+              },
+            },
+          });
+
+          // Update resource: set status to AVAILABLE and clear currentLoanId
+          await tx.resource.update({
+            where: { id: borrowRequest.resourceId },
+            data: {
+              status: "AVAILABLE",
+              currentLoanId: null,
+            },
+          });
+
+          return { loan: updatedLoan };
+        },
+        {
+          maxWait: 5000,
+          timeout: 10000,
+        },
+      );
 
       res.json({
         success: true,
@@ -2950,7 +3084,11 @@ app.post(
       });
     } catch (error) {
       console.error("Error marking item as returned:", error);
-      res.status(500).json({ error: "Failed to mark item as returned" });
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to mark item as returned";
+      res.status(500).json({ error: errorMessage });
     }
   },
 );
@@ -3021,48 +3159,66 @@ app.post(
       }
 
       // Perform transaction: update loan status, update resource status, clear currentLoanId
-      const result = await prisma.$transaction(async (tx) => {
-        // Update loan status to RETURNED
-        const updatedLoan = await tx.loan.update({
-          where: { id },
-          data: {
-            status: "RETURNED",
-          },
-          include: {
-            resource: {
-              select: {
-                id: true,
-                title: true,
-                description: true,
-                image: true,
-                status: true,
+      const result = await prisma.$transaction(
+        async (tx) => {
+          // Double-check loan status within transaction (optimistic locking)
+          const currentLoan = await tx.loan.findUnique({
+            where: { id },
+            select: { status: true, resourceId: true },
+          });
+
+          if (!currentLoan || currentLoan.status !== "ACTIVE") {
+            throw new Error(
+              "Loan status changed. Please refresh and try again.",
+            );
+          }
+
+          // Update loan status to RETURNED
+          const updatedLoan = await tx.loan.update({
+            where: { id },
+            data: {
+              status: "RETURNED",
+            },
+            include: {
+              resource: {
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  image: true,
+                  status: true,
+                },
+              },
+              borrower: {
+                select: { id: true, email: true, name: true },
+              },
+              lender: {
+                select: { id: true, email: true, name: true },
               },
             },
-            borrower: {
-              select: { id: true, email: true, name: true },
-            },
-            lender: {
-              select: { id: true, email: true, name: true },
-            },
-          },
-        });
+          });
 
-        // Update resource: set status to AVAILABLE and clear currentLoanId
-        const updatedResource = await tx.resource.update({
-          where: { id: loan.resourceId },
-          data: {
-            status: "AVAILABLE",
-            currentLoanId: null,
-          },
-          select: {
-            id: true,
-            title: true,
-            status: true,
-          },
-        });
+          // Update resource: set status to AVAILABLE and clear currentLoanId
+          const updatedResource = await tx.resource.update({
+            where: { id: currentLoan.resourceId },
+            data: {
+              status: "AVAILABLE",
+              currentLoanId: null,
+            },
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          });
 
-        return { loan: updatedLoan, resource: updatedResource };
-      });
+          return { loan: updatedLoan, resource: updatedResource };
+        },
+        {
+          maxWait: 5000,
+          timeout: 10000,
+        },
+      );
 
       res.json({
         success: true,
@@ -3072,7 +3228,11 @@ app.post(
       });
     } catch (error) {
       console.error("Error confirming loan return:", error);
-      res.status(500).json({ error: "Failed to confirm loan return" });
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to confirm loan return";
+      res.status(500).json({ error: errorMessage });
     }
   },
 );
@@ -3086,13 +3246,14 @@ process.on("uncaughtException", (error) => {
   console.error("❌ Uncaught Exception:", error);
   console.error("Stack:", error.stack);
   console.error("Time:", new Date().toISOString());
-  
+
   // For critical errors, gracefully shutdown
-  if (error.message && (
-    error.message.includes("FATAL") ||
-    error.message.includes("Cannot read properties of null") ||
-    error.message.includes("ECONNREFUSED")
-  )) {
+  if (
+    error.message &&
+    (error.message.includes("FATAL") ||
+      error.message.includes("Cannot read properties of null") ||
+      error.message.includes("ECONNREFUSED"))
+  ) {
     console.error("Critical error detected, initiating graceful shutdown...");
     prisma.$disconnect().finally(() => process.exit(1));
   }
@@ -3103,7 +3264,7 @@ process.on("unhandledRejection", (reason, promise) => {
   console.error("❌ Unhandled Rejection at:", promise);
   console.error("Reason:", reason);
   console.error("Time:", new Date().toISOString());
-  
+
   // Don't crash on promise rejections - log and continue
   // The specific route handler's try-catch should handle these
 });

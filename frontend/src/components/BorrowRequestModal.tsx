@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import apiClient from "../utils/apiClient";
 import type { CreateBorrowRequestData } from "../types/api.types";
 import { getErrorMessage, logError } from "../utils/errorHandler";
@@ -20,6 +21,7 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
   userId,
   groupId,
 }) => {
+  const navigate = useNavigate();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [message, setMessage] = useState("");
@@ -102,9 +104,14 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
       setMessage("");
       setValidationErrors({});
 
-      // Close modal and show success
+      // Close modal
       onClose();
-      alert("Borrow request sent successfully!");
+
+      // Show success message and navigate to Requests page
+      alert(
+        "Borrow request sent successfully! Redirecting to your requests...",
+      );
+      navigate("/requests");
     } catch (err) {
       logError("BorrowRequestModal", err);
 

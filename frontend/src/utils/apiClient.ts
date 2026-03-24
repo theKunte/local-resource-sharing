@@ -23,7 +23,7 @@ const pendingRequests = new Map<string, Promise<any>>();
 // Generate cache key for GET requests
 const getCacheKey = (config: any): string => {
   const { method, url, params } = config;
-  return `${method}:${url}:${JSON.stringify(params || {})}`;
+  return `${(method || "").toUpperCase()}:${url}:${JSON.stringify(params || {})}`;
 };
 
 // Request interceptor: Add auth token and track GET requests
