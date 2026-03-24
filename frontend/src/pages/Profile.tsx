@@ -138,7 +138,10 @@ export default function Profile() {
                   <span className="font-bold">{groups.length}</span> Groups
                 </span>
                 <span>
-                  <span className="font-bold">0</span> Shared
+                  <span className="font-bold">
+                    {resources.filter(r => r.sharedWith && r.sharedWith.length > 0).length}
+                  </span>{" "}
+                  Shared
                 </span>
               </div>
             </div>

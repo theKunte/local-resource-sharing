@@ -56,20 +56,22 @@ interface RequestDashboardProps {
   userId: string;
 }
 
-type StatusFilter = "all" | "pending" | "borrowed" | "returned";
+type StatusFilter = "all" | "pending" | "lending" | "borrowed" | "returned";
 
 const StatusBadge = ({
   status,
   loanStatus,
+  isOwner,
 }: {
   status: string;
   loanStatus?: string;
+  isOwner?: boolean;
 }) => {
   let displayText = status;
   let colorClasses = "bg-slate-100 text-slate-700 border-slate-200";
 
   if (status === "PENDING") {
-    displayText = "Pending";
+    displayText = isOwner ? "Pending" : "Awaiting Owner";
     colorClasses = "bg-amber-500/90 text-white border-amber-600";
   } else if (status === "APPROVED" && loanStatus === "ACTIVE") {
     displayText = "Borrowed";
@@ -135,7 +137,11 @@ const RequestCard: React.FC<{
   const isReturned = isApproved && request.loan?.status === "RETURNED";
 
   const getStatusMessage = () => {
-    if (isPending) return "Waiting for approval";
+    if (isPending) {
+      return isOwner
+        ? "Waiting for your approval"
+        : `Waiting for ${request.owner.name || "the owner"} to respond`;
+    }
     if (isActive) return "Currently in use";
     if (isPendingReturn) return "Awaiting return confirmation";
     if (isReturned) return "Item successfully returned";
@@ -166,6 +172,7 @@ const RequestCard: React.FC<{
                 <StatusBadge
                   status={request.status}
                   loanStatus={request.loan?.status}
+                  isOwner={isOwner}
                 />
               </div>
             </div>
@@ -236,6 +243,14 @@ const RequestCard: React.FC<{
           <p className="text-xs text-slate-400 italic mb-4">
             {getStatusMessage()}
           </p>
+
+          {/* Pending info banner for borrower */}
+          {!isOwner && isPending && (
+            <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-3 py-2 text-xs">
+              <Clock size={14} className="flex-shrink-0" />
+              <span>Your request has been sent. The owner will review and accept or decline it.</span>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap">
@@ -400,11 +415,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       const requestPromise = (async () => {
         try {
           // Add cache-busting parameter when forcing refresh to bypass apiClient deduplication
-          const cacheBuster = forceRefresh ? `&_t=${Date.now()}` : '';
-          
+          const cacheBuster = forceRefresh ? `&_t=${Date.now()}` : "";
+
           // Load all requests (both incoming and outgoing)
           const [incomingResponse, outgoingResponse] = await Promise.all([
-            apiClient.get(`/api/borrow-requests?userId=${userId}&role=owner${cacheBuster}`),
+            apiClient.get(
+              `/api/borrow-requests?userId=${userId}&role=owner${cacheBuster}`,
+            ),
             apiClient.get(
               `/api/borrow-requests?userId=${userId}&role=borrower${cacheBuster}`,
             ),
@@ -497,14 +514,30 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       // Clear cache and force immediate refresh to get accurate state
       cacheRef.current = null;
       await loadRequests(true);
-      
+
+      // Emit resource update event so other components (like Home) can refresh
+      if (response.data?.borrowRequest?.resource) {
+        try {
+          window.dispatchEvent(
+            new CustomEvent("resource:updated", {
+              detail: { resource: response.data.borrowRequest.resource },
+            }),
+          );
+        } catch (e) {
+          console.debug("Failed to dispatch resource:updated event", e);
+        }
+      }
+
       alert("Request accepted successfully!");
     } catch (error: any) {
       console.error("Error accepting request:", error);
       // Clear cache and reload on error to get correct state
       cacheRef.current = null;
       await loadRequests(true);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to accept request";
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to accept request";
       alert(errorMessage);
     } finally {
       setActionLoading(null);
@@ -635,6 +668,22 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       // Clear cache and force immediate refresh to ensure UI is in sync
       cacheRef.current = null;
       await loadRequests(true);
+
+      // Emit event to notify other components that resource is now available again
+      // Find the updated request to get resource data
+      const updatedRequest = allRequests.find((r) => r.id === requestId);
+      if (updatedRequest?.resource) {
+        try {
+          window.dispatchEvent(
+            new CustomEvent("resource:updated", {
+              detail: { resource: updatedRequest.resource },
+            }),
+          );
+        } catch (e) {
+          console.debug("Failed to dispatch resource:updated event", e);
+        }
+      }
+
       alert(
         "Item marked as returned successfully! The item is now available in your groups.",
       );
@@ -643,7 +692,10 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       // Clear cache and reload to get actual state
       cacheRef.current = null;
       await loadRequests(true);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to mark as returned";
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to mark as returned";
       alert(errorMessage);
     } finally {
       setActionLoading(null);
@@ -696,6 +748,22 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       // Clear cache and force immediate refresh to ensure UI is in sync
       cacheRef.current = null;
       await loadRequests(true);
+
+      // Emit event to notify other components that resource is now available again
+      // Find the request with this loan to get resource data
+      const updatedRequest = allRequests.find((r) => r.loan?.id === loanId);
+      if (updatedRequest?.resource) {
+        try {
+          window.dispatchEvent(
+            new CustomEvent("resource:updated", {
+              detail: { resource: updatedRequest.resource },
+            }),
+          );
+        } catch (e) {
+          console.debug("Failed to dispatch resource:updated event", e);
+        }
+      }
+
       alert(
         "Return confirmed! The item is now available in your groups again.",
       );
@@ -728,9 +796,21 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       return requests.filter((req) => req.status === "PENDING");
     }
 
+    if (statusFilter === "lending") {
+      return requests.filter(
+        (req) =>
+          req.ownerId === userId &&
+          req.status === "APPROVED" &&
+          req.loan?.status === "ACTIVE",
+      );
+    }
+
     if (statusFilter === "borrowed") {
       return requests.filter(
-        (req) => req.status === "APPROVED" && req.loan?.status === "ACTIVE",
+        (req) =>
+          req.borrowerId === userId &&
+          req.status === "APPROVED" &&
+          req.loan?.status === "ACTIVE",
       );
     }
 
@@ -749,8 +829,17 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const pendingCount = allRequests.filter(
     (req) => req.status === "PENDING",
   ).length;
+  const lendingCount = allRequests.filter(
+    (req) =>
+      req.ownerId === userId &&
+      req.status === "APPROVED" &&
+      req.loan?.status === "ACTIVE",
+  ).length;
   const borrowedCount = allRequests.filter(
-    (req) => req.status === "APPROVED" && req.loan?.status === "ACTIVE",
+    (req) =>
+      req.borrowerId === userId &&
+      req.status === "APPROVED" &&
+      req.loan?.status === "ACTIVE",
   ).length;
   const returnedCount = allRequests.filter(
     (req) => req.status === "APPROVED" && req.loan?.status === "RETURNED",
@@ -763,6 +852,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   }[] = [
     { value: "all", label: "All", count: allRequests.length },
     { value: "pending", label: "Pending", count: pendingCount },
+    { value: "lending", label: "Lending", count: lendingCount },
     { value: "borrowed", label: "Borrowed", count: borrowedCount },
     { value: "returned", label: "Returned", count: returnedCount },
   ];
