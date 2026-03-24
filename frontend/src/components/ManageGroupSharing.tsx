@@ -173,6 +173,7 @@ const ManageGroupSharing: React.FC<ManageGroupSharingProps> = ({
                               src={group.avatar}
                               alt={group.name}
                               className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
                             />
                           ) : (
                             group.name.slice(0, 2).toUpperCase()
