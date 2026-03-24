@@ -89,6 +89,7 @@ function Header() {
                     src={user.photoURL}
                     alt={user.displayName || "User"}
                     className="w-8 h-8 rounded-full border-2 border-white/30 object-cover"
+                    referrerPolicy="no-referrer"
                   />
                 )}
                 <button

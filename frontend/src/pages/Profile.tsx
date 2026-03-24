@@ -179,6 +179,7 @@ export default function Profile() {
                         alt={`${g.name} Avatar`}
                         className="w-full h-full object-cover rounded-full"
                         style={{ aspectRatio: "1/1", objectFit: "cover" }}
+                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <span>
@@ -239,6 +240,7 @@ export default function Profile() {
                         alt={`${g.name} Avatar`}
                         className="w-full h-full object-cover rounded-full"
                         style={{ aspectRatio: "1/1", objectFit: "cover" }}
+                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <span>
