@@ -9,6 +9,7 @@ import {
   Edit,
   Trash2,
   Package,
+  AlertTriangle,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 
@@ -45,7 +46,7 @@ interface BorrowRequest {
   };
   loan?: {
     id: string;
-    status: "ACTIVE" | "PENDING_RETURN_CONFIRMATION" | "RETURNED";
+    status: "ACTIVE" | "PENDING_RETURN_CONFIRMATION" | "RETURNED" | "OVERDUE";
     startDate: string;
     endDate: string;
     returnedDate?: string;
@@ -56,23 +57,39 @@ interface RequestDashboardProps {
   userId: string;
 }
 
-type StatusFilter = "all" | "pending" | "lending" | "borrowed" | "returned";
+type StatusFilter =
+  | "all"
+  | "pending"
+  | "lending"
+  | "borrowed"
+  | "returned";
 
 const StatusBadge = ({
   status,
   loanStatus,
   isOwner,
+  loanEndDate,
 }: {
   status: string;
   loanStatus?: string;
   isOwner?: boolean;
+  loanEndDate?: string;
 }) => {
   let displayText = status;
   let colorClasses = "bg-slate-100 text-slate-700 border-slate-200";
 
+  const isOverdue =
+    status === "APPROVED" &&
+    (loanStatus === "ACTIVE" || loanStatus === "OVERDUE") &&
+    loanEndDate &&
+    new Date(loanEndDate) < new Date();
+
   if (status === "PENDING") {
     displayText = isOwner ? "Pending" : "Awaiting Owner";
     colorClasses = "bg-amber-500/90 text-white border-amber-600";
+  } else if (isOverdue) {
+    displayText = "Overdue";
+    colorClasses = "bg-red-600/90 text-white border-red-700 animate-pulse";
   } else if (status === "APPROVED" && loanStatus === "ACTIVE") {
     displayText = "Borrowed";
     colorClasses = "bg-blue-500/90 text-white border-blue-600";
@@ -131,16 +148,33 @@ const RequestCard: React.FC<{
 }) => {
   const isPending = request.status === "PENDING";
   const isApproved = request.status === "APPROVED";
-  const isActive = isApproved && request.loan?.status === "ACTIVE";
+  const isActive =
+    isApproved &&
+    (request.loan?.status === "ACTIVE" || request.loan?.status === "OVERDUE");
   const isPendingReturn =
     isApproved && request.loan?.status === "PENDING_RETURN_CONFIRMATION";
   const isReturned = isApproved && request.loan?.status === "RETURNED";
+  const isOverdue =
+    isActive &&
+    request.loan?.endDate &&
+    new Date(request.loan.endDate) < new Date();
+
+  const getOverdueDays = () => {
+    if (!isOverdue || !request.loan?.endDate) return 0;
+    const diffMs =
+      new Date().getTime() - new Date(request.loan.endDate).getTime();
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  };
 
   const getStatusMessage = () => {
     if (isPending) {
       return isOwner
         ? "Waiting for your approval"
         : `Waiting for ${request.owner.name || "the owner"} to respond`;
+    }
+    if (isOverdue) {
+      const days = getOverdueDays();
+      return `Overdue by ${days} day${days !== 1 ? "s" : ""} — please return or contact the ${isOwner ? "borrower" : "owner"}`;
     }
     if (isActive) return "Currently in use";
     if (isPendingReturn) return "Awaiting return confirmation";
@@ -173,6 +207,7 @@ const RequestCard: React.FC<{
                   status={request.status}
                   loanStatus={request.loan?.status}
                   isOwner={isOwner}
+                  loanEndDate={request.loan?.endDate}
                 />
               </div>
             </div>
@@ -248,7 +283,27 @@ const RequestCard: React.FC<{
           {!isOwner && isPending && (
             <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-3 py-2 text-xs">
               <Clock size={14} className="flex-shrink-0" />
-              <span>Your request has been sent. The owner will review and accept or decline it.</span>
+              <span>
+                Your request has been sent. The owner will review and accept or
+                decline it.
+              </span>
+            </div>
+          )}
+
+          {/* Overdue warning banner */}
+          {isOverdue && (
+            <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-800 rounded-xl px-3 py-2 text-xs">
+              <AlertTriangle size={14} className="flex-shrink-0" />
+              <span>
+                This item is overdue by{" "}
+                <strong>
+                  {getOverdueDays()} day{getOverdueDays() !== 1 ? "s" : ""}
+                </strong>
+                .
+                {isOwner
+                  ? " Please follow up with the borrower."
+                  : " Please return the item as soon as possible."}
+              </span>
             </div>
           )}
 
@@ -376,7 +431,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     timestamp: number;
   } | null>(null);
   const pendingRequestRef = React.useRef<Promise<void> | null>(null);
-  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const CACHE_TTL = 10000; // 10 seconds cache
 
   const loadRequests = React.useCallback(
@@ -435,7 +492,10 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
           const incoming = Array.isArray(incomingData) ? incomingData : [];
           const outgoing = Array.isArray(outgoingData) ? outgoingData : [];
 
-          const combinedData = [...incoming, ...outgoing];
+          const combinedData = [...incoming, ...outgoing].sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
 
           // Update cache
           cacheRef.current = {
@@ -793,7 +853,12 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     if (statusFilter === "all") return requests;
 
     if (statusFilter === "pending") {
-      return requests.filter((req) => req.status === "PENDING");
+      return requests.filter(
+        (req) =>
+          req.status === "PENDING" ||
+          (req.status === "APPROVED" &&
+            req.loan?.status === "PENDING_RETURN_CONFIRMATION"),
+      );
     }
 
     if (statusFilter === "lending") {
@@ -825,9 +890,12 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
   const filteredRequests = filterRequests(allRequests);
 
-  // Calculate counts for each status
+  // Calculate counts for each status (includes return confirmations needing action)
   const pendingCount = allRequests.filter(
-    (req) => req.status === "PENDING",
+    (req) =>
+      req.status === "PENDING" ||
+      (req.status === "APPROVED" &&
+        req.loan?.status === "PENDING_RETURN_CONFIRMATION"),
   ).length;
   const lendingCount = allRequests.filter(
     (req) =>
@@ -844,7 +912,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const returnedCount = allRequests.filter(
     (req) => req.status === "APPROVED" && req.loan?.status === "RETURNED",
   ).length;
-
   const statusFilterTabs: {
     value: StatusFilter;
     label: string;
@@ -874,13 +941,16 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             <button
               key={tab.value}
               onClick={() => setStatusFilter(tab.value)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              className={`relative flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                 statusFilter === tab.value
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
               {tab.label} ({tab.count})
+              {tab.value === "pending" && tab.count > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+              )}
             </button>
           ))}
         </div>

@@ -2,12 +2,83 @@
  * Input Validation Utilities
  */
 
+// Allowed image MIME types — SVG, HTML, and other script-capable types are blocked
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+// Magic byte signatures for each type
+const MAGIC_BYTES: Record<string, number[][]> = {
+  "image/jpeg": [[0xff, 0xd8, 0xff]],
+  "image/png": [[0x89, 0x50, 0x4e, 0x47]],
+  "image/webp": [[0x52, 0x49, 0x46, 0x46]], // "RIFF"
+};
+
+/**
+ * Validates a base64 data URI image for safe content type and matching magic bytes.
+ * Blocks SVG (can contain scripts), HTML, and all non-raster formats.
+ */
+export function validateBase64Image(dataUri: string): {
+  valid: boolean;
+  error?: string;
+} {
+  // Must be a data URI
+  const dataUriRegex = /^data:([\w/+-]+);base64,(.+)$/;
+  const match = dataUri.match(dataUriRegex);
+  if (!match) {
+    return {
+      valid: false,
+      error: "Invalid image format: must be a base64 data URI",
+    };
+  }
+
+  const mimeType = match[1].toLowerCase();
+  const base64Data = match[2];
+
+  // Check MIME type is in allowlist
+  if (!ALLOWED_IMAGE_TYPES.includes(mimeType as any)) {
+    return {
+      valid: false,
+      error: `Image type "${mimeType}" is not allowed. Use JPEG, PNG, or WebP.`,
+    };
+  }
+
+  // Validate base64 is well-formed (check a reasonable prefix)
+  const base64Regex = /^[A-Za-z0-9+/]+=*$/;
+  const sampleChunk = base64Data.slice(0, 1000);
+  if (!base64Regex.test(sampleChunk.replace(/\s/g, ""))) {
+    return { valid: false, error: "Invalid base64 encoding" };
+  }
+
+  // Decode first few bytes and verify magic bytes match declared type
+  try {
+    const binaryChunk = Buffer.from(base64Data.slice(0, 32), "base64");
+    const expectedSignatures = MAGIC_BYTES[mimeType];
+    if (expectedSignatures) {
+      const matchesMagic = expectedSignatures.some((sig) =>
+        sig.every((byte, i) => binaryChunk[i] === byte),
+      );
+      if (!matchesMagic) {
+        return {
+          valid: false,
+          error: "Image content does not match declared type",
+        };
+      }
+    }
+  } catch {
+    return { valid: false, error: "Failed to decode image data" };
+  }
+
+  return { valid: true };
+}
+
 export function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
-export function sanitizeString(str: string | undefined | null, maxLength: number = 500): string {
+export function sanitizeString(
+  str: string | undefined | null,
+  maxLength: number = 500,
+): string {
   if (!str) return "";
   return str.trim().slice(0, maxLength);
 }
@@ -31,7 +102,10 @@ export function validateResourceInput(data: any): {
     errors.push("Description must be less than 2000 characters");
   }
   // Image validation - only check if explicitly checking for new resource (not update)
-  if (data.image !== undefined && (!data.image || data.image.trim().length === 0)) {
+  if (
+    data.image !== undefined &&
+    (!data.image || data.image.trim().length === 0)
+  ) {
     errors.push("Image is required");
   }
   if (!data.ownerId) {
