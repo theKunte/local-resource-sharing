@@ -1,9 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
+import { useActionableCount } from "../hooks/useActionableCount";
 
 function BottomNavigation() {
   const location = useLocation();
   const { user } = useFirebaseAuth();
+  const actionableCount = useActionableCount(user?.uid);
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -126,9 +128,12 @@ function BottomNavigation() {
               <Link
                 key={item.path}
                 to={item.path}
-                className="flex flex-col items-center justify-center min-w-[56px] h-full hover:bg-gray-50 transition-colors"
+                className="relative flex flex-col items-center justify-center min-w-[56px] h-full hover:bg-gray-50 transition-colors"
               >
                 {item.icon(active)}
+                {item.path === "/requests" && actionableCount > 0 && (
+                  <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                )}
                 <span
                   className={`text-[9px] mt-0.5 ${
                     active ? "text-primary-600 font-semibold" : "text-gray-600"

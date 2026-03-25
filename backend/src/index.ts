@@ -10,6 +10,13 @@ import {
   validateGroupInput,
   sanitizeString,
 } from "./utils/validation";
+import {
+  notifyNewBorrowRequest,
+  notifyRequestAccepted,
+  notifyRequestDeclined,
+  notifyReturnRequested,
+  notifyReturnConfirmed,
+} from "./utils/notifications";
 
 dotenv.config();
 
@@ -121,13 +128,32 @@ app.use(
 // Rate limiting - prevent abuse
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per window
+  max: 200, // limit each IP to 200 requests per window
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
 });
 
+// Stricter rate limit for auth endpoints (register fires on every page load, so needs headroom)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  message: "Too many auth attempts, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Stricter rate limit for write operations (borrow requests, resource creation)
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: "Too many requests, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use("/api/", limiter);
+app.use("/api/auth/", authLimiter);
 app.use(express.json({ limit: "5mb" })); // Allow large payloads for images
 
 // Authentication Middleware with timeout protection
@@ -338,7 +364,7 @@ app.get(
 );
 
 // Post a new resource to the database
-app.post("/api/resources", authenticateToken, async (req, res) => {
+app.post("/api/resources", authenticateToken, writeLimiter, async (req, res) => {
   const { title, description, ownerId, image } = req.body;
   const authenticatedUserId = (req as any).user.uid;
 
@@ -744,7 +770,18 @@ app.post(
 // Get group members
 app.get("/api/groups/:groupId/members", authenticateToken, async (req, res) => {
   const { groupId } = req.params;
+  const requestingUserId = (req as any).user.uid;
+
   try {
+    // Verify requester is a member of this group
+    const requesterMembership = await prisma.groupMember.findFirst({
+      where: { groupId, userId: requestingUserId },
+    });
+
+    if (!requesterMembership) {
+      return res.status(403).json({ error: "You are not a member of this group" });
+    }
+
     const members = await prisma.groupMember.findMany({
       where: { groupId },
       include: {
@@ -849,8 +886,26 @@ app.delete(
   authenticateToken,
   async (req, res) => {
     const { groupId, userId } = req.params;
+    const requestingUserId = (req as any).user.uid;
 
     try {
+      // Users can remove themselves; otherwise need owner/admin role
+      if (userId !== requestingUserId) {
+        const requesterMembership = await prisma.groupMember.findFirst({
+          where: { groupId, userId: requestingUserId },
+          select: { role: true },
+        });
+
+        if (!requesterMembership) {
+          return res.status(403).json({ error: "You are not a member of this group" });
+        }
+
+        const canRemove = requesterMembership.role === "owner" || requesterMembership.role === "admin";
+        if (!canRemove) {
+          return res.status(403).json({ error: "Only group owners and admins can remove other members" });
+        }
+      }
+
       await prisma.groupMember.deleteMany({
         where: {
           groupId,
@@ -1398,11 +1453,17 @@ app.get("/api/debug/users", authenticateToken, async (req, res) => {
 });
 
 // Register/update user on login (call this when user first authenticates)
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", authenticateToken, async (req, res) => {
+  const authenticatedUid = (req as any).user.uid;
   const { uid, email, name, photoURL } = req.body;
 
   if (!uid) {
     return res.status(400).json({ error: "User ID is required" });
+  }
+
+  // Only allow users to register/update themselves
+  if (uid !== authenticatedUid) {
+    return res.status(403).json({ error: "You can only register yourself" });
   }
 
   try {
@@ -1462,11 +1523,17 @@ app.post("/api/auth/register", async (req, res) => {
 });
 
 // Fix existing user email (for users who already have placeholder emails)
-app.put("/api/auth/fix-user-email", async (req, res) => {
+app.put("/api/auth/fix-user-email", authenticateToken, async (req, res) => {
+  const authenticatedUid = (req as any).user.uid;
   const { uid, email } = req.body;
 
   if (!uid || !email) {
     return res.status(400).json({ error: "User ID and email are required" });
+  }
+
+  // Only allow users to fix their own email
+  if (uid !== authenticatedUid) {
+    return res.status(403).json({ error: "You can only update your own email" });
   }
 
   try {
@@ -1485,6 +1552,28 @@ app.put("/api/auth/fix-user-email", async (req, res) => {
   } catch (error) {
     console.error("Error updating user email:", error);
     res.status(500).json({ error: "Failed to update user email" });
+  }
+});
+
+// Save or update FCM push notification token
+app.post("/api/notifications/token", authenticateToken, async (req, res) => {
+  const uid = (req as any).user.uid;
+  const { token } = req.body;
+
+  if (!token || typeof token !== "string") {
+    return res.status(400).json({ error: "Valid token string is required" });
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: uid },
+      data: { fcmToken: token },
+    });
+
+    res.json({ success: true, message: "Notification token saved" });
+  } catch (error) {
+    console.error("Error saving FCM token:", error);
+    res.status(500).json({ error: "Failed to save notification token" });
   }
 });
 
@@ -1707,7 +1796,7 @@ app.get("/api/users/:userId/groups", authenticateToken, async (req, res) => {
 // --- BORROW REQUESTS API --- //
 
 // Create a borrow request
-app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
+app.post("/api/borrow-requests", authenticateToken, writeLimiter, async (req, res) => {
   const { resourceId, borrowerId, groupId, message, startDate, endDate } =
     req.body;
   const authenticatedUserId = (req as any).user.uid;
@@ -1756,6 +1845,15 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
       return res
         .status(400)
         .json({ error: "End date must be after start date" });
+    }
+
+    // Enforce maximum loan duration (365 days)
+    const durationMs = end.getTime() - start.getTime();
+    const durationDays = durationMs / (1000 * 60 * 60 * 24);
+    if (durationDays > 365) {
+      return res
+        .status(400)
+        .json({ error: "Loan duration cannot exceed 365 days" });
     }
 
     // Get resource with owner information
@@ -1998,6 +2096,14 @@ app.post("/api/borrow-requests", authenticateToken, async (req, res) => {
       borrowRequest,
       message: "Borrow request created successfully",
     });
+
+    // Fire-and-forget push notification to owner
+    notifyNewBorrowRequest(
+      borrowRequest.ownerId,
+      borrowRequest.borrower.name || borrowRequest.borrower.email,
+      borrowRequest.resource.title,
+      borrowRequest.id
+    );
   } catch (error) {
     console.error("Error creating borrow request:", error);
     res.status(500).json({ error: "Failed to create borrow request" });
@@ -2374,6 +2480,14 @@ app.post(
         loan: result.loan,
         autoDeclinedRequests: result.declinedCount,
       });
+
+      // Fire-and-forget push notification to borrower
+      notifyRequestAccepted(
+        result.updatedRequest.borrowerId,
+        result.updatedRequest.owner.name || result.updatedRequest.owner.email,
+        result.updatedRequest.resource.title,
+        result.updatedRequest.id
+      );
     } catch (error) {
       console.error("Error accepting borrow request:", error);
       const errorMessage =
@@ -2460,6 +2574,14 @@ app.post(
         message: "Borrow request declined",
         borrowRequest: updatedRequest,
       });
+
+      // Fire-and-forget push notification to borrower
+      notifyRequestDeclined(
+        updatedRequest.borrowerId,
+        updatedRequest.owner.name || updatedRequest.owner.email,
+        updatedRequest.resource.title,
+        updatedRequest.id
+      );
     } catch (error) {
       console.error("Error declining borrow request:", error);
       res.status(500).json({ error: "Failed to decline borrow request" });
@@ -2849,6 +2971,14 @@ app.post(
         message: "Return requested successfully. Awaiting owner confirmation.",
         loan: result.loan,
       });
+
+      // Fire-and-forget push notification to lender/owner
+      notifyReturnRequested(
+        result.loan.lenderId,
+        result.loan.borrower.name || result.loan.borrower.email,
+        result.loan.resource.title,
+        result.loan.id
+      );
     } catch (error) {
       console.error("Error requesting loan return:", error);
       const errorMessage =
@@ -2944,6 +3074,12 @@ app.post(
               status: "RETURNED",
             },
             include: {
+              resource: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
               borrower: {
                 select: { id: true, email: true, name: true },
               },
@@ -2975,6 +3111,14 @@ app.post(
         message: "Return confirmed successfully",
         loan: result.loan,
       });
+
+      // Fire-and-forget push notification to borrower
+      notifyReturnConfirmed(
+        result.loan.borrowerId,
+        result.loan.lender.name || result.loan.lender.email,
+        result.loan.resource.title,
+        result.loan.id
+      );
     } catch (error) {
       console.error("Error confirming return:", error);
       const errorMessage =

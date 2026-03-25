@@ -13,6 +13,7 @@ import SessionWarning from "./components/SessionWarning";
 import BottomNavigation from "./components/BottomNavigation";
 import { useFirebaseAuth } from "./hooks/useFirebaseAuth";
 import { useSessionTimeout } from "./hooks/useSessionTimeout";
+import { useNotifications } from "./hooks/useNotifications";
 
 function App() {
   const { user, loading } = useFirebaseAuth();
@@ -20,6 +21,9 @@ function App() {
 
   // Enable session timeout (5 min of inactivity)
   const { showWarning, extendSession, logout } = useSessionTimeout();
+
+  // Initialize push notifications when user is logged in
+  useNotifications(user?.uid);
 
   // Check for Firebase initialization errors
   useEffect(() => {

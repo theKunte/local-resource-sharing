@@ -839,7 +839,12 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     if (statusFilter === "all") return requests;
 
     if (statusFilter === "pending") {
-      return requests.filter((req) => req.status === "PENDING");
+      return requests.filter(
+        (req) =>
+          req.status === "PENDING" ||
+          (req.status === "APPROVED" &&
+            req.loan?.status === "PENDING_RETURN_CONFIRMATION"),
+      );
     }
 
     if (statusFilter === "lending") {
@@ -881,9 +886,12 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
   const filteredRequests = filterRequests(allRequests);
 
-  // Calculate counts for each status
+  // Calculate counts for each status (includes return confirmations needing action)
   const pendingCount = allRequests.filter(
-    (req) => req.status === "PENDING",
+    (req) =>
+      req.status === "PENDING" ||
+      (req.status === "APPROVED" &&
+        req.loan?.status === "PENDING_RETURN_CONFIRMATION"),
   ).length;
   const lendingCount = allRequests.filter(
     (req) =>
@@ -938,13 +946,16 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
             <button
               key={tab.value}
               onClick={() => setStatusFilter(tab.value)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              className={`relative flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                 statusFilter === tab.value
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
               {tab.label} ({tab.count})
+              {tab.value === "pending" && tab.count > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+              )}
             </button>
           ))}
         </div>

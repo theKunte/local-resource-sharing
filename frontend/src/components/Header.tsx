@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
+import { useActionableCount } from "../hooks/useActionableCount";
 
 function Header() {
   const { user, signOutUser } = useFirebaseAuth();
   const navigate = useNavigate();
+  const actionableCount = useActionableCount(user?.uid);
 
   const handleLogout = async () => {
     if (window.confirm("Are you sure you want to log out?")) {
@@ -74,9 +76,12 @@ function Header() {
                 </Link>
                 <Link
                   to="/requests"
-                  className="text-white/90 hover:text-white hover:bg-white/15 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                  className="relative text-white/90 hover:text-white hover:bg-white/15 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 >
                   Requests
+                  {actionableCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900" />
+                  )}
                 </Link>
               </div>
             )}

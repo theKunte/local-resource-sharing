@@ -5,6 +5,7 @@ import {
   setPersistence,
   browserSessionPersistence,
 } from "firebase/auth";
+import { getMessaging, isSupported } from "firebase/messaging";
 import { logError } from "./utils/errorHandler";
 
 const firebaseConfig = {
@@ -26,6 +27,24 @@ if (!firebaseConfig.apiKey) {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+// Lazy-initialized Firebase Cloud Messaging (only in supported browsers)
+let _messaging: ReturnType<typeof getMessaging> | null = null;
+let _messagingChecked = false;
+
+export async function getFirebaseMessaging() {
+  if (_messagingChecked) return _messaging;
+  _messagingChecked = true;
+  try {
+    const supported = await isSupported();
+    if (supported) {
+      _messaging = getMessaging(app);
+    }
+  } catch {
+    // FCM not supported in this environment
+  }
+  return _messaging;
+}
 
 // Track persistence initialization status
 let persistenceInitialized = false;
