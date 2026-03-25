@@ -22,7 +22,7 @@ function BottomNavigation() {
       label: "Home",
       icon: (active: boolean) => (
         <svg
-          className={`w-5 h-5 ${active ? "fill-primary-600" : "fill-gray-600"}`}
+          className={`w-6 h-6 ${active ? "fill-primary-600" : "fill-gray-600"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -35,7 +35,7 @@ function BottomNavigation() {
       label: "Groups",
       icon: (active: boolean) => (
         <svg
-          className={`w-5 h-5 ${active ? "fill-primary-600" : "fill-gray-600"}`}
+          className={`w-6 h-6 ${active ? "fill-primary-600" : "fill-gray-600"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -48,21 +48,20 @@ function BottomNavigation() {
       label: "Add",
       icon: (active: boolean) => (
         <svg
-          className={`w-6 h-6 ${active ? "fill-white" : "fill-white"}`}
+          className={`w-6 h-6 ${active ? "fill-primary-600" : "fill-gray-600"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
           <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
         </svg>
       ),
-      isSpecial: true,
     },
     {
       path: "/my-gear",
       label: "My Gear",
       icon: (active: boolean) => (
         <svg
-          className={`w-5 h-5 ${active ? "fill-primary-600" : "fill-gray-600"}`}
+          className={`w-6 h-6 ${active ? "fill-primary-600" : "fill-gray-600"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -75,7 +74,7 @@ function BottomNavigation() {
       label: "Requests",
       icon: (active: boolean) => (
         <svg
-          className={`w-5 h-5 ${active ? "fill-primary-600" : "fill-gray-600"}`}
+          className={`w-6 h-6 ${active ? "fill-primary-600" : "fill-gray-600"}`}
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -100,42 +99,25 @@ function BottomNavigation() {
           zIndex: 99999,
           position: "fixed",
           bottom: 0,
-          height: "48px",
+          height: "64px",
         }}
       >
-        <div className="flex justify-between items-center h-12 px-3 max-w-md mx-auto">
+        <div className="flex justify-between items-center h-16 px-4 max-w-md mx-auto">
           {navItems.map((item) => {
             const active = isActive(item.path);
-
-            if (item.isSpecial) {
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className="flex flex-col items-center justify-center -mt-4"
-                >
-                  <div className="bg-primary-600 rounded-full p-2 shadow-lg hover:bg-primary-700 transition-colors">
-                    {item.icon(active)}
-                  </div>
-                  <span className="text-[9px] mt-0.5 text-gray-600">
-                    {item.label}
-                  </span>
-                </Link>
-              );
-            }
 
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className="relative flex flex-col items-center justify-center min-w-[56px] h-full hover:bg-gray-50 transition-colors"
+                className="relative flex flex-col items-center justify-center min-w-[60px] h-full hover:bg-gray-50 transition-colors"
               >
                 {item.icon(active)}
                 {item.path === "/requests" && actionableCount > 0 && (
                   <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
                 )}
                 <span
-                  className={`text-[9px] mt-0.5 ${
+                  className={`text-[10px] mt-0.5 ${
                     active ? "text-primary-600 font-semibold" : "text-gray-600"
                   }`}
                 >
