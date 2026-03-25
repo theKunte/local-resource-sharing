@@ -9,10 +9,12 @@ import apiClient from "../utils/apiClient";
  * and handles foreground notifications.
  */
 export function useNotifications(userId: string | undefined) {
-  const tokenSaved = useRef(false);
+  const savedForUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!userId || tokenSaved.current) return;
+    if (!userId || savedForUserIdRef.current === userId) return;
+
+    let unsubscribeOnMessage: (() => void) | undefined;
 
     const setup = async () => {
       try {
@@ -40,10 +42,10 @@ export function useNotifications(userId: string | undefined) {
 
         // Save token to backend
         await apiClient.post("/api/notifications/token", { token });
-        tokenSaved.current = true;
+        savedForUserIdRef.current = userId;
 
         // Handle foreground messages
-        onMessage(messaging, (payload) => {
+        unsubscribeOnMessage = onMessage(messaging, (payload) => {
           const { title, body } = payload.notification || {};
           if (title) {
             new Notification(title, {
@@ -58,5 +60,9 @@ export function useNotifications(userId: string | undefined) {
     };
 
     setup();
+
+    return () => {
+      unsubscribeOnMessage?.();
+    };
   }, [userId]);
 }
