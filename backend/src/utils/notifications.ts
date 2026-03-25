@@ -1,8 +1,14 @@
 import admin from "firebase-admin";
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+declare global {
+  // eslint-disable-next-line no-var
+  // Allow global `prisma` to be reused across hot reloads / serverless invocations
+  var prisma: PrismaClient | undefined;
+}
 
+const prisma: PrismaClient =
+  globalThis.prisma ?? (globalThis.prisma = new PrismaClient());
 interface NotificationPayload {
   title: string;
   body: string;
