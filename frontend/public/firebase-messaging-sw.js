@@ -8,14 +8,14 @@ importScripts(
   "https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging-compat.js",
 );
 
-// Firebase config is injected at runtime — must match your app's config
+// Firebase config is injected at build time via Vite plugin (see vite.config.ts)
 firebase.initializeApp({
-  apiKey: "***REMOVED***",
-  authDomain: "local-resource-share.firebaseapp.com",
-  projectId: "local-resource-share",
-  storageBucket: "local-resource-share.firebasestorage.app",
-  messagingSenderId: "124786154163",
-  appId: "1:124786154163:web:d0968ecccf85733ae96ec6",
+  apiKey: "__VITE_FIREBASE_API_KEY__",
+  authDomain: "__VITE_FIREBASE_AUTH_DOMAIN__",
+  projectId: "__VITE_FIREBASE_PROJECT_ID__",
+  storageBucket: "__VITE_FIREBASE_STORAGE_BUCKET__",
+  messagingSenderId: "__VITE_FIREBASE_MESSAGING_SENDER_ID__",
+  appId: "__VITE_FIREBASE_APP_ID__",
 });
 
 const messaging = firebase.messaging();
