@@ -57,7 +57,12 @@ interface RequestDashboardProps {
   userId: string;
 }
 
-type StatusFilter = "all" | "pending" | "lending" | "borrowed" | "overdue" | "returned";
+type StatusFilter =
+  | "all"
+  | "pending"
+  | "lending"
+  | "borrowed"
+  | "returned";
 
 const StatusBadge = ({
   status,
@@ -143,7 +148,9 @@ const RequestCard: React.FC<{
 }) => {
   const isPending = request.status === "PENDING";
   const isApproved = request.status === "APPROVED";
-  const isActive = isApproved && (request.loan?.status === "ACTIVE" || request.loan?.status === "OVERDUE");
+  const isActive =
+    isApproved &&
+    (request.loan?.status === "ACTIVE" || request.loan?.status === "OVERDUE");
   const isPendingReturn =
     isApproved && request.loan?.status === "PENDING_RETURN_CONFIRMATION";
   const isReturned = isApproved && request.loan?.status === "RETURNED";
@@ -154,7 +161,8 @@ const RequestCard: React.FC<{
 
   const getOverdueDays = () => {
     if (!isOverdue || !request.loan?.endDate) return 0;
-    const diffMs = new Date().getTime() - new Date(request.loan.endDate).getTime();
+    const diffMs =
+      new Date().getTime() - new Date(request.loan.endDate).getTime();
     return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   };
 
@@ -287,7 +295,11 @@ const RequestCard: React.FC<{
             <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-800 rounded-xl px-3 py-2 text-xs">
               <AlertTriangle size={14} className="flex-shrink-0" />
               <span>
-                This item is overdue by <strong>{getOverdueDays()} day{getOverdueDays() !== 1 ? "s" : ""}</strong>.
+                This item is overdue by{" "}
+                <strong>
+                  {getOverdueDays()} day{getOverdueDays() !== 1 ? "s" : ""}
+                </strong>
+                .
                 {isOwner
                   ? " Please follow up with the borrower."
                   : " Please return the item as soon as possible."}
@@ -419,7 +431,9 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     timestamp: number;
   } | null>(null);
   const pendingRequestRef = React.useRef<Promise<void> | null>(null);
-  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const CACHE_TTL = 10000; // 10 seconds cache
 
   const loadRequests = React.useCallback(
@@ -871,16 +885,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       );
     }
 
-    if (statusFilter === "overdue") {
-      return requests.filter(
-        (req) =>
-          req.status === "APPROVED" &&
-          (req.loan?.status === "ACTIVE" || req.loan?.status === "OVERDUE") &&
-          req.loan?.endDate &&
-          new Date(req.loan.endDate) < new Date(),
-      );
-    }
-
     return requests;
   };
 
@@ -908,14 +912,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
   const returnedCount = allRequests.filter(
     (req) => req.status === "APPROVED" && req.loan?.status === "RETURNED",
   ).length;
-  const overdueCount = allRequests.filter(
-    (req) =>
-      req.status === "APPROVED" &&
-      (req.loan?.status === "ACTIVE" || req.loan?.status === "OVERDUE") &&
-      req.loan?.endDate &&
-      new Date(req.loan.endDate) < new Date(),
-  ).length;
-
   const statusFilterTabs: {
     value: StatusFilter;
     label: string;
@@ -925,7 +921,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     { value: "pending", label: "Pending", count: pendingCount },
     { value: "lending", label: "Lending", count: lendingCount },
     { value: "borrowed", label: "Borrowed", count: borrowedCount },
-    { value: "overdue", label: "Overdue", count: overdueCount },
     { value: "returned", label: "Returned", count: returnedCount },
   ];
 

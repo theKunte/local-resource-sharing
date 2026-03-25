@@ -365,100 +365,105 @@ app.get(
 );
 
 // Post a new resource to the database
-app.post("/api/resources", authenticateToken, writeLimiter, async (req, res) => {
-  const { title, description, ownerId, image } = req.body;
-  const authenticatedUserId = (req as any).user.uid;
+app.post(
+  "/api/resources",
+  authenticateToken,
+  writeLimiter,
+  async (req, res) => {
+    const { title, description, ownerId, image } = req.body;
+    const authenticatedUserId = (req as any).user.uid;
 
-  // Sanitize user inputs
-  const sanitizedTitle = sanitizeString(title, 200);
-  const sanitizedDescription = sanitizeString(description, 2000);
+    // Sanitize user inputs
+    const sanitizedTitle = sanitizeString(title, 200);
+    const sanitizedDescription = sanitizeString(description, 2000);
 
-  // Validate input
-  const validation = validateResourceInput({
-    title: sanitizedTitle,
-    description: sanitizedDescription,
-    ownerId,
-    image,
-  });
-  if (!validation.valid) {
-    return res.status(400).json({ error: validation.errors.join(", ") });
-  }
-
-  // Validate image content type and magic bytes (blocks SVG/XSS)
-  if (image && typeof image === 'string') {
-    const imageValidation = validateBase64Image(image);
-    if (!imageValidation.valid) {
-      return res.status(400).json({ error: imageValidation.error });
+    // Validate input
+    const validation = validateResourceInput({
+      title: sanitizedTitle,
+      description: sanitizedDescription,
+      ownerId,
+      image,
+    });
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.errors.join(", ") });
     }
-  }
 
-  // Ensure user can only create resources for themselves
-  if (ownerId !== authenticatedUserId) {
-    return res
-      .status(403)
-      .json({ error: "You can only create resources for yourself" });
-  }
+    // Validate image content type and magic bytes (blocks SVG/XSS)
+    if (image && typeof image === "string") {
+      const imageValidation = validateBase64Image(image);
+      if (!imageValidation.valid) {
+        return res.status(400).json({ error: imageValidation.error });
+      }
+    }
 
-  try {
-    // Ensure user exists
-    const user = await prisma.user.upsert({
-      where: { id: ownerId },
-      update: {
-        // Update email and name if they've changed
-        email: req.body.email ? req.body.email.toLowerCase() : undefined,
-        name: req.body.name || undefined,
-      },
-      create: {
-        id: ownerId,
-        email: req.body.email
-          ? req.body.email.toLowerCase()
-          : ownerId + "@local.firebase", // fallback if no email
-        name: req.body.name || null,
-      },
-    });
+    // Ensure user can only create resources for themselves
+    if (ownerId !== authenticatedUserId) {
+      return res
+        .status(403)
+        .json({ error: "You can only create resources for yourself" });
+    }
 
-    // Check if user is in any groups, if not create a default group
-    const userGroups = await prisma.groupMember.findMany({
-      where: { userId: ownerId },
-    });
+    try {
+      // Ensure user exists
+      const user = await prisma.user.upsert({
+        where: { id: ownerId },
+        update: {
+          // Update email and name if they've changed
+          email: req.body.email ? req.body.email.toLowerCase() : undefined,
+          name: req.body.name || undefined,
+        },
+        create: {
+          id: ownerId,
+          email: req.body.email
+            ? req.body.email.toLowerCase()
+            : ownerId + "@local.firebase", // fallback if no email
+          name: req.body.name || null,
+        },
+      });
 
-    if (userGroups.length === 0) {
-      // Create a default "Friends" group for the user
-      const defaultGroup = await prisma.group.create({
-        data: {
-          name: "My Friends",
-          createdById: ownerId,
-          members: {
-            create: { userId: ownerId },
+      // Check if user is in any groups, if not create a default group
+      const userGroups = await prisma.groupMember.findMany({
+        where: { userId: ownerId },
+      });
+
+      if (userGroups.length === 0) {
+        // Create a default "Friends" group for the user
+        const defaultGroup = await prisma.group.create({
+          data: {
+            name: "My Friends",
+            createdById: ownerId,
+            members: {
+              create: { userId: ownerId },
+            },
           },
-        },
-      });
+        });
 
-      // Update the creator's role to "owner"
-      await prisma.groupMember.updateMany({
-        where: {
-          groupId: defaultGroup.id,
-          userId: ownerId,
+        // Update the creator's role to "owner"
+        await prisma.groupMember.updateMany({
+          where: {
+            groupId: defaultGroup.id,
+            userId: ownerId,
+          },
+          data: {},
+        });
+      }
+
+      // Create resource with sanitized data
+      const resource = await prisma.resource.create({
+        data: {
+          title: sanitizedTitle,
+          description: sanitizedDescription,
+          ownerId,
+          image,
         },
-        data: {},
       });
+      res.status(201).json(resource);
+    } catch (error) {
+      console.error("Error creating resource:", error);
+      res.status(500).json({ error: "Failed to create resource" });
     }
-
-    // Create resource with sanitized data
-    const resource = await prisma.resource.create({
-      data: {
-        title: sanitizedTitle,
-        description: sanitizedDescription,
-        ownerId,
-        image,
-      },
-    });
-    res.status(201).json(resource);
-  } catch (error) {
-    console.error("Error creating resource:", error);
-    res.status(500).json({ error: "Failed to create resource" });
-  }
-});
+  },
+);
 
 // Update a resource by id
 app.put("/api/resources/:id", authenticateToken, async (req, res) => {
@@ -788,7 +793,9 @@ app.get("/api/groups/:groupId/members", authenticateToken, async (req, res) => {
     });
 
     if (!requesterMembership) {
-      return res.status(403).json({ error: "You are not a member of this group" });
+      return res
+        .status(403)
+        .json({ error: "You are not a member of this group" });
     }
 
     const members = await prisma.groupMember.findMany({
@@ -906,12 +913,20 @@ app.delete(
         });
 
         if (!requesterMembership) {
-          return res.status(403).json({ error: "You are not a member of this group" });
+          return res
+            .status(403)
+            .json({ error: "You are not a member of this group" });
         }
 
-        const canRemove = requesterMembership.role === "owner" || requesterMembership.role === "admin";
+        const canRemove =
+          requesterMembership.role === "owner" ||
+          requesterMembership.role === "admin";
         if (!canRemove) {
-          return res.status(403).json({ error: "Only group owners and admins can remove other members" });
+          return res
+            .status(403)
+            .json({
+              error: "Only group owners and admins can remove other members",
+            });
         }
       }
 
@@ -976,7 +991,7 @@ app.put("/api/groups/:groupId", authenticateToken, async (req, res) => {
     if (name !== undefined && name.trim()) updateData.name = name.trim();
     if (avatar !== undefined) {
       // Validate avatar image content type (blocks SVG/XSS)
-      if (avatar && typeof avatar === 'string') {
+      if (avatar && typeof avatar === "string") {
         const avatarValidation = validateBase64Image(avatar);
         if (!avatarValidation.valid) {
           return res.status(400).json({ error: avatarValidation.error });
@@ -1551,7 +1566,9 @@ app.put("/api/auth/fix-user-email", authenticateToken, async (req, res) => {
 
   // Only allow users to fix their own email
   if (uid !== authenticatedUid) {
-    return res.status(403).json({ error: "You can only update your own email" });
+    return res
+      .status(403)
+      .json({ error: "You can only update your own email" });
   }
 
   try {
@@ -1814,319 +1831,324 @@ app.get("/api/users/:userId/groups", authenticateToken, async (req, res) => {
 // --- BORROW REQUESTS API --- //
 
 // Create a borrow request
-app.post("/api/borrow-requests", authenticateToken, writeLimiter, async (req, res) => {
-  const { resourceId, borrowerId, groupId, message, startDate, endDate } =
-    req.body;
-  const authenticatedUserId = (req as any).user.uid;
+app.post(
+  "/api/borrow-requests",
+  authenticateToken,
+  writeLimiter,
+  async (req, res) => {
+    const { resourceId, borrowerId, groupId, message, startDate, endDate } =
+      req.body;
+    const authenticatedUserId = (req as any).user.uid;
 
-  // Validate required fields (groupId is now optional)
-  if (!resourceId || !borrowerId || !startDate || !endDate) {
-    return res.status(400).json({
-      error: "Missing required fields",
-      required: ["resourceId", "borrowerId", "startDate", "endDate"],
-    });
-  }
-
-  // Ensure user can only create requests for themselves
-  if (borrowerId !== authenticatedUserId) {
-    return res
-      .status(403)
-      .json({ error: "You can only create borrow requests for yourself" });
-  }
-
-  // Sanitize message input
-  const sanitizedMessage = message ? sanitizeString(message, 500) : null;
-
-  try {
-    // Parse and validate dates
-    // Parse date strings as local time to avoid UTC timezone offset issues
-    const parseDateParts = (dateStr: string) => {
-      const [y, m, d] = dateStr.split("-").map(Number);
-      return new Date(y, m - 1, d);
-    };
-    const start = parseDateParts(startDate);
-    const end = parseDateParts(endDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return res.status(400).json({ error: "Invalid date format" });
+    // Validate required fields (groupId is now optional)
+    if (!resourceId || !borrowerId || !startDate || !endDate) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        required: ["resourceId", "borrowerId", "startDate", "endDate"],
+      });
     }
 
-    if (start < today) {
+    // Ensure user can only create requests for themselves
+    if (borrowerId !== authenticatedUserId) {
       return res
-        .status(400)
-        .json({ error: "Start date cannot be in the past" });
+        .status(403)
+        .json({ error: "You can only create borrow requests for yourself" });
     }
 
-    if (end <= start) {
-      return res
-        .status(400)
-        .json({ error: "End date must be after start date" });
-    }
+    // Sanitize message input
+    const sanitizedMessage = message ? sanitizeString(message, 500) : null;
 
-    // Enforce maximum loan duration (365 days)
-    const durationMs = end.getTime() - start.getTime();
-    const durationDays = durationMs / (1000 * 60 * 60 * 24);
-    if (durationDays > 365) {
-      return res
-        .status(400)
-        .json({ error: "Loan duration cannot exceed 365 days" });
-    }
+    try {
+      // Parse and validate dates
+      // Parse date strings as local time to avoid UTC timezone offset issues
+      const parseDateParts = (dateStr: string) => {
+        const [y, m, d] = dateStr.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      };
+      const start = parseDateParts(startDate);
+      const end = parseDateParts(endDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    // Get resource with owner information
-    const resource = await prisma.resource.findUnique({
-      where: { id: resourceId },
-      include: {
-        owner: {
-          select: { id: true, email: true, name: true },
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ error: "Invalid date format" });
+      }
+
+      if (start < today) {
+        return res
+          .status(400)
+          .json({ error: "Start date cannot be in the past" });
+      }
+
+      if (end <= start) {
+        return res
+          .status(400)
+          .json({ error: "End date must be after start date" });
+      }
+
+      // Enforce maximum loan duration (365 days)
+      const durationMs = end.getTime() - start.getTime();
+      const durationDays = durationMs / (1000 * 60 * 60 * 24);
+      if (durationDays > 365) {
+        return res
+          .status(400)
+          .json({ error: "Loan duration cannot exceed 365 days" });
+      }
+
+      // Get resource with owner information
+      const resource = await prisma.resource.findUnique({
+        where: { id: resourceId },
+        include: {
+          owner: {
+            select: { id: true, email: true, name: true },
+          },
         },
-      },
-    });
+      });
 
-    if (!resource) {
-      return res.status(404).json({ error: "Resource not found" });
-    }
+      if (!resource) {
+        return res.status(404).json({ error: "Resource not found" });
+      }
 
-    // Check if requesting user is the owner
-    if (resource.ownerId === borrowerId) {
-      return res
-        .status(400)
-        .json({ error: "You cannot borrow your own resource" });
-    }
+      // Check if requesting user is the owner
+      if (resource.ownerId === borrowerId) {
+        return res
+          .status(400)
+          .json({ error: "You cannot borrow your own resource" });
+      }
 
-    // If groupId not provided, find a suitable group
-    let finalGroupId = groupId;
-    if (!finalGroupId) {
-      // Find groups where: 1) resource is shared, 2) borrower is a member
-      const suitableGroup = await prisma.resourceSharing.findFirst({
-        where: {
-          resourceId,
-          group: {
-            members: {
-              some: {
-                userId: borrowerId,
+      // If groupId not provided, find a suitable group
+      let finalGroupId = groupId;
+      if (!finalGroupId) {
+        // Find groups where: 1) resource is shared, 2) borrower is a member
+        const suitableGroup = await prisma.resourceSharing.findFirst({
+          where: {
+            resourceId,
+            group: {
+              members: {
+                some: {
+                  userId: borrowerId,
+                },
               },
             },
           },
-        },
-        select: { groupId: true },
-      });
-
-      if (!suitableGroup) {
-        return res.status(403).json({
-          error: "No suitable group found",
-          message:
-            "You must be a member of a group where this resource is shared",
+          select: { groupId: true },
         });
+
+        if (!suitableGroup) {
+          return res.status(403).json({
+            error: "No suitable group found",
+            message:
+              "You must be a member of a group where this resource is shared",
+          });
+        }
+
+        finalGroupId = suitableGroup.groupId;
+      } else {
+        // If groupId provided, verify resource is shared with the specified group
+        const resourceSharing = await prisma.resourceSharing.findFirst({
+          where: {
+            resourceId,
+            groupId: finalGroupId,
+          },
+        });
+
+        if (!resourceSharing) {
+          return res.status(403).json({
+            error: "Resource not shared with this group",
+            message: "This resource is not available in the specified group",
+          });
+        }
+
+        // Verify requesting user is a member of the group
+        const groupMember = await prisma.groupMember.findFirst({
+          where: {
+            userId: borrowerId,
+            groupId: finalGroupId,
+          },
+        });
+
+        if (!groupMember) {
+          return res.status(403).json({
+            error: "Not a group member",
+            message:
+              "You must be a member of this group to request this resource",
+          });
+        }
       }
 
-      finalGroupId = suitableGroup.groupId;
-    } else {
-      // If groupId provided, verify resource is shared with the specified group
-      const resourceSharing = await prisma.resourceSharing.findFirst({
+      // Check for overlapping active loans
+      const overlappingLoans = await prisma.loan.findMany({
         where: {
           resourceId,
-          groupId: finalGroupId,
+          status: "ACTIVE",
+          OR: [
+            {
+              // Existing loan starts during requested period
+              AND: [{ startDate: { lte: end } }, { startDate: { gte: start } }],
+            },
+            {
+              // Existing loan ends during requested period
+              AND: [{ endDate: { lte: end } }, { endDate: { gte: start } }],
+            },
+            {
+              // Existing loan spans entire requested period
+              AND: [{ startDate: { lte: start } }, { endDate: { gte: end } }],
+            },
+          ],
         },
       });
 
-      if (!resourceSharing) {
-        return res.status(403).json({
-          error: "Resource not shared with this group",
-          message: "This resource is not available in the specified group",
-        });
-      }
-
-      // Verify requesting user is a member of the group
-      const groupMember = await prisma.groupMember.findFirst({
-        where: {
-          userId: borrowerId,
-          groupId: finalGroupId,
-        },
-      });
-
-      if (!groupMember) {
-        return res.status(403).json({
-          error: "Not a group member",
+      if (overlappingLoans.length > 0) {
+        return res.status(409).json({
+          error: "Resource unavailable",
           message:
-            "You must be a member of this group to request this resource",
+            "This resource is already borrowed during the requested time period",
+          conflictingLoans: overlappingLoans.map((loan) => ({
+            startDate: loan.startDate,
+            endDate: loan.endDate,
+          })),
         });
       }
-    }
 
-    // Check for overlapping active loans
-    const overlappingLoans = await prisma.loan.findMany({
-      where: {
+      // Check for existing pending or approved requests from the same borrower for overlapping dates
+      const existingRequests = await prisma.borrowRequest.findMany({
+        where: {
+          resourceId,
+          borrowerId,
+          status: {
+            in: ["PENDING", "APPROVED"],
+          },
+          OR: [
+            {
+              // Existing request starts during requested period
+              AND: [{ startDate: { lte: end } }, { startDate: { gte: start } }],
+            },
+            {
+              // Existing request ends during requested period
+              AND: [{ endDate: { lte: end } }, { endDate: { gte: start } }],
+            },
+            {
+              // Existing request spans entire requested period
+              AND: [{ startDate: { lte: start } }, { endDate: { gte: end } }],
+            },
+          ],
+        },
+        include: {
+          loan: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      // Filter to only active/pending requests (exclude completed loans)
+      const activeRequests = existingRequests.filter((req) => {
+        // PENDING requests are always considered active
+        if (req.status === "PENDING") return true;
+        // APPROVED requests are only active if they don't have a loan or the loan is still ACTIVE
+        if (req.status === "APPROVED") {
+          const isActive =
+            !req.loan ||
+            req.loan.status === "ACTIVE" ||
+            req.loan.status === "PENDING_RETURN_CONFIRMATION";
+          console.log("[DEBUG] APPROVED request filter:", {
+            requestId: req.id,
+            hasLoan: !!req.loan,
+            loanStatus: req.loan?.status,
+            isActive,
+          });
+          return isActive;
+        }
+        return false;
+      });
+
+      console.log("[DEBUG] Duplicate request check:", {
         resourceId,
-        status: "ACTIVE",
-        OR: [
-          {
-            // Existing loan starts during requested period
-            AND: [{ startDate: { lte: end } }, { startDate: { gte: start } }],
-          },
-          {
-            // Existing loan ends during requested period
-            AND: [{ endDate: { lte: end } }, { endDate: { gte: start } }],
-          },
-          {
-            // Existing loan spans entire requested period
-            AND: [{ startDate: { lte: start } }, { endDate: { gte: end } }],
-          },
-        ],
-      },
-    });
-
-    if (overlappingLoans.length > 0) {
-      return res.status(409).json({
-        error: "Resource unavailable",
-        message:
-          "This resource is already borrowed during the requested time period",
-        conflictingLoans: overlappingLoans.map((loan) => ({
-          startDate: loan.startDate,
-          endDate: loan.endDate,
+        borrowerId,
+        totalExisting: existingRequests.length,
+        activeCount: activeRequests.length,
+        existingRequests: existingRequests.map((r) => ({
+          id: r.id,
+          status: r.status,
+          loanId: r.loan?.id,
+          loanStatus: r.loan?.status,
         })),
       });
-    }
 
-    // Check for existing pending or approved requests from the same borrower for overlapping dates
-    const existingRequests = await prisma.borrowRequest.findMany({
-      where: {
-        resourceId,
-        borrowerId,
-        status: {
-          in: ["PENDING", "APPROVED"],
-        },
-        OR: [
-          {
-            // Existing request starts during requested period
-            AND: [{ startDate: { lte: end } }, { startDate: { gte: start } }],
+      if (activeRequests.length > 0) {
+        const existingRequest = activeRequests[0];
+        const requestType =
+          existingRequest.status === "PENDING" ? "pending" : "approved";
+        return res.status(409).json({
+          error: "Duplicate request",
+          message: `You already have a ${requestType} request for this item during these dates`,
+          existingRequest: {
+            id: existingRequest.id,
+            status: existingRequest.status,
+            startDate: existingRequest.startDate,
+            endDate: existingRequest.endDate,
           },
-          {
-            // Existing request ends during requested period
-            AND: [{ endDate: { lte: end } }, { endDate: { gte: start } }],
-          },
-          {
-            // Existing request spans entire requested period
-            AND: [{ startDate: { lte: start } }, { endDate: { gte: end } }],
-          },
-        ],
-      },
-      include: {
-        loan: {
-          select: {
-            id: true,
-            status: true,
-          },
-        },
-      },
-    });
-
-    // Filter to only active/pending requests (exclude completed loans)
-    const activeRequests = existingRequests.filter((req) => {
-      // PENDING requests are always considered active
-      if (req.status === "PENDING") return true;
-      // APPROVED requests are only active if they don't have a loan or the loan is still ACTIVE
-      if (req.status === "APPROVED") {
-        const isActive =
-          !req.loan ||
-          req.loan.status === "ACTIVE" ||
-          req.loan.status === "PENDING_RETURN_CONFIRMATION";
-        console.log("[DEBUG] APPROVED request filter:", {
-          requestId: req.id,
-          hasLoan: !!req.loan,
-          loanStatus: req.loan?.status,
-          isActive,
         });
-        return isActive;
       }
-      return false;
-    });
 
-    console.log("[DEBUG] Duplicate request check:", {
-      resourceId,
-      borrowerId,
-      totalExisting: existingRequests.length,
-      activeCount: activeRequests.length,
-      existingRequests: existingRequests.map((r) => ({
-        id: r.id,
-        status: r.status,
-        loanId: r.loan?.id,
-        loanStatus: r.loan?.status,
-      })),
-    });
-
-    if (activeRequests.length > 0) {
-      const existingRequest = activeRequests[0];
-      const requestType =
-        existingRequest.status === "PENDING" ? "pending" : "approved";
-      return res.status(409).json({
-        error: "Duplicate request",
-        message: `You already have a ${requestType} request for this item during these dates`,
-        existingRequest: {
-          id: existingRequest.id,
-          status: existingRequest.status,
-          startDate: existingRequest.startDate,
-          endDate: existingRequest.endDate,
+      // Create the borrow request (using finalGroupId for validation but not storing it)
+      const borrowRequest = await prisma.borrowRequest.create({
+        data: {
+          resourceId,
+          borrowerId,
+          ownerId: resource.ownerId,
+          message: sanitizedMessage,
+          startDate: start,
+          endDate: end,
+          status: "PENDING",
+        },
+        include: {
+          resource: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              image: true,
+            },
+          },
+          borrower: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          owner: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
         },
       });
+
+      res.status(201).json({
+        success: true,
+        borrowRequest,
+        message: "Borrow request created successfully",
+      });
+
+      // Fire-and-forget push notification to owner
+      notifyNewBorrowRequest(
+        borrowRequest.ownerId,
+        borrowRequest.borrower.name || borrowRequest.borrower.email,
+        borrowRequest.resource.title,
+        borrowRequest.id,
+      );
+    } catch (error) {
+      console.error("Error creating borrow request:", error);
+      res.status(500).json({ error: "Failed to create borrow request" });
     }
-
-    // Create the borrow request (using finalGroupId for validation but not storing it)
-    const borrowRequest = await prisma.borrowRequest.create({
-      data: {
-        resourceId,
-        borrowerId,
-        ownerId: resource.ownerId,
-        message: sanitizedMessage,
-        startDate: start,
-        endDate: end,
-        status: "PENDING",
-      },
-      include: {
-        resource: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            image: true,
-          },
-        },
-        borrower: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          },
-        },
-        owner: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    res.status(201).json({
-      success: true,
-      borrowRequest,
-      message: "Borrow request created successfully",
-    });
-
-    // Fire-and-forget push notification to owner
-    notifyNewBorrowRequest(
-      borrowRequest.ownerId,
-      borrowRequest.borrower.name || borrowRequest.borrower.email,
-      borrowRequest.resource.title,
-      borrowRequest.id
-    );
-  } catch (error) {
-    console.error("Error creating borrow request:", error);
-    res.status(500).json({ error: "Failed to create borrow request" });
-  }
-});
+  },
+);
 
 // Get borrow requests for owner or borrower
 app.get("/api/borrow-requests", authenticateToken, async (req, res) => {
@@ -2504,7 +2526,7 @@ app.post(
         result.updatedRequest.borrowerId,
         result.updatedRequest.owner.name || result.updatedRequest.owner.email,
         result.updatedRequest.resource.title,
-        result.updatedRequest.id
+        result.updatedRequest.id,
       );
     } catch (error) {
       console.error("Error accepting borrow request:", error);
@@ -2598,7 +2620,7 @@ app.post(
         updatedRequest.borrowerId,
         updatedRequest.owner.name || updatedRequest.owner.email,
         updatedRequest.resource.title,
-        updatedRequest.id
+        updatedRequest.id,
       );
     } catch (error) {
       console.error("Error declining borrow request:", error);
@@ -2995,7 +3017,7 @@ app.post(
         result.loan.lenderId,
         result.loan.borrower.name || result.loan.borrower.email,
         result.loan.resource.title,
-        result.loan.id
+        result.loan.id,
       );
     } catch (error) {
       console.error("Error requesting loan return:", error);
@@ -3135,7 +3157,7 @@ app.post(
         result.loan.borrowerId,
         result.loan.lender.name || result.loan.lender.email,
         result.loan.resource.title,
-        result.loan.id
+        result.loan.id,
       );
     } catch (error) {
       console.error("Error confirming return:", error);

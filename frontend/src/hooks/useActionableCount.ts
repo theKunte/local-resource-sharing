@@ -32,7 +32,9 @@ export function useActionableCount(userId: string | undefined): number {
         ).length;
 
         if (import.meta.env.DEV) {
-          console.log(`[ActionableCount] ${actionable} of ${requests.length} owner requests need action`);
+          console.log(
+            `[ActionableCount] ${actionable} of ${requests.length} owner requests need action`,
+          );
         }
 
         setCount(actionable);

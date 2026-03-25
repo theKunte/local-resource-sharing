@@ -90,12 +90,14 @@ function Header() {
             {user && (
               <div className="flex items-center gap-3">
                 {user.photoURL && (
-                  <img
-                    src={user.photoURL}
-                    alt={user.displayName || "User"}
-                    className="w-8 h-8 rounded-full border-2 border-gray-200 object-cover"
-                    referrerPolicy="no-referrer"
-                  />
+                  <Link to="/profile">
+                    <img
+                      src={user.photoURL}
+                      alt={user.displayName || "User"}
+                      className="w-8 h-8 rounded-full border-2 border-gray-200 object-cover hover:border-primary-600 transition-colors"
+                      referrerPolicy="no-referrer"
+                    />
+                  </Link>
                 )}
                 <button
                   onClick={handleLogout}

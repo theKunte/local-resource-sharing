@@ -123,27 +123,41 @@ export default function Profile() {
       {/* Sidebar */}
 
       {/* Main Content */}
-      <main className="flex-1 p-10">
+      <main className="flex-1 px-4 py-6 md:p-10">
         {/* Profile Header */}
-        <div className="flex flex-col md:flex-row md:items-center gap-8 mb-10">
-          <div className="flex flex-col items-center md:items-start"></div>
-          <div className="flex-1 flex flex-col md:flex-row md:items-center gap-8 justify-between">
-            <div className="flex flex-col gap-2 md:gap-4">
-              <div className="flex gap-8 text-lg">
-                <span>
-                  <span className="font-bold">{resources.length}</span>{" "}
-                  Resources
-                </span>
-                <span>
-                  <span className="font-bold">{groups.length}</span> Groups
-                </span>
-                <span>
-                  <span className="font-bold">
-                    {resources.filter(r => r.sharedWith && r.sharedWith.length > 0).length}
-                  </span>{" "}
-                  Shared
-                </span>
-              </div>
+        <div className="flex items-center gap-4 md:gap-8 mb-6 md:mb-10">
+          {/* User Avatar */}
+          {user.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt={user.displayName || "User"}
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-gray-200 object-cover flex-shrink-0"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary-600 flex items-center justify-center text-white text-xl md:text-2xl font-bold flex-shrink-0">
+              {(user.displayName || user.email || "U").charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="flex flex-col gap-1 min-w-0">
+            <h1 className="text-lg md:text-xl font-bold text-gray-900 truncate">
+              {user.displayName || "User"}
+            </h1>
+            <p className="text-sm text-gray-500 truncate">{user.email}</p>
+            <div className="flex gap-4 md:gap-8 text-sm md:text-lg mt-1">
+              <span>
+                <span className="font-bold">{resources.length}</span>{" "}
+                Resources
+              </span>
+              <span>
+                <span className="font-bold">{groups.length}</span> Groups
+              </span>
+              <span>
+                <span className="font-bold">
+                  {resources.filter(r => r.sharedWith && r.sharedWith.length > 0).length}
+                </span>{" "}
+                Shared
+              </span>
             </div>
           </div>
         </div>
@@ -208,7 +222,7 @@ export default function Profile() {
               >
                 +
               </button>
-              <span className="text-xs text-white font-bold tracking-widest uppercase mt-1">
+              <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
                 New
               </span>
             </div>
@@ -269,7 +283,7 @@ export default function Profile() {
               >
                 +
               </button>
-              <span className="text-xs text-white font-bold tracking-widest uppercase mt-1">
+              <span className="text-xs text-gray-700 font-bold tracking-widest uppercase mt-1">
                 New
               </span>
             </div>
@@ -357,7 +371,7 @@ export default function Profile() {
           />
         )}
         {/* Posted Resources Grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 sm:px-4 md:px-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
           {resources.length === 0 ? (
             <div className="text-gray-500 col-span-full">
               You haven't posted any resources yet.

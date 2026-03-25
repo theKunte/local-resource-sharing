@@ -28,7 +28,9 @@ export function useNotifications(userId: string | undefined) {
         // Get VAPID key from environment
         const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
         if (!vapidKey) {
-          console.warn("VITE_FIREBASE_VAPID_KEY not set — push notifications disabled");
+          console.warn(
+            "VITE_FIREBASE_VAPID_KEY not set — push notifications disabled",
+          );
           return;
         }
 

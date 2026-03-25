@@ -61,16 +61,16 @@ setPersistence(auth, browserSessionPersistence)
   .catch((error) => {
     persistenceError = error;
     logError("Firebase Auth Persistence", error);
-    
+
     // Sign out user for security
     auth.signOut().catch((signOutError) => {
       logError("Firebase Sign Out", signOutError);
     });
-    
+
     // Store error state for the app to handle
     sessionStorage.setItem(
       "firebase_init_error",
-      "Authentication system initialization failed. Please refresh the page."
+      "Authentication system initialization failed. Please refresh the page.",
     );
   });
 

@@ -2,10 +2,10 @@
 // This runs in the background to receive push notifications when the app is closed
 
 importScripts(
-  "https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js"
+  "https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js",
 );
 importScripts(
-  "https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging-compat.js"
+  "https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging-compat.js",
 );
 
 // Firebase config is injected at runtime — must match your app's config
@@ -50,6 +50,6 @@ self.addEventListener("notificationclick", (event) => {
         }
         // Otherwise open a new window
         return clients.openWindow("/requests");
-      })
+      }),
   );
 });

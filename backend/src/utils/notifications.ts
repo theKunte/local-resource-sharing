@@ -15,7 +15,7 @@ interface NotificationPayload {
  */
 export async function sendNotification(
   userId: string,
-  payload: NotificationPayload
+  payload: NotificationPayload,
 ): Promise<void> {
   try {
     const user = await prisma.user.findUnique({
@@ -53,7 +53,10 @@ export async function sendNotification(
       });
     }
     // Don't throw — notifications should never break the main flow
-    console.error(`Failed to send notification to user ${userId}:`, error?.message || error);
+    console.error(
+      `Failed to send notification to user ${userId}:`,
+      error?.message || error,
+    );
   }
 }
 
@@ -63,7 +66,7 @@ export function notifyNewBorrowRequest(
   ownerId: string,
   borrowerName: string,
   itemTitle: string,
-  requestId: string
+  requestId: string,
 ) {
   return sendNotification(ownerId, {
     title: "New Borrow Request",
@@ -76,7 +79,7 @@ export function notifyRequestAccepted(
   borrowerId: string,
   ownerName: string,
   itemTitle: string,
-  requestId: string
+  requestId: string,
 ) {
   return sendNotification(borrowerId, {
     title: "Request Accepted!",
@@ -89,7 +92,7 @@ export function notifyRequestDeclined(
   borrowerId: string,
   ownerName: string,
   itemTitle: string,
-  requestId: string
+  requestId: string,
 ) {
   return sendNotification(borrowerId, {
     title: "Request Declined",
@@ -102,7 +105,7 @@ export function notifyReturnRequested(
   ownerId: string,
   borrowerName: string,
   itemTitle: string,
-  loanId: string
+  loanId: string,
 ) {
   return sendNotification(ownerId, {
     title: "Item Return Requested",
@@ -115,7 +118,7 @@ export function notifyReturnConfirmed(
   borrowerId: string,
   ownerName: string,
   itemTitle: string,
-  loanId: string
+  loanId: string,
 ) {
   return sendNotification(borrowerId, {
     title: "Return Confirmed",
