@@ -1,36 +1,19 @@
 /**
  * Firebase Admin Authentication Middleware
- * Validates Firebase ID tokens on every backend request
+ * Validates Firebase ID tokens with revocation check and timeout protection
  */
 import { Request, Response, NextFunction } from "express";
 import admin from "firebase-admin";
 
-// Initialize Firebase Admin (do this once in index.ts)
-// You'll need to download service account key from Firebase Console
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      }),
-    });
-  } catch (error) {
-    console.error("Firebase admin initialization error:", error);
-  }
-}
-
 /**
- * Middleware to verify Firebase ID token
+ * Middleware to verify Firebase ID token with revocation check and timeout
  */
 export async function authenticateToken(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   try {
-    // Get token from Authorization header
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -39,35 +22,60 @@ export async function authenticateToken(
 
     const token = authHeader.split("Bearer ")[1];
 
-    // Verify the token with Firebase Admin
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    // Verify the token with Firebase Admin with timeout protection
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Token verification timeout")), 10000);
+    });
 
-    // Attach user info to request for use in routes
+    const decodedToken = await Promise.race([
+      admin.auth().verifyIdToken(token, true), // checkRevoked = true
+      timeoutPromise,
+    ]);
+
+    // Attach user info to request
     (req as any).user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      emailVerified: decodedToken.email_verified,
+      uid: (decodedToken as any).uid,
+      email: (decodedToken as any).email,
+      emailVerified: (decodedToken as any).email_verified,
     };
 
     next();
   } catch (error) {
-    console.error("Token verification error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("Token verification failed:", {
+      error: errorMessage,
+      timestamp: new Date().toISOString(),
+      path: req.path,
+    });
+
+    if (errorMessage.includes("timeout")) {
+      return res.status(503).json({
+        error: "Authentication service temporarily unavailable",
+        message: "Please try again in a moment",
+      });
+    }
+
     return res.status(403).json({ error: "Invalid or expired token" });
   }
 }
 
 /**
- * Optional: Check if user owns the resource
+ * Middleware to require verified email
  */
-export function authorizeResourceOwner(resourceIdParam: string = "id") {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user;
-    const resourceId = req.params[resourceIdParam];
+export function requireVerifiedEmail(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const user = (req as any).user;
 
-    // Add your resource ownership check here
-    // Example: const resource = await prisma.resource.findUnique({ where: { id: resourceId } });
-    // if (resource.ownerId !== user.uid) return res.status(403).json({ error: 'Forbidden' });
+  if (!user || !user.emailVerified) {
+    return res.status(403).json({
+      error: "Email verification required",
+      message: "Please verify your email address to access this resource",
+    });
+  }
 
-    next();
-  };
+  next();
 }
