@@ -26,14 +26,14 @@ function Header() {
           }
         }
       `}</style>
-      <header className="bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-sm text-gray-800 shadow-md border-b border-gray-200 sticky top-0 z-50">
         <nav className="w-full px-3 py-2 md:px-6 md:py-3">
           <div className="flex items-center justify-between">
             {/* Logo and App Name */}
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <svg
-                  className="w-5 h-5 fill-primary-600"
+                  className="w-5 h-5 fill-white"
                   width="20"
                   height="20"
                   viewBox="0 0 24 24"
@@ -52,35 +52,35 @@ function Header() {
               <div className="desktop-nav items-center gap-4">
                 <Link
                   to="/"
-                  className="text-white/90 hover:text-white hover:bg-white/15 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                  className="text-gray-600 hover:text-primary-600 hover:bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 >
                   Home
                 </Link>
                 <Link
                   to="/groups"
-                  className="text-white/90 hover:text-white hover:bg-white/15 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                  className="text-gray-600 hover:text-primary-600 hover:bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 >
                   Groups
                 </Link>
                 <Link
                   to="/post"
-                  className="text-white/90 hover:text-white hover:bg-white/15 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                  className="text-gray-600 hover:text-primary-600 hover:bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 >
                   Add Gear
                 </Link>
                 <Link
                   to="/my-gear"
-                  className="text-white/90 hover:text-white hover:bg-white/15 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                  className="text-gray-600 hover:text-primary-600 hover:bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 >
                   My Gear
                 </Link>
                 <Link
                   to="/requests"
-                  className="relative text-white/90 hover:text-white hover:bg-white/15 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                  className="relative text-gray-600 hover:text-primary-600 hover:bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 >
                   Requests
                   {actionableCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900" />
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
                   )}
                 </Link>
               </div>
@@ -93,13 +93,13 @@ function Header() {
                   <img
                     src={user.photoURL}
                     alt={user.displayName || "User"}
-                    className="w-8 h-8 rounded-full border-2 border-white/30 object-cover"
+                    className="w-8 h-8 rounded-full border-2 border-gray-200 object-cover"
                     referrerPolicy="no-referrer"
                   />
                 )}
                 <button
                   onClick={handleLogout}
-                  className="text-white/90 hover:text-white hover:bg-white/15 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                  className="text-gray-600 hover:text-primary-600 hover:bg-gray-100 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                   title="Log out"
                 >
                   Logout

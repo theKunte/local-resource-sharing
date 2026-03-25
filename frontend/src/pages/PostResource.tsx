@@ -327,7 +327,7 @@ export default function PostResource() {
                   <div className="mb-3 sm:mb-4"></div>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={handleImageChange}
                     className="hidden"
                     id="image-upload"
@@ -376,7 +376,7 @@ export default function PostResource() {
                     </label>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       onChange={handleImageChange}
                       className="hidden"
                       id="image-upload"

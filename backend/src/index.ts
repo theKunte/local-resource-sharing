@@ -8,6 +8,7 @@ import helmet from "helmet";
 import {
   validateResourceInput,
   validateGroupInput,
+  validateBase64Image,
   sanitizeString,
 } from "./utils/validation";
 import {
@@ -381,6 +382,14 @@ app.post("/api/resources", authenticateToken, writeLimiter, async (req, res) => 
   });
   if (!validation.valid) {
     return res.status(400).json({ error: validation.errors.join(", ") });
+  }
+
+  // Validate image content type and magic bytes (blocks SVG/XSS)
+  if (image && typeof image === 'string') {
+    const imageValidation = validateBase64Image(image);
+    if (!imageValidation.valid) {
+      return res.status(400).json({ error: imageValidation.error });
+    }
   }
 
   // Ensure user can only create resources for themselves
@@ -965,7 +974,16 @@ app.put("/api/groups/:groupId", authenticateToken, async (req, res) => {
 
     const updateData: any = {};
     if (name !== undefined && name.trim()) updateData.name = name.trim();
-    if (avatar !== undefined) updateData.avatar = avatar; // Allow setting to null/empty
+    if (avatar !== undefined) {
+      // Validate avatar image content type (blocks SVG/XSS)
+      if (avatar && typeof avatar === 'string') {
+        const avatarValidation = validateBase64Image(avatar);
+        if (!avatarValidation.valid) {
+          return res.status(400).json({ error: avatarValidation.error });
+        }
+      }
+      updateData.avatar = avatar; // Allow setting to null/empty
+    }
     if (description !== undefined) updateData.description = description;
 
     // Ensure at least one field is being updated
