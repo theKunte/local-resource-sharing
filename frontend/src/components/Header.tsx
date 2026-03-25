@@ -2,10 +2,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useActionableCount } from "../hooks/useActionableCount";
 
-function Header() {
+interface HeaderProps {
+  actionableCount?: number | null;
+}
+
+function Header({ actionableCount: actionableCountProp }: HeaderProps) {
   const { user, signOutUser } = useFirebaseAuth();
   const navigate = useNavigate();
-  const actionableCount = useActionableCount(user?.uid);
+  const actionableCount = actionableCountProp ?? useActionableCount(user?.uid);
 
   const handleLogout = async () => {
     if (window.confirm("Are you sure you want to log out?")) {
