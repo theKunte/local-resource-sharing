@@ -444,7 +444,9 @@ app.post(
             groupId: defaultGroup.id,
             userId: ownerId,
           },
-          data: {},
+          data: {
+            role: "owner",
+          },
         });
       }
 
