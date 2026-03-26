@@ -25,7 +25,7 @@ export default function Home() {
       setLoadingCommunityGear(true);
       apiClient
         .get(`/api/resources?user=${encodeURIComponent(user.uid)}`)
-        .then((res) => setCommunityGear(res.data))
+        .then((res) => setCommunityGear(res.data.data ?? res.data))
         .finally(() => setLoadingCommunityGear(false));
     }
   }, [user]);
@@ -215,7 +215,7 @@ export default function Home() {
               const res = await apiClient.get(
                 `/api/resources?user=${encodeURIComponent(user.uid)}`,
               );
-              setCommunityGear(res.data);
+              setCommunityGear(res.data.data ?? res.data);
             } catch (err) {
               logError("Home - reload community gear", err);
             } finally {

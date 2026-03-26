@@ -27,7 +27,7 @@ export default function MyGear() {
       setLoadingGear(true);
       apiClient
         .get(`/api/resources?ownerId=${encodeURIComponent(user.uid)}`)
-        .then((res) => setMyGear(res.data))
+        .then((res) => setMyGear(res.data.data ?? res.data))
         .finally(() => setLoadingGear(false));
     }
   }, [user]);
@@ -238,7 +238,7 @@ export default function MyGear() {
                 const res = await apiClient.get(
                   `/api/resources?ownerId=${encodeURIComponent(user.uid)}`,
                 );
-                setMyGear(res.data);
+                setMyGear(res.data.data ?? res.data);
               } catch (error) {
                 logError("MyGear - reload gear after group changes", error);
               } finally {
