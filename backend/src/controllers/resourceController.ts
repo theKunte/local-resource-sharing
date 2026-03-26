@@ -12,44 +12,55 @@ export async function getResources(req: Request, res: Response) {
     const userId = req.query.user as string | undefined;
     const ownerId = req.query.ownerId as string | undefined;
     const authenticatedUserId = (req as any).user.uid;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const skip = (page - 1) * limit;
 
     if (ownerId) {
-      const resources = await prisma.resource.findMany({
-        where: { ownerId },
-        include: {
-          owner: {
-            select: { id: true, email: true, name: true },
-          },
-          currentLoan: {
-            select: {
-              id: true,
-              status: true,
-              startDate: true,
-              endDate: true,
-              returnedDate: true,
-              borrower: {
-                select: { id: true, name: true, email: true },
+      const [resources, total] = await Promise.all([
+        prisma.resource.findMany({
+          where: { ownerId },
+          skip,
+          take: limit,
+          include: {
+            owner: {
+              select: { id: true, email: true, name: true },
+            },
+            currentLoan: {
+              select: {
+                id: true,
+                status: true,
+                startDate: true,
+                endDate: true,
+                returnedDate: true,
+                borrower: {
+                  select: { id: true, name: true, email: true },
+                },
               },
             },
-          },
-          sharedWith: {
-            include: {
-              group: {
-                select: {
-                  id: true,
-                  name: true,
-                  avatar: true,
+            sharedWith: {
+              include: {
+                group: {
+                  select: {
+                    id: true,
+                    name: true,
+                    avatar: true,
+                  },
                 },
               },
             },
           },
-        },
+        }),
+        prisma.resource.count({ where: { ownerId } }),
+      ]);
+      return res.json({
+        data: resources,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
       });
-      return res.json(resources);
     }
 
     if (!userId) {
-      return res.json([]);
+      return res.json({ data: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } });
     }
 
     const userGroups = await prisma.groupMember.findMany({
@@ -94,8 +105,13 @@ export async function getResources(req: Request, res: Response) {
       }
     });
 
-    const resources = Array.from(uniqueResources.values());
-    res.json(resources);
+    const allResources = Array.from(uniqueResources.values());
+    const total = allResources.length;
+    const paginatedResources = allResources.slice(skip, skip + limit);
+    res.json({
+      data: paginatedResources,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     console.error("Error fetching resources:", error);
     res.status(500).json({ error: "Internal server error" });

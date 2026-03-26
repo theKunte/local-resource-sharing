@@ -1,10 +1,12 @@
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import admin from "firebase-admin";
 import helmet from "helmet";
 import prisma from "./prisma";
+import { requestIdMiddleware } from "./middleware/requestId";
 
 // Route imports
 import resourceRoutes from "./routes/resources";
@@ -38,6 +40,12 @@ if (missingEnvVars.length > 0) {
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Request ID tracking - must be first middleware
+app.use(requestIdMiddleware);
+
+// TODO: Remove compression from Express once a reverse proxy (nginx, Cloudflare, AWS ALB, etc.) is in place — let the proxy handle it instead.
+app.use(compression());
 
 // Test database connection on startup
 prisma
@@ -131,6 +139,26 @@ app.get("/", (req, res) => {
   res.send(
     "<h2>Local Resource Sharing API is running.<br>Use <code>/api/resources</code> to access resources.</h2>",
   );
+});
+
+// Health check endpoint for load balancers and orchestrators
+app.get("/health", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: "connected",
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: "unhealthy",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: "disconnected",
+    });
+  }
 });
 
 // Mount routes

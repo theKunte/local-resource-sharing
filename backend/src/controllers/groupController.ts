@@ -72,24 +72,33 @@ export async function addMember(req: Request, res: Response) {
 export async function getGroups(req: Request, res: Response) {
   const userId = req.query.userId as string;
   if (!userId) return res.status(400).json({ error: "userId required" });
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const skip = (page - 1) * limit;
+
   try {
-    const memberships = await prisma.groupMember.findMany({
-      where: { userId },
-      select: {
-        role: true,
-        group: {
-          include: {
-            members: {
-              include: {
-                user: {
-                  select: { id: true, email: true, name: true },
+    const [memberships, total] = await Promise.all([
+      prisma.groupMember.findMany({
+        where: { userId },
+        skip,
+        take: limit,
+        select: {
+          role: true,
+          group: {
+            include: {
+              members: {
+                include: {
+                  user: {
+                    select: { id: true, email: true, name: true },
+                  },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
+      prisma.groupMember.count({ where: { userId } }),
+    ]);
 
     const groupsWithRole = memberships.map((membership) => {
       return {
@@ -99,7 +108,10 @@ export async function getGroups(req: Request, res: Response) {
       };
     });
 
-    res.json(groupsWithRole);
+    res.json({
+      data: groupsWithRole,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     console.error("Error fetching groups:", error);
     res.status(500).json({ error: "Failed to fetch groups" });
