@@ -55,12 +55,20 @@ export async function getResources(req: Request, res: Response) {
       ]);
       return res.json({
         data: resources,
-        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       });
     }
 
     if (!userId) {
-      return res.json({ data: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } });
+      return res.json({
+        data: [],
+        pagination: { page: 1, limit, total: 0, totalPages: 0 },
+      });
     }
 
     const userGroups = await prisma.groupMember.findMany({
