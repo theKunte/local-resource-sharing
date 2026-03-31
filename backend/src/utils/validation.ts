@@ -79,8 +79,17 @@ export function validateBase64Image(dataUri: string): {
 
 export function validateEmail(email: string): boolean {
   if (email.length > 254) return false;
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  return emailRegex.test(email);
+  const parts = email.split("@");
+  if (parts.length !== 2) return false;
+  const [local, domain] = parts;
+  if (!local || local.length > 64) return false;
+  if (!domain || domain.length > 253) return false;
+  const domainParts = domain.split(".");
+  if (domainParts.length < 2) return false;
+  if (domainParts.some((p) => !p || p.length > 63)) return false;
+  if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local)) return false;
+  if (domainParts.some((p) => !/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(p))) return false;
+  return true;
 }
 
 export function sanitizeString(
