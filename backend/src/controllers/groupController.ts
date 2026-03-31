@@ -174,8 +174,7 @@ export async function inviteToGroup(req: Request, res: Response) {
   }
 
   try {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!validateEmail(email)) {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
