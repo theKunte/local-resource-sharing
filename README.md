@@ -1,5 +1,8 @@
 # Local Resource Sharing Platform
 
+[![Tests & Coverage](https://github.com/theKunte/local-resource-sharing/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/theKunte/local-resource-sharing/actions/workflows/test-coverage.yml)
+[![codecov](https://codecov.io/gh/theKunte/local-resource-sharing/graph/badge.svg)](https://codecov.io/gh/theKunte/local-resource-sharing)
+
 A community-based gear sharing platform built with React, TypeScript, and Firebase. Share equipment, tools, and resources within trusted groups of friends and neighbors.
 
 ## 🌟 Features
@@ -152,12 +155,20 @@ local-resource-sharing/
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run lint` - Run ESLint
+- `npm test` - Run tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage report
 
 **Backend:**
 
 - `npm run dev` - Start development server with hot reload
 - `npm run build` - Compile TypeScript
 - `npm start` - Run compiled code
+- `npm test` - Run tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage report
+- `npm run test:unit` - Run unit tests only
+- `npm run test:integration` - Run integration tests only
 
 ### Code Quality
 

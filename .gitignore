@@ -28,6 +28,11 @@ backend/prisma/*.db-journal
 backend/prisma/prisma/*.db
 backend/prisma/prisma/*.db-journal
 
+# Coverage reports
+coverage/
+backend/coverage/
+frontend/coverage/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -44,10 +44,11 @@ export default function Groups() {
       try {
         setLoading(true);
         const response = await apiClient.get(`/api/groups?userId=${user!.uid}`);
+        const groupsList = response.data.data ?? response.data;
 
         // Get detailed info for each group including members
         const groupsWithDetails = await Promise.all(
-          response.data.map(async (group: Group) => {
+          groupsList.map(async (group: Group) => {
             try {
               const membersResponse = await apiClient.get(
                 `/api/groups/${group.id}/members`,
@@ -85,10 +86,11 @@ export default function Groups() {
     try {
       setLoading(true);
       const response = await apiClient.get(`/api/groups?userId=${user!.uid}`);
+      const groupsList = response.data.data ?? response.data;
 
       // Get detailed info for each group including members
       const groupsWithDetails = await Promise.all(
-        response.data.map(async (group: Group) => {
+        groupsList.map(async (group: Group) => {
           try {
             const membersResponse = await apiClient.get(
               `/api/groups/${group.id}/members`,

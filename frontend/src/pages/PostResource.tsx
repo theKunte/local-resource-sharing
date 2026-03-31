@@ -36,7 +36,7 @@ export default function PostResource() {
         setLoadingGroups(true);
         setGroupsError(null);
         const response = await apiClient.get(`/api/groups?userId=${user.uid}`);
-        const userGroups = response.data;
+        const userGroups = response.data.data ?? response.data;
         setGroups(userGroups);
 
         // By default, select all groups

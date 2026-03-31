@@ -1,4 +1,5 @@
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig } from "vitest/config";
+import { loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
@@ -70,4 +71,21 @@ function firebaseSwEnvPlugin(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), firebaseSwEnvPlugin()],
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
+    include: ["src/**/*.test.{ts,tsx}"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "text-summary", "lcov", "html"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/main.tsx",
+        "src/vite-env.d.ts",
+        "src/firebase.ts",
+        "src/test/**",
+      ],
+    },
+  },
 });

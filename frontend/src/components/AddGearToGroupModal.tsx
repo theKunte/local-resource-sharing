@@ -42,12 +42,13 @@ export default function AddGearToGroupModal({
           apiClient.get(`/api/groups/${encodeURIComponent(groupId)}/resources`),
         ]);
         // Debug logs to help ensure the right data is returned
-        console.debug("[AddGearToGroupModal] myGear count:", resMy.data.length);
+        const myGearList = resMy.data.data ?? resMy.data;
+        console.debug("[AddGearToGroupModal] myGear count:", myGearList.length);
         console.debug(
           "[AddGearToGroupModal] shared resources count:",
           resShared.data.length,
         );
-        setMyGear(resMy.data || []);
+        setMyGear(myGearList || []);
         const sharedData = (resShared.data || []) as SharedResourceRow[];
         const sharedList: string[] = sharedData.map((r) => r.id);
         setSharedIds(new Set(sharedList));

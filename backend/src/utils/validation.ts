@@ -20,8 +20,15 @@ export function validateBase64Image(dataUri: string): {
   valid: boolean;
   error?: string;
 } {
-  // Must be a data URI
-  const dataUriRegex = /^data:([\w/+-]+);base64,(.+)$/;
+  // Mitigate ReDoS: limit input size and use non-greedy regex
+  if (typeof dataUri !== "string" || dataUri.length > 100000) {
+    return {
+      valid: false,
+      error: "Image data URI is too large or not a string",
+    };
+  }
+  // Non-greedy match for base64 data, avoids catastrophic backtracking
+  const dataUriRegex = /^data:([\w/+-]+);base64,(.+?)$/;
   const match = dataUri.match(dataUriRegex);
   if (!match) {
     return {
@@ -71,7 +78,8 @@ export function validateBase64Image(dataUri: string): {
 }
 
 export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (email.length > 254) return false;
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   return emailRegex.test(email);
 }
 
