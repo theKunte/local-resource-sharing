@@ -2,7 +2,7 @@ name: Tests & Coverage
 
 on:
   push:
-    branches: [main, backend_update_ready_for_testing]
+    branches: [main, backend_update_ready_for_testing, test_coverageUpdate]
   pull_request:
     branches: [main]
 
