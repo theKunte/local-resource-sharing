@@ -1,8 +1,11 @@
 name: Tests & Coverage
 
+permissions:
+  contents: read
+
 on:
   push:
-    branches: [main, backend_update_ready_for_testing, test_coverageUpdate]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -11,9 +14,9 @@ jobs:
     name: Backend Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -44,9 +47,9 @@ jobs:
     name: Frontend Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
