@@ -39,7 +39,7 @@ describe("BorrowRequestModal", () => {
         <BorrowRequestModal {...baseProps} isOpen={false} />
       </MemoryRouter>,
     );
-    expect(container.innerHTML).toBe("");
+    expect(container.childElementCount).toBe(0);
   });
 
   it("renders modal with resource title", () => {

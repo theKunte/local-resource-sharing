@@ -36,7 +36,7 @@ describe("ManageGroupSharing", () => {
         userId="u1"
       />,
     );
-    expect(container.innerHTML).toBe("");
+    expect(container.childElementCount).toBe(0);
   });
 
   it("shows loading state", () => {

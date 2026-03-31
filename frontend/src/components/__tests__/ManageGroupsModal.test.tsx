@@ -36,7 +36,7 @@ describe("ManageGroupsModal", () => {
         onClose={vi.fn()}
       />,
     );
-    expect(container.innerHTML).toBe("");
+    expect(container.childElementCount).toBe(0);
   });
 
   it("shows loading state while fetching groups", () => {
