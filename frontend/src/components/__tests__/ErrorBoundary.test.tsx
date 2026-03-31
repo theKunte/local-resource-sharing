@@ -1,8 +1,9 @@
+import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import ErrorBoundary from "../ErrorBoundary";
 
-function ThrowingComponent({ error }: { error: Error }) {
+function ThrowingComponent({ error }: { error: Error }): React.ReactNode {
   throw error;
 }
 
@@ -19,7 +20,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <p>Hello World</p>
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
     expect(screen.getByText("Hello World")).toBeInTheDocument();
   });
@@ -28,7 +29,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <ThrowingComponent error={new Error("Test boom")} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     expect(screen.getByText("Test boom")).toBeInTheDocument();
@@ -39,10 +40,10 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <ThrowingComponent error={new Error("")} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
     expect(
-      screen.getByText("An unexpected error occurred")
+      screen.getByText("An unexpected error occurred"),
     ).toBeInTheDocument();
   });
 });

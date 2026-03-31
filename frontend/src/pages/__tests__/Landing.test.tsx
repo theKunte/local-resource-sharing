@@ -15,7 +15,7 @@ function renderLanding() {
   return render(
     <MemoryRouter>
       <Landing />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -28,7 +28,7 @@ describe("Landing", () => {
   it("renders the sign-in button", () => {
     renderLanding();
     expect(
-      screen.getByText(/Start Sharing Gear.*Sign in with Google/)
+      screen.getByText(/Start Sharing Gear.*Sign in with Google/),
     ).toBeInTheDocument();
   });
 

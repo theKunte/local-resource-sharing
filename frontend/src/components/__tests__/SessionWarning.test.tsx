@@ -6,9 +6,7 @@ describe("SessionWarning", () => {
   it("renders warning text", () => {
     render(<SessionWarning onExtend={vi.fn()} onSignOut={vi.fn()} />);
     expect(screen.getByText("Session Expiring Soon")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Your session will expire/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Your session will expire/)).toBeInTheDocument();
   });
 
   it("calls onExtend when Extend Session is clicked", () => {

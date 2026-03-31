@@ -1,4 +1,12 @@
 {
+  "scripts": {
+    "test": "cd backend && npm test && cd ../frontend && npm test",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:coverage": "cd backend && npm run test:coverage && cd ../frontend && npm run test:coverage",
+    "test:coverage:backend": "cd backend && npm run test:coverage",
+    "test:coverage:frontend": "cd frontend && npm run test:coverage"
+  },
   "dependencies": {
     "dotenv": "^16.5.0"
   }
