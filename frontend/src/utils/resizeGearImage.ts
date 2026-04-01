@@ -3,8 +3,8 @@ export async function resizeGearImage(
   file: File,
   width: number = 600,
   height: number = 400,
-  quality: number = 0.8
-): Promise<string> {
+  quality: number = 0.8,
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const reader = new FileReader();
@@ -44,8 +44,15 @@ export async function resizeGearImage(
         // Draw the cropped and resized image
         ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, width, height);
 
-        // Convert to JPEG with specified quality to reduce file size
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        // Convert to JPEG blob with specified quality to reduce file size
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return reject("Failed to create blob");
+            resolve(blob);
+          },
+          "image/jpeg",
+          quality,
+        );
       };
 
       img.onerror = reject;

@@ -12,7 +12,11 @@ function setupMocks(imgWidth: number, imgHeight: number, triggerError = false) {
   };
   const canvas = {
     getContext: vi.fn(() => ctx),
-    toDataURL: vi.fn(() => "data:image/jpeg;base64,resized"),
+    toBlob: vi.fn(
+      (cb: (blob: Blob | null) => void, type: string, quality: number) => {
+        cb(new Blob(["fake-image-data"], { type: type || "image/jpeg" }));
+      },
+    ),
     width: 0,
     height: 0,
   };
@@ -71,7 +75,7 @@ describe("resizeGearImage", () => {
     restoreFn = restore;
     const result = await resizeGearImage(createMockFile());
 
-    expect(result).toBe("data:image/jpeg;base64,resized");
+    expect(result).toBeInstanceOf(Blob);
     expect(ctx.drawImage).toHaveBeenCalled();
     expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 600, 400);
   });
@@ -81,7 +85,7 @@ describe("resizeGearImage", () => {
     restoreFn = restore;
     const result = await resizeGearImage(createMockFile());
 
-    expect(result).toBe("data:image/jpeg;base64,resized");
+    expect(result).toBeInstanceOf(Blob);
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 
@@ -90,7 +94,7 @@ describe("resizeGearImage", () => {
     restoreFn = restore;
     const result = await resizeGearImage(createMockFile());
 
-    expect(result).toBe("data:image/jpeg;base64,resized");
+    expect(result).toBeInstanceOf(Blob);
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 

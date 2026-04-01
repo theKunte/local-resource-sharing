@@ -148,7 +148,7 @@ describe("groupController", () => {
     it("returns paginated groups for a user", async () => {
       const memberships = [
         {
-          role: "owner",
+          role: "OWNER",
           group: { id: "g1", name: "Friends", members: [] },
         },
       ];
@@ -357,7 +357,7 @@ describe("groupController", () => {
     });
 
     it("returns 403 when regular member tries to remove another user", async () => {
-      mockPrisma.groupMember.findFirst.mockResolvedValue({ role: "member" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ role: "MEMBER" });
 
       const { req, res } = mockReqRes(
         {},
@@ -368,7 +368,7 @@ describe("groupController", () => {
     });
 
     it("allows owner to remove another user", async () => {
-      mockPrisma.groupMember.findFirst.mockResolvedValue({ role: "owner" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ role: "OWNER" });
       mockPrisma.groupMember.deleteMany.mockResolvedValue({ count: 1 });
 
       const { req, res } = mockReqRes(
@@ -380,7 +380,7 @@ describe("groupController", () => {
     });
 
     it("allows admin to remove another user", async () => {
-      mockPrisma.groupMember.findFirst.mockResolvedValue({ role: "admin" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ role: "ADMIN" });
       mockPrisma.groupMember.deleteMany.mockResolvedValue({ count: 1 });
 
       const { req, res } = mockReqRes(
@@ -425,7 +425,7 @@ describe("groupController", () => {
 
     it("returns 403 when user is a regular member", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue({
-        role: "member",
+        role: "MEMBER",
         group: { id: "g1", name: "Old", avatar: null, createdById: "other" },
       });
 
@@ -439,7 +439,7 @@ describe("groupController", () => {
 
     it("returns 400 when no valid fields to update", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue({
-        role: "owner",
+        role: "OWNER",
         group: { id: "g1", name: "Old", avatar: null, createdById: "user-123" },
       });
 
@@ -453,7 +453,7 @@ describe("groupController", () => {
 
     it("returns 400 for invalid base64 avatar", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue({
-        role: "owner",
+        role: "OWNER",
         group: { id: "g1", name: "Old", avatar: null, createdById: "user-123" },
       });
 
@@ -467,7 +467,7 @@ describe("groupController", () => {
 
     it("updates group name and description successfully", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue({
-        role: "owner",
+        role: "OWNER",
         group: { id: "g1", name: "Old", avatar: null, createdById: "user-123" },
       });
       const updated = { id: "g1", name: "New Name", members: [] };
@@ -518,7 +518,7 @@ describe("groupController", () => {
     it("returns 403 when user is not the owner", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue({
         id: "m1",
-        role: "admin",
+        role: "ADMIN",
       });
 
       const { req, res } = mockReqRes(
@@ -532,7 +532,7 @@ describe("groupController", () => {
     it("returns 404 when group not found", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue({
         id: "m1",
-        role: "owner",
+        role: "OWNER",
       });
       mockPrisma.group.findUnique.mockResolvedValue(null);
 
@@ -547,7 +547,7 @@ describe("groupController", () => {
     it("deletes group successfully", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue({
         id: "m1",
-        role: "owner",
+        role: "OWNER",
       });
       mockPrisma.group.findUnique.mockResolvedValue({ name: "My Group" });
       mockPrisma.resourceSharing.deleteMany.mockResolvedValue({ count: 0 });
@@ -602,7 +602,7 @@ describe("groupController", () => {
     it("returns 403 when user is not the owner", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue({
         id: "m1",
-        role: "admin",
+        role: "ADMIN",
       });
 
       const { req, res } = mockReqRes(
@@ -615,7 +615,7 @@ describe("groupController", () => {
 
     it("returns 400 when new owner is not a member", async () => {
       mockPrisma.groupMember.findFirst
-        .mockResolvedValueOnce({ id: "m1", role: "owner" }) // current owner
+        .mockResolvedValueOnce({ id: "m1", role: "OWNER" }) // current owner
         .mockResolvedValueOnce(null); // new owner not found
 
       const { req, res } = mockReqRes(
@@ -628,7 +628,7 @@ describe("groupController", () => {
 
     it("transfers ownership successfully", async () => {
       mockPrisma.groupMember.findFirst
-        .mockResolvedValueOnce({ id: "m1", role: "owner" })
+        .mockResolvedValueOnce({ id: "m1", role: "OWNER" })
         .mockResolvedValueOnce({
           id: "m2",
           user: { email: "b@c.com", name: "User B" },
@@ -882,7 +882,7 @@ describe("groupController", () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue(null);
 
       const { req, res } = mockReqRes(
-        { requesterId: "user-123", role: "admin" },
+        { requesterId: "user-123", role: "ADMIN" },
         { groupId: "g1", userId: "u2" },
       );
       await updateMemberRole(req, res);
@@ -892,11 +892,11 @@ describe("groupController", () => {
     it("returns 403 when requester is not the owner", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue({
         id: "m1",
-        role: "admin",
+        role: "ADMIN",
       });
 
       const { req, res } = mockReqRes(
-        { requesterId: "user-123", role: "admin" },
+        { requesterId: "user-123", role: "ADMIN" },
         { groupId: "g1", userId: "u2" },
       );
       await updateMemberRole(req, res);
@@ -905,11 +905,11 @@ describe("groupController", () => {
 
     it("returns 404 when target is not a member", async () => {
       mockPrisma.groupMember.findFirst
-        .mockResolvedValueOnce({ id: "m1", role: "owner" })
+        .mockResolvedValueOnce({ id: "m1", role: "OWNER" })
         .mockResolvedValueOnce(null);
 
       const { req, res } = mockReqRes(
-        { requesterId: "user-123", role: "admin" },
+        { requesterId: "user-123", role: "ADMIN" },
         { groupId: "g1", userId: "u2" },
       );
       await updateMemberRole(req, res);
@@ -918,11 +918,11 @@ describe("groupController", () => {
 
     it("returns 403 when trying to change the owner role", async () => {
       mockPrisma.groupMember.findFirst
-        .mockResolvedValueOnce({ id: "m1", role: "owner" })
-        .mockResolvedValueOnce({ id: "m2", role: "owner" });
+        .mockResolvedValueOnce({ id: "m1", role: "OWNER" })
+        .mockResolvedValueOnce({ id: "m2", role: "OWNER" });
 
       const { req, res } = mockReqRes(
-        { requesterId: "user-123", role: "admin" },
+        { requesterId: "user-123", role: "ADMIN" },
         { groupId: "g1", userId: "u2" },
       );
       await updateMemberRole(req, res);
@@ -931,17 +931,17 @@ describe("groupController", () => {
 
     it("updates role successfully", async () => {
       mockPrisma.groupMember.findFirst
-        .mockResolvedValueOnce({ id: "m1", role: "owner" }) // requester
-        .mockResolvedValueOnce({ id: "m2", role: "member" }) // target
+        .mockResolvedValueOnce({ id: "m1", role: "OWNER" }) // requester
+        .mockResolvedValueOnce({ id: "m2", role: "MEMBER" }) // target
         .mockResolvedValueOnce({
           id: "m2",
-          role: "admin",
+          role: "ADMIN",
           user: { id: "u2", email: "b@c.com", name: "B" },
         }); // updated
       mockPrisma.groupMember.updateMany.mockResolvedValue({ count: 1 });
 
       const { req, res } = mockReqRes(
-        { requesterId: "user-123", role: "admin" },
+        { requesterId: "user-123", role: "ADMIN" },
         { groupId: "g1", userId: "u2" },
       );
       await updateMemberRole(req, res);

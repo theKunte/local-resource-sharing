@@ -10,7 +10,9 @@ function setupMocks(imgWidth: number, imgHeight: number, triggerError = false) {
   };
   const canvas = {
     getContext: vi.fn(() => ctx),
-    toDataURL: vi.fn(() => "data:image/png;base64,cropped"),
+    toBlob: vi.fn((cb: (blob: Blob | null) => void, type: string) => {
+      cb(new Blob(["fake-image-data"], { type: type || "image/png" }));
+    }),
     width: 0,
     height: 0,
   };
@@ -71,7 +73,7 @@ describe("cropImageToSquare", () => {
     restoreFn = restore;
     const result = await cropImageToSquare(createMockFile());
 
-    expect(result).toBe("data:image/png;base64,cropped");
+    expect(result).toBeInstanceOf(Blob);
     expect(ctx.drawImage).toHaveBeenCalledWith(
       expect.anything(),
       50,
@@ -90,7 +92,7 @@ describe("cropImageToSquare", () => {
     restoreFn = restore;
     const result = await cropImageToSquare(createMockFile());
 
-    expect(result).toBe("data:image/png;base64,cropped");
+    expect(result).toBeInstanceOf(Blob);
     expect(ctx.drawImage).toHaveBeenCalledWith(
       expect.anything(),
       0,
@@ -109,7 +111,7 @@ describe("cropImageToSquare", () => {
     restoreFn = restore;
     const result = await cropImageToSquare(createMockFile());
 
-    expect(result).toBe("data:image/png;base64,cropped");
+    expect(result).toBeInstanceOf(Blob);
     expect(ctx.drawImage).toHaveBeenCalledWith(
       expect.anything(),
       0,

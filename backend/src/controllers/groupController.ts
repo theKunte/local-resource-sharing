@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
+import { GroupRole } from "@prisma/client";
 import prisma from "../prisma";
 import {
   validateGroupInput,
-  validateBase64Image,
+  validateImageInput,
   sanitizeString,
   validateEmail,
 } from "../utils/validation";
@@ -42,7 +43,7 @@ export async function createGroup(req: Request, res: Response) {
         userId: createdById,
       },
       data: {
-        role: "owner",
+        role: GroupRole.OWNER,
       },
     });
 
@@ -261,8 +262,8 @@ export async function removeMember(req: Request, res: Response) {
       }
 
       const canRemove =
-        requesterMembership.role === "owner" ||
-        requesterMembership.role === "admin";
+        requesterMembership.role === GroupRole.OWNER ||
+        requesterMembership.role === GroupRole.ADMIN;
       if (!canRemove) {
         return res.status(403).json({
           error: "Only group owners and admins can remove other members",
@@ -317,7 +318,9 @@ export async function updateGroup(req: Request, res: Response) {
         .json({ error: "You are not a member of this group" });
     }
 
-    const canEdit = membership.role === "owner" || membership.role === "admin";
+    const canEdit =
+      membership.role === GroupRole.OWNER ||
+      membership.role === GroupRole.ADMIN;
     if (!canEdit) {
       return res
         .status(403)
@@ -328,7 +331,7 @@ export async function updateGroup(req: Request, res: Response) {
     if (name !== undefined && name.trim()) updateData.name = name.trim();
     if (avatar !== undefined) {
       if (avatar && typeof avatar === "string") {
-        const avatarValidation = validateBase64Image(avatar);
+        const avatarValidation = validateImageInput(avatar);
         if (!avatarValidation.valid) {
           return res.status(400).json({ error: avatarValidation.error });
         }
@@ -393,7 +396,7 @@ export async function deleteGroup(req: Request, res: Response) {
         .json({ error: "You are not a member of this group" });
     }
 
-    if (userMembership.role !== "owner") {
+    if (userMembership.role !== GroupRole.OWNER) {
       return res
         .status(403)
         .json({ error: "Only the group owner can delete this group" });
@@ -459,7 +462,7 @@ export async function transferOwnership(req: Request, res: Response) {
         .json({ error: "You are not a member of this group" });
     }
 
-    if (currentOwnerMembership.role !== "owner") {
+    if (currentOwnerMembership.role !== GroupRole.OWNER) {
       return res
         .status(403)
         .json({ error: "Only the group owner can transfer ownership" });
@@ -489,8 +492,8 @@ export async function transferOwnership(req: Request, res: Response) {
         userId: currentOwnerId,
       },
       data: {
-        role: "admin",
-      } as any,
+        role: GroupRole.ADMIN,
+      },
     });
 
     await prisma.groupMember.updateMany({
@@ -499,8 +502,8 @@ export async function transferOwnership(req: Request, res: Response) {
         userId: newOwnerId,
       },
       data: {
-        role: "owner",
-      } as any,
+        role: GroupRole.OWNER,
+      },
     });
 
     const updatedGroup = await prisma.group.update({
@@ -679,8 +682,8 @@ export async function updateMemberRole(req: Request, res: Response) {
       .json({ error: "Requester ID and role are required" });
   }
 
-  if (!["member", "admin"].includes(role)) {
-    return res.status(400).json({ error: "Role must be 'member' or 'admin'" });
+  if (![GroupRole.MEMBER, GroupRole.ADMIN].includes(role)) {
+    return res.status(400).json({ error: "Role must be 'MEMBER' or 'ADMIN'" });
   }
 
   try {
@@ -701,7 +704,7 @@ export async function updateMemberRole(req: Request, res: Response) {
         .json({ error: "You are not a member of this group" });
     }
 
-    if (requesterMembership.role !== "owner") {
+    if (requesterMembership.role !== GroupRole.OWNER) {
       return res
         .status(403)
         .json({ error: "Only group owners can assign admin rights" });
@@ -724,7 +727,7 @@ export async function updateMemberRole(req: Request, res: Response) {
         .json({ error: "User is not a member of this group" });
     }
 
-    if (targetMembership.role === "owner") {
+    if (targetMembership.role === GroupRole.OWNER) {
       return res.status(403).json({ error: "Cannot change the owner's role" });
     }
 
@@ -735,7 +738,7 @@ export async function updateMemberRole(req: Request, res: Response) {
       },
       data: {
         role,
-      } as any,
+      },
     });
 
     const updatedMembership = await prisma.groupMember.findFirst({

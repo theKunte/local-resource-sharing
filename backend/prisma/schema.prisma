@@ -31,11 +31,19 @@ enum LoanStatus {
   OVERDUE
 }
 
+enum GroupRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
 model User {
   id               String          @id @default(uuid())
   email            String          @unique
   name             String?
   fcmToken         String?         // Firebase Cloud Messaging token for push notifications
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   resources        Resource[]      @relation("UserResources")
   groupMembers     GroupMember[]
   createdGroups    Group[]         @relation("CreatedGroups")
@@ -48,97 +56,101 @@ model User {
 model Group {
   id          String            @id @default(uuid())
   name        String
-  description String? // Optional group description
+  description String?
   createdById String
-  createdBy   User              @relation("CreatedGroups", fields: [createdById], references: [id])
+  createdBy   User              @relation("CreatedGroups", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   members     GroupMember[]
   resources   ResourceSharing[]
-  avatar      String? // base64 or URL
+  avatar      String?           // TODO: Move to object storage (S3/R2/Firebase Storage) — base64 in DB causes bloat and slow queries
 }
 
 model GroupMember {
-  id      String @id @default(uuid())
-  group   Group  @relation(fields: [groupId], references: [id])
-  groupId String
-  user    User   @relation(fields: [userId], references: [id])
-  userId  String
-  role    String @default("member") // "owner", "admin", "member"
+  id        String    @id @default(uuid())
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId   String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      GroupRole @default(MEMBER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
+  @@unique([groupId, userId])
   @@index([groupId])
   @@index([userId])
-  @@unique([groupId, userId])
+  @@index([groupId, role])
 }
 
 model Resource {
   id             String            @id @default(uuid())
   title          String
   description    String
-  image          String?
+  image          String?           // TODO: Move to object storage (S3/R2/Firebase Storage) — base64 in DB causes bloat and slow queries
   ownerId        String
   status         ResourceStatus    @default(AVAILABLE)
   currentLoanId  String?           @unique
-  owner          User              @relation("UserResources", fields: [ownerId], references: [id])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  owner          User              @relation("UserResources", fields: [ownerId], references: [id], onDelete: Cascade)
   sharedWith     ResourceSharing[]
   borrowRequests BorrowRequest[]
   loans          Loan[]
-  currentLoan    Loan?             @relation("CurrentLoan", fields: [currentLoanId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currentLoan    Loan?             @relation("CurrentLoan", fields: [currentLoanId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([ownerId])
   @@index([status])
+  @@index([ownerId, status])
 }
 
 model ResourceSharing {
   id         String   @id @default(uuid())
-  resource   Resource @relation(fields: [resourceId], references: [id])
+  resourceId String
+  groupId    String
+  createdAt  DateTime @default(now())
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
+  @@unique([resourceId, groupId])
   @@index([resourceId])
   @@index([groupId])
-  @@unique([resourceId, groupId])
-  resourceId String
-  group      Group    @relation(fields: [groupId], references: [id])
-  groupId    String
 }
 
 model BorrowRequest {
   id         String              @id @default(uuid())
   resourceId String
-  resource   Resource            @relation(fields: [resourceId], references: [id])
+  resource   Resource            @relation(fields: [resourceId], references: [id], onDelete: Cascade)
   borrowerId String
-  borrower   User                @relation("BorrowerRequests", fields: [borrowerId], references: [id])
+  borrower   User                @relation("BorrowerRequests", fields: [borrowerId], references: [id], onDelete: Cascade)
   ownerId    String
-  owner      User                @relation("OwnerRequests", fields: [ownerId], references: [id])
+  owner      User                @relation("OwnerRequests", fields: [ownerId], references: [id], onDelete: Cascade)
   status     BorrowRequestStatus @default(PENDING)
   message    String?
   startDate  DateTime
+  endDate    DateTime
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  loan       Loan?
 
   @@index([borrowerId])
   @@index([ownerId])
   @@index([resourceId])
   @@index([status])
   @@index([createdAt])
-  endDate    DateTime
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
-  loan       Loan?
+  @@index([borrowerId, status])
+  @@index([ownerId, status])
 }
 
 model Loan {
   id              String        @id @default(uuid())
   requestId       String        @unique
-  request         BorrowRequest @relation(fields: [requestId], references: [id])
+  request         BorrowRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   resourceId      String
-  resource        Resource      @relation(fields: [resourceId], references: [id])
+  resource        Resource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
   borrowerId      String
-
-  @@index([borrowerId])
-  @@index([lenderId])
-  @@index([resourceId])
-  @@index([status])
-  @@index([startDate])
-  @@index([endDate])
-  borrower        User          @relation("BorrowerLoans", fields: [borrowerId], references: [id])
+  borrower        User          @relation("BorrowerLoans", fields: [borrowerId], references: [id], onDelete: Cascade)
   lenderId        String
-  lender          User          @relation("LenderLoans", fields: [lenderId], references: [id])
+  lender          User          @relation("LenderLoans", fields: [lenderId], references: [id], onDelete: Cascade)
   status          LoanStatus    @default(ACTIVE)
   startDate       DateTime
   endDate         DateTime
@@ -146,4 +158,13 @@ model Loan {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   currentResource Resource?     @relation("CurrentLoan")
+
+  @@index([borrowerId])
+  @@index([lenderId])
+  @@index([resourceId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([borrowerId, status])
+  @@index([lenderId, status])
 }

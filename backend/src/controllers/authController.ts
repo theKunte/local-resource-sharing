@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { GroupRole } from "@prisma/client";
 import prisma from "../prisma";
 
 // GET /api/debug/users (dev only)
@@ -71,8 +72,8 @@ export async function registerUser(req: Request, res: Response) {
           userId: uid,
         },
         data: {
-          role: "owner",
-        } as any,
+          role: GroupRole.OWNER,
+        },
       });
     }
 
