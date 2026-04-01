@@ -4,6 +4,7 @@ import {
   validateGroupInput,
   validateBase64Image,
   sanitizeString,
+  validateEmail,
 } from "../utils/validation";
 
 // POST /api/groups
