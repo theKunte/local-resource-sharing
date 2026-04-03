@@ -17,10 +17,14 @@ export async function cropImageToSquare(
         const ctx = canvas.getContext("2d");
         if (!ctx) return reject("No canvas context");
         ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
-        canvas.toBlob((blob) => {
-          if (!blob) return reject("Failed to create blob");
-          resolve(blob);
-        }, "image/png");
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return reject("Failed to create blob");
+            resolve(blob);
+          },
+          "image/jpeg",
+          0.8,
+        );
       };
       img.onerror = reject;
       img.src = e.target?.result as string;

@@ -25,6 +25,7 @@ export async function uploadImageToStorage(
 
   const snapshot = await uploadBytes(storageRef, file, {
     contentType: file.type,
+    cacheControl: "public, max-age=31536000",
   });
 
   return getDownloadURL(snapshot.ref);
@@ -51,6 +52,7 @@ export async function uploadBlobToStorage(
 
   const snapshot = await uploadBytes(storageRef, blob, {
     contentType: blob.type,
+    cacheControl: "public, max-age=31536000",
   });
 
   return getDownloadURL(snapshot.ref);
