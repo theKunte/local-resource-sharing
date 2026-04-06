@@ -282,7 +282,6 @@ export default function GroupDetail() {
       const response = await apiClient.put(
         `/api/groups/${groupId}/members/${memberId}/role`,
         {
-          requesterId: user?.uid,
           role: newRole,
         },
       );

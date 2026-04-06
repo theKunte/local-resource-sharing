@@ -8,11 +8,7 @@ import {
 // POST /api/loans/:id/request-return (borrower only)
 export async function requestReturn(req: Request, res: Response) {
   const { id } = req.params;
-  const { userId } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ error: "userId is required" });
-  }
+  const userId = (req as any).user.uid;
 
   try {
     const loan = await prisma.loan.findUnique({
@@ -121,11 +117,7 @@ export async function requestReturn(req: Request, res: Response) {
 // POST /api/loans/:id/confirm-return (lender/owner only)
 export async function confirmReturn(req: Request, res: Response) {
   const { id } = req.params;
-  const { userId } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ error: "userId is required" });
-  }
+  const userId = (req as any).user.uid;
 
   try {
     const loan = await prisma.loan.findUnique({
@@ -245,11 +237,7 @@ export async function confirmReturn(req: Request, res: Response) {
 // POST /api/borrow-requests/:id/mark-returned (owner direct return)
 export async function markReturned(req: Request, res: Response) {
   const { id } = req.params;
-  const { userId } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ error: "userId is required" });
-  }
+  const userId = (req as any).user.uid;
 
   try {
     const borrowRequest = await prisma.borrowRequest.findUnique({

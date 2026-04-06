@@ -58,8 +58,36 @@ export async function createGroup(req: Request, res: Response) {
 export async function addMember(req: Request, res: Response) {
   const { groupId } = req.params;
   const { userId } = req.body;
+  const requestingUserId = (req as any).user.uid;
+
   if (!userId) return res.status(400).json({ error: "User ID required" });
+
   try {
+    const requesterMembership = await prisma.groupMember.findFirst({
+      where: { groupId, userId: requestingUserId },
+    });
+
+    if (
+      !requesterMembership ||
+      (requesterMembership.role !== GroupRole.OWNER &&
+        requesterMembership.role !== GroupRole.ADMIN)
+    ) {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: "Only group owners and admins can add members",
+      });
+    }
+
+    const existingMembership = await prisma.groupMember.findFirst({
+      where: { groupId, userId },
+    });
+
+    if (existingMembership) {
+      return res
+        .status(409)
+        .json({ error: "User is already a member of this group" });
+    }
+
     const member = await prisma.groupMember.create({
       data: { groupId, userId },
     });
@@ -674,12 +702,11 @@ export async function removeGroupMember(req: Request, res: Response) {
 // PUT /api/groups/:groupId/members/:userId/role
 export async function updateMemberRole(req: Request, res: Response) {
   const { groupId, userId: targetUserId } = req.params;
-  const { requesterId, role } = req.body;
+  const requesterId = (req as any).user.uid;
+  const { role } = req.body;
 
-  if (!requesterId || !role) {
-    return res
-      .status(400)
-      .json({ error: "Requester ID and role are required" });
+  if (!role) {
+    return res.status(400).json({ error: "Role is required" });
   }
 
   if (![GroupRole.MEMBER, GroupRole.ADMIN].includes(role)) {
