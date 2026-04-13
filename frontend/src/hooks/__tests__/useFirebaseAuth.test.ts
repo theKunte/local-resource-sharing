@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 
 // We need to mock firebase and apiClient before importing the hook
-const mockOnAuthStateChanged = vi.fn();
-const mockSignInWithPopup = vi.fn();
-const mockSignOut = vi.fn();
-const mockPost = vi.fn();
+const { mockOnAuthStateChanged, mockSignInWithPopup, mockSignOut, mockPost } =
+  vi.hoisted(() => ({
+    mockOnAuthStateChanged: vi.fn(),
+    mockSignInWithPopup: vi.fn(),
+    mockSignOut: vi.fn(),
+    mockPost: vi.fn(),
+  }));
 
 vi.mock("../../firebase", () => ({
   auth: {},

@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
-const mockGetToken = vi.fn();
-const mockOnMessage = vi.fn();
-const mockPost = vi.fn();
-const mockGetFirebaseMessaging = vi.fn();
+const { mockGetToken, mockOnMessage, mockPost, mockGetFirebaseMessaging } =
+  vi.hoisted(() => ({
+    mockGetToken: vi.fn(),
+    mockOnMessage: vi.fn(),
+    mockPost: vi.fn(),
+    mockGetFirebaseMessaging: vi.fn(),
+  }));
 
 vi.mock("../../firebase", () => ({
   getFirebaseMessaging: mockGetFirebaseMessaging,

@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockGetIdToken = vi.fn();
-const mockSignOut = vi.fn();
+const { mockGetIdToken, mockSignOut } = vi.hoisted(() => ({
+  mockGetIdToken: vi.fn(),
+  mockSignOut: vi.fn(),
+}));
 
 vi.mock("../../firebase", () => ({
   auth: {

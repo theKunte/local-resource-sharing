@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
-const mockSignOut = vi.fn();
+const { mockSignOut } = vi.hoisted(() => ({ mockSignOut: vi.fn() }));
 
 vi.mock("../../firebase", () => ({
   auth: {
