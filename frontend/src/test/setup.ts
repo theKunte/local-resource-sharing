@@ -40,7 +40,13 @@ const MOTION_PROPS = new Set([
 vi.mock("motion/react", () => {
   const handler: ProxyHandler<object> = {
     get: (_target, prop: string) => {
-      return ({ children, ...rest }: { [key: string]: unknown }) => {
+      return ({
+        children,
+        ...rest
+      }: {
+        children?: React.ReactNode;
+        [key: string]: unknown;
+      }) => {
         const domProps = Object.fromEntries(
           Object.entries(rest).filter(([k]) => !MOTION_PROPS.has(k)),
         );
