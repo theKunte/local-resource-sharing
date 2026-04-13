@@ -27,6 +27,15 @@ vi.mock("../../utils/cropImageToSquare", () => ({
   cropImageToSquare: vi.fn().mockResolvedValue("data:image/png;base64,abc"),
 }));
 
+vi.mock("../../utils/firebaseStorage", () => ({
+  uploadBlobToStorage: vi
+    .fn()
+    .mockResolvedValue("https://example.com/image.jpg"),
+  uploadImageToStorage: vi
+    .fn()
+    .mockResolvedValue("https://example.com/image.jpg"),
+}));
+
 import PostResource from "../PostResource";
 import { useFirebaseAuth } from "../../hooks/useFirebaseAuth";
 

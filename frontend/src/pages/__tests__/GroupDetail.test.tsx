@@ -2,12 +2,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-const { mockGet, mockPost, mockPut, mockDelete } = vi.hoisted(() => ({
-  mockGet: vi.fn(),
-  mockPost: vi.fn(),
-  mockPut: vi.fn(),
-  mockDelete: vi.fn(),
-}));
+const { mockGet, mockPost, mockPut, mockDelete, mockNavigate } = vi.hoisted(
+  () => ({
+    mockGet: vi.fn(),
+    mockPost: vi.fn(),
+    mockPut: vi.fn(),
+    mockDelete: vi.fn(),
+    mockNavigate: vi.fn(),
+  }),
+);
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 vi.mock("../../hooks/useFirebaseAuth", () => ({
   useFirebaseAuth: vi.fn(),
@@ -129,10 +137,10 @@ describe("GroupDetail", () => {
     expect(screen.getByText("Loading group details...")).toBeInTheDocument();
   });
 
-  it("redirects when not logged in", () => {
+  it("redirects when not logged in", async () => {
     mockAuth.mockReturnValue({ user: null, loading: false });
     renderWithRoute();
-    expect(screen.getByText("Home")).toBeInTheDocument();
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/"));
   });
 
   it("renders group details after loading", async () => {
@@ -160,7 +168,7 @@ describe("GroupDetail", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Total Items")).toBeInTheDocument();
-      expect(screen.getByText("Members")).toBeInTheDocument();
+      expect(screen.getAllByText("Members").length).toBeGreaterThan(0);
       expect(screen.getByText("1")).toBeInTheDocument(); // sharedResourcesCount
       expect(screen.getByText("2")).toBeInTheDocument(); // memberCount
     });
@@ -217,7 +225,7 @@ describe("GroupDetail", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Owner")).toBeInTheDocument();
-      expect(screen.getByText("Member")).toBeInTheDocument();
+      expect(screen.getAllByText("Member").length).toBeGreaterThan(0);
     });
   });
 
@@ -588,7 +596,7 @@ describe("GroupDetail", () => {
     fireEvent.click(screen.getByRole("button", { name: "Members" }));
 
     await waitFor(() => {
-      const select = screen.getByDisplayValue("member");
+      const select = screen.getByDisplayValue("Member");
       expect(select).toBeInTheDocument();
     });
   });
@@ -609,7 +617,7 @@ describe("GroupDetail", () => {
     fireEvent.click(screen.getByRole("button", { name: "Members" }));
 
     await waitFor(() => {
-      const select = screen.getByDisplayValue("member");
+      const select = screen.getByDisplayValue("Member");
       fireEvent.change(select, { target: { value: "admin" } });
     });
 

@@ -208,14 +208,14 @@ describe("Home", () => {
         {
           id: "r1",
           title: "Tent",
-          description: "Tent",
+          description: "Camping tent",
           ownerId: "u2",
           status: "AVAILABLE",
         },
         {
           id: "r2",
           title: "Bag",
-          description: "Bag",
+          description: "Hiking bag",
           ownerId: "u2",
           status: "AVAILABLE",
         },

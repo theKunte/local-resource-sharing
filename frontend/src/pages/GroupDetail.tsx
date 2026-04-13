@@ -89,6 +89,7 @@ export default function GroupDetail() {
 
   useEffect(() => {
     if (!authLoading && !user) {
+      setLoading(false);
       navigate("/");
       return;
     }
@@ -282,6 +283,7 @@ export default function GroupDetail() {
       const response = await apiClient.put(
         `/api/groups/${groupId}/members/${memberId}/role`,
         {
+          requesterId: user?.uid,
           role: newRole,
         },
       );
@@ -490,7 +492,7 @@ export default function GroupDetail() {
 
   const userRole =
     group.members.find((m) => m.userId === user?.uid)?.role || "MEMBER";
-  const isOwner = userRole === "OWNER";
+  const isOwner = userRole.toUpperCase() === "OWNER";
   const canManageMembers = isOwner;
 
   return (
@@ -790,7 +792,7 @@ export default function GroupDetail() {
 
                   {canManageMembers &&
                     member.userId !== user?.uid &&
-                    member.role !== "OWNER" && (
+                    member.role.toUpperCase() !== "OWNER" && (
                       <div className="flex items-center gap-2">
                         <select
                           value={member.role}
@@ -803,8 +805,8 @@ export default function GroupDetail() {
                           }
                           className="text-xs border-2 border-slate-200 rounded-lg px-2 py-1.5 font-medium focus:border-cyan-400 focus:outline-none"
                         >
-                          <option value="MEMBER">Member</option>
-                          <option value="ADMIN">Admin</option>
+                          <option value="member">Member</option>
+                          <option value="admin">Admin</option>
                         </select>
                         <button
                           onClick={() =>
