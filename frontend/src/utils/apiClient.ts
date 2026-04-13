@@ -10,12 +10,53 @@ import { auth } from "../firebase";
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 // Create axios instance with base configuration
+// allowAbsoluteUrls: false prevents SSRF/cloud-metadata exfiltration (CVE-2025-27152)
+// by ensuring all requests are resolved relative to baseURL only.
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  allowAbsoluteUrls: false,
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+// ---------------------------------------------------------------------------
+// SSRF / NO_PROXY hostname-normalization bypass guard
+// Axios does not normalize hostnames before matching against NO_PROXY, so an
+// attacker can craft variants (uppercase, trailing dots, IPv6 brackets) that
+// bypass proxy denylists and reach cloud-metadata or private-network services.
+// This guard applies the normalization Axios omits and blocks known-bad targets.
+// ---------------------------------------------------------------------------
+
+const BLOCKED_HOSTNAMES = new Set([
+  "metadata.google.internal",
+  "metadata.internal",
+  "169.254.169.254", // AWS / Azure / GCP link-local metadata
+]);
+
+const PRIVATE_IP_RE = [
+  /^127\./, // loopback
+  /^10\./, // RFC 1918
+  /^172\.(1[6-9]|2\d|3[01])\./, // RFC 1918
+  /^192\.168\./, // RFC 1918
+  /^169\.254\./, // link-local
+  /^\[?::1\]?$/, // IPv6 loopback
+  /^\[?fe80:/i, // IPv6 link-local
+  /^\[?fc[0-9a-f]{2}:/i, // IPv6 ULA
+];
+
+function isBlockedUrl(relativeUrl: string | undefined, base: string): boolean {
+  try {
+    const resolved = new URL(relativeUrl ?? "/", base);
+    // Normalize: lowercase + strip trailing dot (the bypass vector)
+    const hostname = resolved.hostname.toLowerCase().replace(/\.$/, "");
+    if (BLOCKED_HOSTNAMES.has(hostname)) return true;
+    if (PRIVATE_IP_RE.some((re) => re.test(hostname))) return true;
+    return false;
+  } catch {
+    return true; // block malformed / unparseable URLs
+  }
+}
 
 // Request deduplication cache
 const pendingRequests = new Map<string, Promise<any>>();
@@ -29,13 +70,26 @@ const getCacheKey = (config: any): string => {
 // Request interceptor: Add auth token and track GET requests
 apiClient.interceptors.request.use(
   async (config) => {
+    // Block requests that target private networks or cloud-metadata endpoints.
+    // This guards against the NO_PROXY hostname normalization bypass where
+    // Axios skips proxy denylists for uppercase/trailing-dot hostname variants.
+    if (isBlockedUrl(config.url, API_BASE_URL)) {
+      return Promise.reject(
+        new Error(
+          "Request blocked: target resolves to a restricted network address.",
+        ),
+      );
+    }
+
     try {
       const user = auth.currentUser;
 
       if (user) {
         // Get fresh ID token from Firebase
         const token = await user.getIdToken();
-        config.headers.Authorization = `Bearer ${token}`;
+        // Strip CR/LF to prevent HTTP header injection
+        const sanitizedToken = token.replace(/[\r\n]/g, "");
+        config.headers.Authorization = `Bearer ${sanitizedToken}`;
       }
 
       // Track GET requests for deduplication
