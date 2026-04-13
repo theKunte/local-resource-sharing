@@ -47,7 +47,7 @@ describe("useFirebaseAuth", () => {
       getIdToken: vi.fn().mockResolvedValue("token"),
     };
 
-    mockOnAuthStateChanged.mockImplementation((auth: any, callback: any) => {
+    mockOnAuthStateChanged.mockImplementation((_auth: any, callback: any) => {
       // Simulate async callback
       setTimeout(() => callback(fakeUser), 0);
       return vi.fn();
@@ -70,7 +70,7 @@ describe("useFirebaseAuth", () => {
   });
 
   it("sets user to null when auth state changes to logged-out", async () => {
-    mockOnAuthStateChanged.mockImplementation((auth: any, callback: any) => {
+    mockOnAuthStateChanged.mockImplementation((_auth: any, callback: any) => {
       setTimeout(() => callback(null), 0);
       return vi.fn();
     });
@@ -89,7 +89,7 @@ describe("useFirebaseAuth", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     mockOnAuthStateChanged.mockImplementation(
-      (auth: any, callback: any, errorCallback: any) => {
+      (_auth: any, _callback: any, errorCallback: any) => {
         setTimeout(() => errorCallback(new Error("auth error")), 0);
         return vi.fn();
       },
@@ -159,7 +159,7 @@ describe("useFirebaseAuth", () => {
     };
 
     mockPost.mockRejectedValue(new Error("server down"));
-    mockOnAuthStateChanged.mockImplementation((auth: any, callback: any) => {
+    mockOnAuthStateChanged.mockImplementation((_auth: any, callback: any) => {
       setTimeout(() => callback(fakeUser), 0);
       return vi.fn();
     });

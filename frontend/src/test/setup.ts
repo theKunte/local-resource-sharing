@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import React from "react";
 
 // Mock firebase modules globally for all tests
 vi.mock("../firebase", () => ({
@@ -22,35 +23,6 @@ vi.mock("react-router-dom", async () => {
 
 // Mock motion/react (framer-motion) globally
 vi.mock("motion/react", () => {
-  const createMotionComponent = (tag: string) => {
-    const Component = ({ children, ...props }: any) => {
-      // Strip motion-specific props
-      const {
-        initial,
-        animate,
-        exit,
-        transition,
-        whileHover,
-        whileTap,
-        whileInView,
-        viewport,
-        variants,
-        layout,
-        layoutId,
-        drag,
-        dragConstraints,
-        onDragEnd,
-        ...domProps
-      } = props;
-      const el = document.createElement(tag);
-      Object.entries(domProps).forEach(([k, v]) => {
-        if (typeof v === "string") el.setAttribute(k, v);
-      });
-      return { type: tag, props: { ...domProps, children } };
-    };
-    return Component;
-  };
-
   const handler: ProxyHandler<object> = {
     get: (_target, prop: string) => {
       return ({ children, ...props }: any) => {
@@ -68,7 +40,6 @@ vi.mock("motion/react", () => {
           layoutId,
           ...domProps
         } = props;
-        const React = require("react");
         return React.createElement(prop, domProps, children);
       };
     },
@@ -84,7 +55,6 @@ vi.mock("motion/react", () => {
 
 // Mock lucide-react icons globally — explicit exports required by Vitest
 vi.mock("lucide-react", () => {
-  const React = require("react");
   const icon = (name: string) => (props: any) =>
     React.createElement("svg", { "data-testid": `icon-${name}`, ...props });
   return {

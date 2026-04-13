@@ -57,12 +57,7 @@ interface RequestDashboardProps {
   userId: string;
 }
 
-type StatusFilter =
-  | "all"
-  | "pending"
-  | "lending"
-  | "borrowed"
-  | "returned";
+type StatusFilter = "all" | "pending" | "lending" | "borrowed" | "returned";
 
 const StatusBadge = ({
   status,
@@ -519,33 +514,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     },
     [userId],
   );
-
-  // Debounced refresh - prevents rapid successive calls
-  const debouncedLoadRequests = React.useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      loadRequests(true);
-    }, 500);
-  }, [loadRequests]);
-
-  // Optimistic update helper
-  const updateRequestOptimistically = React.useCallback(
-    (requestId: string, updates: Partial<BorrowRequest>) => {
-      setAllRequests((prev) =>
-        prev.map((req) =>
-          req.id === requestId ? { ...req, ...updates } : req,
-        ),
-      );
-    },
-    [],
-  );
-
-  // Remove request optimistically
-  const removeRequestOptimistically = React.useCallback((requestId: string) => {
-    setAllRequests((prev) => prev.filter((req) => req.id !== requestId));
-  }, []);
 
   useEffect(() => {
     if (userId) {

@@ -138,7 +138,7 @@ apiClient.interceptors.response.use(
 
 // Wrap the get method to implement deduplication
 const originalGet = apiClient.get.bind(apiClient);
-apiClient.get = function <T = any>(url: string, config?: any): Promise<any> {
+apiClient.get = function (url: string, config?: any): Promise<any> {
   const cacheKey = getCacheKey({ method: "GET", url, params: config?.params });
 
   // Return existing pending request if available

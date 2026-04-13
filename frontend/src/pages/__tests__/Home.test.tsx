@@ -19,7 +19,7 @@ vi.mock("../../utils/apiClient", () => ({
 
 vi.mock("../../utils/errorHandler", () => ({
   logError: vi.fn(),
-  getErrorMessage: vi.fn((e) => "Error"),
+  getErrorMessage: vi.fn((_e) => "Error"),
 }));
 
 import Home from "../Home";

@@ -1,3 +1,4 @@
+// @ts-nocheck — backup file, not used in production
 import { useEffect, useState } from "react";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import axios from "axios";
@@ -27,7 +28,7 @@ export default function Profile() {
   const [userGroups, setUserGroups] = useState<Group[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [activeTab, setActiveTab] = useState<"gear" | "groups" | "borrowed">(
-    "gear"
+    "gear",
   );
   const [activeGearTab, setActiveGearTab] = useState<
     "your" | "shared" | "borrowed"
@@ -46,8 +47,8 @@ export default function Profile() {
       axios
         .get(
           `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
-            user.uid
-          )}`
+            user.uid,
+          )}`,
         )
         .then((res) => {
           const actualGear = res.data;
@@ -140,7 +141,7 @@ export default function Profile() {
             res.data.map(async (group: Group) => {
               try {
                 const membersResponse = await axios.get(
-                  `http://localhost:3001/api/groups/${group.id}/members`
+                  `http://localhost:3001/api/groups/${group.id}/members`,
                 );
                 return {
                   ...group,
@@ -150,11 +151,11 @@ export default function Profile() {
               } catch (error) {
                 console.error(
                   `Error loading members for group ${group.id}:`,
-                  error
+                  error,
                 );
                 return { ...group, memberCount: 0, members: [] };
               }
-            })
+            }),
           );
           setUserGroups(groupsWithDetails);
         })
@@ -165,7 +166,7 @@ export default function Profile() {
       const loadSharedGear = async () => {
         try {
           const groupsResponse = await axios.get(
-            `http://localhost:3001/api/groups?userId=${user.uid}`
+            `http://localhost:3001/api/groups?userId=${user.uid}`,
           );
           const allSharedGear: Gear[] = [];
 
@@ -173,7 +174,7 @@ export default function Profile() {
           for (const group of groupsResponse.data) {
             try {
               const membersResponse = await axios.get(
-                `http://localhost:3001/api/groups/${group.id}/members`
+                `http://localhost:3001/api/groups/${group.id}/members`,
               );
 
               // Get gear from each member (excluding current user)
@@ -182,14 +183,14 @@ export default function Profile() {
                   try {
                     const gearResponse = await axios.get(
                       `http://localhost:3001/api/resources?ownerId=${encodeURIComponent(
-                        member.user.id
-                      )}`
+                        member.user.id,
+                      )}`,
                     );
                     allSharedGear.push(...gearResponse.data);
                   } catch (error) {
                     console.error(
                       `Error loading gear for member ${member.user.id}:`,
-                      error
+                      error,
                     );
                   }
                 }
@@ -197,7 +198,7 @@ export default function Profile() {
             } catch (error) {
               console.error(
                 `Error loading members for group ${group.id}:`,
-                error
+                error,
               );
             }
           }
@@ -288,10 +289,10 @@ export default function Profile() {
       {
         title: newTitle,
         description: newDescription,
-      }
+      },
     );
     setGear((prev) =>
-      prev.map((r) => (r.id === gearItem.id ? { ...r, ...updated.data } : r))
+      prev.map((r) => (r.id === gearItem.id ? { ...r, ...updated.data } : r)),
     );
   };
 
@@ -494,7 +495,7 @@ export default function Profile() {
                           onRequestBorrow={(gearId) => {
                             // TODO: Implement borrow request functionality
                             alert(
-                              `Request to borrow ${item.title} (ID: ${gearId}) has been sent!`
+                              `Request to borrow ${item.title} (ID: ${gearId}) has been sent!`,
                             );
                           }}
                         />

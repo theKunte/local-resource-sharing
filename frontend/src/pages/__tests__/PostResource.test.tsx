@@ -192,7 +192,7 @@ describe("PostResource", () => {
       loading: false,
     });
     mockGet.mockResolvedValue({ data: [] });
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(window, "alert").mockImplementation(() => {});
     mockPost.mockResolvedValueOnce({ data: { id: "r1", title: "My Item" } });
 
     render(

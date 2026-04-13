@@ -7,8 +7,8 @@ const TIMEOUT_DURATION = SESSION_CONFIG.TIMEOUT;
 const WARNING_DURATION = SESSION_CONFIG.WARNING_TIME;
 
 export function useSessionTimeout() {
-  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
-  const warningIdRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const [showWarning, setShowWarning] = useState(false);
 

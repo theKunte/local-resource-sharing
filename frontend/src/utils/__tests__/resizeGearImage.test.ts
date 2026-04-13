@@ -13,7 +13,7 @@ function setupMocks(imgWidth: number, imgHeight: number, triggerError = false) {
   const canvas = {
     getContext: vi.fn(() => ctx),
     toBlob: vi.fn(
-      (cb: (blob: Blob | null) => void, type: string, quality: number) => {
+      (cb: (blob: Blob | null) => void, type: string, _quality: number) => {
         cb(new Blob(["fake-image-data"], { type: type || "image/jpeg" }));
       },
     ),
