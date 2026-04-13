@@ -33,14 +33,16 @@ describe("apiClient", () => {
   it("has request interceptor configured", async () => {
     const { default: apiClient } = await import("../apiClient");
     expect(
-      (apiClient.interceptors.request as any).handlers.length,
+      (apiClient.interceptors.request as unknown as { handlers: unknown[] })
+        .handlers.length,
     ).toBeGreaterThan(0);
   });
 
   it("has response interceptor configured", async () => {
     const { default: apiClient } = await import("../apiClient");
     expect(
-      (apiClient.interceptors.response as any).handlers.length,
+      (apiClient.interceptors.response as unknown as { handlers: unknown[] })
+        .handlers.length,
     ).toBeGreaterThan(0);
   });
 

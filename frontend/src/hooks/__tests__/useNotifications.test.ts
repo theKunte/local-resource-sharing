@@ -7,17 +7,17 @@ const mockPost = vi.fn();
 const mockGetFirebaseMessaging = vi.fn();
 
 vi.mock("../../firebase", () => ({
-  getFirebaseMessaging: (...args: any[]) => mockGetFirebaseMessaging(...args),
+  getFirebaseMessaging: mockGetFirebaseMessaging,
 }));
 
 vi.mock("firebase/messaging", () => ({
-  getToken: (...args: any[]) => mockGetToken(...args),
-  onMessage: (...args: any[]) => mockOnMessage(...args),
+  getToken: mockGetToken,
+  onMessage: mockOnMessage,
 }));
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    post: (...args: any[]) => mockPost(...args),
+    post: mockPost,
   },
 }));
 
@@ -92,9 +92,11 @@ describe("useNotifications", () => {
   });
 
   it("skips setup when permission is denied", async () => {
-    (globalThis.Notification as any).requestPermission = vi
-      .fn()
-      .mockResolvedValue("denied");
+    (
+      globalThis.Notification as unknown as {
+        requestPermission: ReturnType<typeof vi.fn>;
+      }
+    ).requestPermission = vi.fn().mockResolvedValue("denied");
 
     renderHook(() => useNotifications("user-1"));
 

@@ -10,7 +10,7 @@ vi.mock("../../firebase", () => ({
 }));
 
 vi.mock("firebase/auth", () => ({
-  signOut: (...args: any[]) => mockSignOut(...args),
+  signOut: mockSignOut,
 }));
 
 vi.mock("../../config/session", () => ({

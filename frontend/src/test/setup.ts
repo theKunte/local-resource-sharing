@@ -21,25 +21,29 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
+// Motion props that should not be forwarded to DOM elements
+const MOTION_PROPS = new Set([
+  "initial",
+  "animate",
+  "exit",
+  "transition",
+  "whileHover",
+  "whileTap",
+  "whileInView",
+  "viewport",
+  "variants",
+  "layout",
+  "layoutId",
+]);
+
 // Mock motion/react (framer-motion) globally
 vi.mock("motion/react", () => {
   const handler: ProxyHandler<object> = {
     get: (_target, prop: string) => {
-      return ({ children, ...props }: any) => {
-        const {
-          initial,
-          animate,
-          exit,
-          transition,
-          whileHover,
-          whileTap,
-          whileInView,
-          viewport,
-          variants,
-          layout,
-          layoutId,
-          ...domProps
-        } = props;
+      return ({ children, ...rest }: { [key: string]: unknown }) => {
+        const domProps = Object.fromEntries(
+          Object.entries(rest).filter(([k]) => !MOTION_PROPS.has(k)),
+        );
         return React.createElement(prop, domProps, children);
       };
     },
@@ -47,7 +51,7 @@ vi.mock("motion/react", () => {
 
   return {
     motion: new Proxy({}, handler),
-    AnimatePresence: ({ children }: any) => children,
+    AnimatePresence: ({ children }: { children?: React.ReactNode }) => children,
     useAnimation: () => ({ start: vi.fn(), stop: vi.fn() }),
     useInView: () => true,
   };
@@ -55,7 +59,7 @@ vi.mock("motion/react", () => {
 
 // Mock lucide-react icons globally — explicit exports required by Vitest
 vi.mock("lucide-react", () => {
-  const icon = (name: string) => (props: any) =>
+  const icon = (name: string) => (props: Record<string, unknown>) =>
     React.createElement("svg", { "data-testid": `icon-${name}`, ...props });
   return {
     Edit2: icon("Edit2"),

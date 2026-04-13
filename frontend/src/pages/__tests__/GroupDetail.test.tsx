@@ -13,10 +13,10 @@ vi.mock("../../hooks/useFirebaseAuth", () => ({
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
-    post: (...args: any[]) => mockPost(...args),
-    put: (...args: any[]) => mockPut(...args),
-    delete: (...args: any[]) => mockDelete(...args),
+    get: mockGet,
+    post: mockPost,
+    put: mockPut,
+    delete: mockDelete,
   },
 }));
 
@@ -25,7 +25,7 @@ vi.mock("../../components/ManageGroupsModal", () => ({
 }));
 
 vi.mock("../../components/AddGearToGroupModal", () => ({
-  default: ({ open, onClose }: any) =>
+  default: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
     open ? (
       <div data-testid="add-gear-modal">
         <button onClick={onClose}>Close</button>
@@ -34,7 +34,7 @@ vi.mock("../../components/AddGearToGroupModal", () => ({
 }));
 
 vi.mock("../../components/BorrowRequestModal", () => ({
-  default: ({ isOpen, onClose }: any) =>
+  default: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
     isOpen ? (
       <div data-testid="borrow-modal">
         <button onClick={onClose}>Close</button>
@@ -319,9 +319,12 @@ describe("GroupDetail", () => {
 
   it("shows error state for 403", async () => {
     mockAuth.mockReturnValue({ user: { uid: "u1" }, loading: false });
-    const err = new Error("Forbidden");
-    (err as any).isAxiosError = true;
-    (err as any).response = { status: 403 };
+    const err = new Error("Forbidden") as Error & {
+      isAxiosError?: boolean;
+      response?: { status: number };
+    };
+    err.isAxiosError = true;
+    err.response = { status: 403 };
 
     // Mock axios.isAxiosError
     const axios = await import("axios");
@@ -342,9 +345,12 @@ describe("GroupDetail", () => {
 
   it("shows error state for 404", async () => {
     mockAuth.mockReturnValue({ user: { uid: "u1" }, loading: false });
-    const err = new Error("Not found");
-    (err as any).isAxiosError = true;
-    (err as any).response = { status: 404 };
+    const err = new Error("Not found") as Error & {
+      isAxiosError?: boolean;
+      response?: { status: number };
+    };
+    err.isAxiosError = true;
+    err.response = { status: 404 };
 
     const axios = await import("axios");
     vi.spyOn(axios.default, "isAxiosError").mockReturnValue(true);

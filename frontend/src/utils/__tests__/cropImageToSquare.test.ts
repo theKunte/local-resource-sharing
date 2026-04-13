@@ -16,15 +16,17 @@ function setupMocks(imgWidth: number, imgHeight: number, triggerError = false) {
     width: 0,
     height: 0,
   };
-  vi.spyOn(document, "createElement").mockReturnValue(canvas as any);
+  vi.spyOn(document, "createElement").mockReturnValue(
+    canvas as unknown as HTMLCanvasElement,
+  );
 
   // Override window.Image as a constructor
   const origImage = window.Image;
-  (window as any).Image = class MockImage {
+  (window as unknown as Record<string, unknown>).Image = class MockImage {
     width = imgWidth;
     height = imgHeight;
     onload: (() => void) | null = null;
-    onerror: ((e: any) => void) | null = null;
+    onerror: ((e: unknown) => void) | null = null;
     set src(_val: string) {
       if (triggerError) {
         setTimeout(() => this.onerror?.(new Error("img fail")), 0);
@@ -36,26 +38,28 @@ function setupMocks(imgWidth: number, imgHeight: number, triggerError = false) {
 
   // Override FileReader
   const origFileReader = window.FileReader;
-  (window as any).FileReader = class MockFileReader {
-    onload: ((e: any) => void) | null = null;
-    onerror: ((e: any) => void) | null = null;
-    readAsDataURL(_file: File) {
-      setTimeout(
-        () =>
-          this.onload?.({
-            target: { result: "data:image/png;base64,fakedata" },
-          }),
-        0,
-      );
-    }
-  };
+  (window as unknown as Record<string, unknown>).FileReader =
+    class MockFileReader {
+      onload: ((e: unknown) => void) | null = null;
+      onerror: ((e: unknown) => void) | null = null;
+      readAsDataURL(_file: File) {
+        setTimeout(
+          () =>
+            this.onload?.({
+              target: { result: "data:image/png;base64,fakedata" },
+            }),
+          0,
+        );
+      }
+    };
 
   return {
     canvas,
     ctx,
     restore() {
       window.Image = origImage;
-      (window as any).FileReader = origFileReader;
+      (window as unknown as Record<string, unknown>).FileReader =
+        origFileReader;
     },
   };
 }

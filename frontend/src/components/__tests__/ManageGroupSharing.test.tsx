@@ -7,9 +7,9 @@ const mockDelete = vi.fn();
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
-    post: (...args: any[]) => mockPost(...args),
-    delete: (...args: any[]) => mockDelete(...args),
+    get: mockGet,
+    post: mockPost,
+    delete: mockDelete,
   },
 }));
 

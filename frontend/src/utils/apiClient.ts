@@ -3,7 +3,7 @@
  * Automatically includes Firebase auth token in all requests
  * With request deduplication and caching
  */
-import axios from "axios";
+import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import { auth } from "../firebase";
 
 // Get backend URL from environment
@@ -59,10 +59,17 @@ function isBlockedUrl(relativeUrl: string | undefined, base: string): boolean {
 }
 
 // Request deduplication cache
-const pendingRequests = new Map<string, Promise<any>>();
+const pendingRequests = new Map<string, Promise<unknown>>();
+
+interface CacheableConfig {
+  method?: string;
+  url?: string;
+  params?: unknown;
+  __cacheKey?: string;
+}
 
 // Generate cache key for GET requests
-const getCacheKey = (config: any): string => {
+const getCacheKey = (config: CacheableConfig): string => {
   const { method, url, params } = config;
   return `${(method || "").toUpperCase()}:${url}:${JSON.stringify(params || {})}`;
 };
@@ -94,8 +101,8 @@ apiClient.interceptors.request.use(
 
       // Track GET requests for deduplication
       if (config.method?.toUpperCase() === "GET") {
-        const cacheKey = getCacheKey(config);
-        (config as any).__cacheKey = cacheKey;
+        const cacheKey = getCacheKey(config as CacheableConfig);
+        (config as CacheableConfig).__cacheKey = cacheKey;
       }
     } catch (error) {
       console.error("Error getting auth token:", error);
@@ -112,7 +119,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     // Clean up pending request cache for GET requests
-    const cacheKey = (response.config as any).__cacheKey;
+    const cacheKey = (response.config as CacheableConfig).__cacheKey;
     if (cacheKey) {
       pendingRequests.delete(cacheKey);
     }
@@ -120,7 +127,7 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     // Clean up pending request cache on error
-    const cacheKey = (error.config as any)?.__cacheKey;
+    const cacheKey = (error.config as CacheableConfig)?.__cacheKey;
     if (cacheKey) {
       pendingRequests.delete(cacheKey);
     }
@@ -138,18 +145,21 @@ apiClient.interceptors.response.use(
 
 // Wrap the get method to implement deduplication
 const originalGet = apiClient.get.bind(apiClient);
-apiClient.get = function (url: string, config?: any): Promise<any> {
+apiClient.get = function <T = unknown, R = AxiosResponse<T>, D = unknown>(
+  url: string,
+  config?: AxiosRequestConfig<D>,
+): Promise<R> {
   const cacheKey = getCacheKey({ method: "GET", url, params: config?.params });
 
   // Return existing pending request if available
   if (pendingRequests.has(cacheKey)) {
     console.log("[API Dedup] Returning pending GET request:", cacheKey);
-    return pendingRequests.get(cacheKey)!;
+    return pendingRequests.get(cacheKey)! as Promise<R>;
   }
 
   // Create new request and cache it
-  const requestPromise = originalGet(url, config);
-  pendingRequests.set(cacheKey, requestPromise);
+  const requestPromise = originalGet<T, R, D>(url, config);
+  pendingRequests.set(cacheKey, requestPromise as Promise<unknown>);
 
   // Clean up on completion (both success and error handled by interceptors)
   return requestPromise;

@@ -5,13 +5,13 @@ const mockGet = vi.fn();
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
+    get: mockGet,
   },
 }));
 
 // We need to re-import after mock because the module has module-level state
 // Reset module state between tests
-let useActionableCount: any;
+let useActionableCount!: (userId?: string) => number;
 
 describe("useActionableCount", () => {
   beforeEach(async () => {

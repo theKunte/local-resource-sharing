@@ -8,7 +8,7 @@ const mockNavigate = vi.fn();
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    post: (...args: any[]) => mockPost(...args),
+    post: mockPost,
   },
 }));
 

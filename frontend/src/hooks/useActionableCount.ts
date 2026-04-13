@@ -5,7 +5,7 @@ import apiClient from "../utils/apiClient";
  * Singleton polling store so that multiple components calling
  * useActionableCount() share a single 30s polling interval.
  */
-let _listeners: Set<() => void> = new Set();
+const _listeners: Set<() => void> = new Set();
 let _count = 0;
 let _activeUserId: string | undefined;
 let _interval: ReturnType<typeof setInterval> | null = null;
@@ -24,7 +24,7 @@ async function fetchCount(userId: string) {
     if (!Array.isArray(requests)) return;
 
     const actionable = requests.filter(
-      (r: any) =>
+      (r: { status: string; loan?: { status: string } }) =>
         r.status === "PENDING" ||
         (r.status === "APPROVED" &&
           r.loan?.status === "PENDING_RETURN_CONFIRMATION"),

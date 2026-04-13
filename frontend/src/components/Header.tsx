@@ -9,7 +9,8 @@ interface HeaderProps {
 function Header({ actionableCount: actionableCountProp }: HeaderProps) {
   const { user, signOutUser } = useFirebaseAuth();
   const navigate = useNavigate();
-  const actionableCount = actionableCountProp ?? useActionableCount(user?.uid);
+  const internalCount = useActionableCount(user?.uid);
+  const actionableCount = actionableCountProp ?? internalCount;
 
   const handleLogout = async () => {
     if (window.confirm("Are you sure you want to log out?")) {

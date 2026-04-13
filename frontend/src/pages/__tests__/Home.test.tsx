@@ -10,7 +10,7 @@ vi.mock("../../hooks/useFirebaseAuth", () => ({
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
+    get: mockGet,
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
