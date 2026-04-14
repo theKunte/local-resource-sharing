@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { authenticateToken } from "../middleware/auth";
+import { authenticateToken, requireVerifiedEmail } from "../middleware/auth";
 import {
   createBorrowRequest,
   getBorrowRequests,
@@ -22,13 +22,49 @@ const writeLimiter = rateLimit({
 
 const router = Router();
 
-router.post("/", authenticateToken, writeLimiter, createBorrowRequest);
+router.post(
+  "/",
+  authenticateToken,
+  requireVerifiedEmail,
+  writeLimiter,
+  createBorrowRequest,
+);
 router.get("/", authenticateToken, getBorrowRequests);
-router.post("/:id/accept", authenticateToken, acceptBorrowRequest);
-router.post("/:id/decline", authenticateToken, declineBorrowRequest);
-router.post("/:id/cancel", authenticateToken, cancelBorrowRequest);
-router.put("/:id", authenticateToken, updateBorrowRequest);
-router.delete("/:id", authenticateToken, deleteBorrowRequest);
-router.post("/:id/mark-returned", authenticateToken, markReturned);
+router.post(
+  "/:id/accept",
+  authenticateToken,
+  requireVerifiedEmail,
+  acceptBorrowRequest,
+);
+router.post(
+  "/:id/decline",
+  authenticateToken,
+  requireVerifiedEmail,
+  declineBorrowRequest,
+);
+router.post(
+  "/:id/cancel",
+  authenticateToken,
+  requireVerifiedEmail,
+  cancelBorrowRequest,
+);
+router.put(
+  "/:id",
+  authenticateToken,
+  requireVerifiedEmail,
+  updateBorrowRequest,
+);
+router.delete(
+  "/:id",
+  authenticateToken,
+  requireVerifiedEmail,
+  deleteBorrowRequest,
+);
+router.post(
+  "/:id/mark-returned",
+  authenticateToken,
+  requireVerifiedEmail,
+  markReturned,
+);
 
 export default router;

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { authenticateToken } from "../middleware/auth";
+import { authenticateToken, requireVerifiedEmail } from "../middleware/auth";
 import {
   getResources,
   getPendingRequestsCount,
@@ -29,22 +29,35 @@ router.get(
   authenticateToken,
   getPendingRequestsCount,
 );
-router.post("/", authenticateToken, writeLimiter, createResource);
-router.put("/:id", authenticateToken, updateResource);
-router.delete("/:id", authenticateToken, deleteResource);
+router.post(
+  "/",
+  authenticateToken,
+  requireVerifiedEmail,
+  writeLimiter,
+  createResource,
+);
+router.put("/:id", authenticateToken, requireVerifiedEmail, updateResource);
+router.delete("/:id", authenticateToken, requireVerifiedEmail, deleteResource);
 
 // Resource sharing
 router.get("/:resourceId/groups", authenticateToken, getResourceGroups);
 router.post(
   "/:resourceId/groups/:groupId",
   authenticateToken,
+  requireVerifiedEmail,
   addResourceToGroup,
 );
 router.delete(
   "/:resourceId/groups/:groupId",
   authenticateToken,
+  requireVerifiedEmail,
   removeResourceFromGroup,
 );
-router.post("/:resourceId/share", authenticateToken, shareResource);
+router.post(
+  "/:resourceId/share",
+  authenticateToken,
+  requireVerifiedEmail,
+  shareResource,
+);
 
 export default router;
