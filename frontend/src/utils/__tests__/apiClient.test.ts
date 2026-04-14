@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockGetIdToken = vi.fn();
-const mockSignOut = vi.fn();
+const { mockGetIdToken, mockSignOut } = vi.hoisted(() => ({
+  mockGetIdToken: vi.fn(),
+  mockSignOut: vi.fn(),
+}));
 
 vi.mock("../../firebase", () => ({
   auth: {
@@ -33,14 +35,16 @@ describe("apiClient", () => {
   it("has request interceptor configured", async () => {
     const { default: apiClient } = await import("../apiClient");
     expect(
-      (apiClient.interceptors.request as any).handlers.length,
+      (apiClient.interceptors.request as unknown as { handlers: unknown[] })
+        .handlers.length,
     ).toBeGreaterThan(0);
   });
 
   it("has response interceptor configured", async () => {
     const { default: apiClient } = await import("../apiClient");
     expect(
-      (apiClient.interceptors.response as any).handlers.length,
+      (apiClient.interceptors.response as unknown as { handlers: unknown[] })
+        .handlers.length,
     ).toBeGreaterThan(0);
   });
 

@@ -2,10 +2,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-const mockGet = vi.fn();
-const mockPost = vi.fn();
-const mockPut = vi.fn();
-const mockDelete = vi.fn();
+const { mockGet, mockPost, mockPut, mockDelete, mockNavigate } = vi.hoisted(
+  () => ({
+    mockGet: vi.fn(),
+    mockPost: vi.fn(),
+    mockPut: vi.fn(),
+    mockDelete: vi.fn(),
+    mockNavigate: vi.fn(),
+  }),
+);
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 vi.mock("../../hooks/useFirebaseAuth", () => ({
   useFirebaseAuth: vi.fn(),
@@ -13,10 +23,10 @@ vi.mock("../../hooks/useFirebaseAuth", () => ({
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
-    post: (...args: any[]) => mockPost(...args),
-    put: (...args: any[]) => mockPut(...args),
-    delete: (...args: any[]) => mockDelete(...args),
+    get: mockGet,
+    post: mockPost,
+    put: mockPut,
+    delete: mockDelete,
   },
 }));
 
@@ -25,7 +35,7 @@ vi.mock("../../components/ManageGroupsModal", () => ({
 }));
 
 vi.mock("../../components/AddGearToGroupModal", () => ({
-  default: ({ open, onClose }: any) =>
+  default: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
     open ? (
       <div data-testid="add-gear-modal">
         <button onClick={onClose}>Close</button>
@@ -34,7 +44,7 @@ vi.mock("../../components/AddGearToGroupModal", () => ({
 }));
 
 vi.mock("../../components/BorrowRequestModal", () => ({
-  default: ({ isOpen, onClose }: any) =>
+  default: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
     isOpen ? (
       <div data-testid="borrow-modal">
         <button onClick={onClose}>Close</button>
@@ -127,10 +137,10 @@ describe("GroupDetail", () => {
     expect(screen.getByText("Loading group details...")).toBeInTheDocument();
   });
 
-  it("redirects when not logged in", () => {
+  it("redirects when not logged in", async () => {
     mockAuth.mockReturnValue({ user: null, loading: false });
     renderWithRoute();
-    expect(screen.getByText("Home")).toBeInTheDocument();
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/"));
   });
 
   it("renders group details after loading", async () => {
@@ -158,7 +168,7 @@ describe("GroupDetail", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Total Items")).toBeInTheDocument();
-      expect(screen.getByText("Members")).toBeInTheDocument();
+      expect(screen.getAllByText("Members").length).toBeGreaterThan(0);
       expect(screen.getByText("1")).toBeInTheDocument(); // sharedResourcesCount
       expect(screen.getByText("2")).toBeInTheDocument(); // memberCount
     });
@@ -215,7 +225,7 @@ describe("GroupDetail", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Owner")).toBeInTheDocument();
-      expect(screen.getByText("Member")).toBeInTheDocument();
+      expect(screen.getAllByText("Member").length).toBeGreaterThan(0);
     });
   });
 
@@ -319,9 +329,12 @@ describe("GroupDetail", () => {
 
   it("shows error state for 403", async () => {
     mockAuth.mockReturnValue({ user: { uid: "u1" }, loading: false });
-    const err = new Error("Forbidden");
-    (err as any).isAxiosError = true;
-    (err as any).response = { status: 403 };
+    const err = new Error("Forbidden") as Error & {
+      isAxiosError?: boolean;
+      response?: { status: number };
+    };
+    err.isAxiosError = true;
+    err.response = { status: 403 };
 
     // Mock axios.isAxiosError
     const axios = await import("axios");
@@ -342,9 +355,12 @@ describe("GroupDetail", () => {
 
   it("shows error state for 404", async () => {
     mockAuth.mockReturnValue({ user: { uid: "u1" }, loading: false });
-    const err = new Error("Not found");
-    (err as any).isAxiosError = true;
-    (err as any).response = { status: 404 };
+    const err = new Error("Not found") as Error & {
+      isAxiosError?: boolean;
+      response?: { status: number };
+    };
+    err.isAxiosError = true;
+    err.response = { status: 404 };
 
     const axios = await import("axios");
     vi.spyOn(axios.default, "isAxiosError").mockReturnValue(true);
@@ -580,7 +596,7 @@ describe("GroupDetail", () => {
     fireEvent.click(screen.getByRole("button", { name: "Members" }));
 
     await waitFor(() => {
-      const select = screen.getByDisplayValue("member");
+      const select = screen.getByDisplayValue("Member");
       expect(select).toBeInTheDocument();
     });
   });
@@ -601,7 +617,7 @@ describe("GroupDetail", () => {
     fireEvent.click(screen.getByRole("button", { name: "Members" }));
 
     await waitFor(() => {
-      const select = screen.getByDisplayValue("member");
+      const select = screen.getByDisplayValue("Member");
       fireEvent.change(select, { target: { value: "admin" } });
     });
 

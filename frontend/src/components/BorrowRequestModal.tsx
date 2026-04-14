@@ -122,7 +122,18 @@ const BorrowRequestModal: React.FC<BorrowRequestModalProps> = ({
       logError("BorrowRequestModal", err);
 
       // Check if it's a duplicate request error
-      const apiError = err as any;
+      const apiError = err as {
+        response?: {
+          status?: number;
+          data?: {
+            existingRequest?: {
+              startDate: string;
+              endDate: string;
+              status?: string;
+            };
+          };
+        };
+      };
       if (
         apiError.response?.status === 409 &&
         apiError.response?.data?.existingRequest

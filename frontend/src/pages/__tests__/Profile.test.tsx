@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const mockGet = vi.fn();
+const { mockGet } = vi.hoisted(() => ({ mockGet: vi.fn() }));
 
 vi.mock("../../hooks/useFirebaseAuth", () => ({
   useFirebaseAuth: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock("../../hooks/useFirebaseAuth", () => ({
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
+    get: mockGet,
   },
 }));
 

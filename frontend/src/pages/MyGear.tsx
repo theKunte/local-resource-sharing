@@ -67,13 +67,14 @@ export default function MyGear() {
       );
       setStatusMessage("Resource deleted successfully");
       setTimeout(() => setStatusMessage(null), 3500);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting resource:", error);
       logError("MyGear - handleDeleteResource", error);
 
       // Show specific error message from backend
       const errorMessage =
-        error.response?.data?.error || "Failed to delete resource";
+        (error as { response?: { data?: { error?: string } } }).response?.data
+          ?.error || "Failed to delete resource";
       setStatusMessage(errorMessage);
       setTimeout(() => setStatusMessage(null), 5000);
     }

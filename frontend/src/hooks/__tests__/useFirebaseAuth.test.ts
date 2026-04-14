@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 
 // We need to mock firebase and apiClient before importing the hook
-const mockOnAuthStateChanged = vi.fn();
-const mockSignInWithPopup = vi.fn();
-const mockSignOut = vi.fn();
-const mockPost = vi.fn();
+const { mockOnAuthStateChanged, mockSignInWithPopup, mockSignOut, mockPost } =
+  vi.hoisted(() => ({
+    mockOnAuthStateChanged: vi.fn(),
+    mockSignInWithPopup: vi.fn(),
+    mockSignOut: vi.fn(),
+    mockPost: vi.fn(),
+  }));
 
 vi.mock("../../firebase", () => ({
   auth: {},
@@ -13,14 +16,14 @@ vi.mock("../../firebase", () => ({
 
 vi.mock("firebase/auth", () => ({
   GoogleAuthProvider: vi.fn(),
-  signInWithPopup: (...args: any[]) => mockSignInWithPopup(...args),
-  signOut: (...args: any[]) => mockSignOut(...args),
-  onAuthStateChanged: (...args: any[]) => mockOnAuthStateChanged(...args),
+  signInWithPopup: mockSignInWithPopup,
+  signOut: mockSignOut,
+  onAuthStateChanged: mockOnAuthStateChanged,
 }));
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    post: (...args: any[]) => mockPost(...args),
+    post: mockPost,
   },
 }));
 
@@ -47,11 +50,13 @@ describe("useFirebaseAuth", () => {
       getIdToken: vi.fn().mockResolvedValue("token"),
     };
 
-    mockOnAuthStateChanged.mockImplementation((auth: any, callback: any) => {
-      // Simulate async callback
-      setTimeout(() => callback(fakeUser), 0);
-      return vi.fn();
-    });
+    mockOnAuthStateChanged.mockImplementation(
+      (_auth: unknown, callback: (user: unknown) => void) => {
+        // Simulate async callback
+        setTimeout(() => callback(fakeUser), 0);
+        return vi.fn();
+      },
+    );
     mockPost.mockResolvedValue({});
 
     const { result } = renderHook(() => useFirebaseAuth());
@@ -70,10 +75,12 @@ describe("useFirebaseAuth", () => {
   });
 
   it("sets user to null when auth state changes to logged-out", async () => {
-    mockOnAuthStateChanged.mockImplementation((auth: any, callback: any) => {
-      setTimeout(() => callback(null), 0);
-      return vi.fn();
-    });
+    mockOnAuthStateChanged.mockImplementation(
+      (_auth: unknown, callback: (user: unknown) => void) => {
+        setTimeout(() => callback(null), 0);
+        return vi.fn();
+      },
+    );
 
     const { result } = renderHook(() => useFirebaseAuth());
 
@@ -89,7 +96,11 @@ describe("useFirebaseAuth", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     mockOnAuthStateChanged.mockImplementation(
-      (auth: any, callback: any, errorCallback: any) => {
+      (
+        _auth: unknown,
+        _callback: unknown,
+        errorCallback: (e: Error) => void,
+      ) => {
         setTimeout(() => errorCallback(new Error("auth error")), 0);
         return vi.fn();
       },
@@ -159,10 +170,12 @@ describe("useFirebaseAuth", () => {
     };
 
     mockPost.mockRejectedValue(new Error("server down"));
-    mockOnAuthStateChanged.mockImplementation((auth: any, callback: any) => {
-      setTimeout(() => callback(fakeUser), 0);
-      return vi.fn();
-    });
+    mockOnAuthStateChanged.mockImplementation(
+      (_auth: unknown, callback: (user: unknown) => void) => {
+        setTimeout(() => callback(fakeUser), 0);
+        return vi.fn();
+      },
+    );
 
     const { result } = renderHook(() => useFirebaseAuth());
 

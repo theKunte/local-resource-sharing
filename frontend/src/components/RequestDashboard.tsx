@@ -13,6 +13,10 @@ import {
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 
+type ApiError = {
+  response?: { data?: { message?: string; error?: string } };
+};
+
 interface BorrowRequest {
   id: string;
   resourceId: string;
@@ -57,12 +61,7 @@ interface RequestDashboardProps {
   userId: string;
 }
 
-type StatusFilter =
-  | "all"
-  | "pending"
-  | "lending"
-  | "borrowed"
-  | "returned";
+type StatusFilter = "all" | "pending" | "lending" | "borrowed" | "returned";
 
 const StatusBadge = ({
   status,
@@ -520,33 +519,6 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     [userId],
   );
 
-  // Debounced refresh - prevents rapid successive calls
-  const debouncedLoadRequests = React.useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      loadRequests(true);
-    }, 500);
-  }, [loadRequests]);
-
-  // Optimistic update helper
-  const updateRequestOptimistically = React.useCallback(
-    (requestId: string, updates: Partial<BorrowRequest>) => {
-      setAllRequests((prev) =>
-        prev.map((req) =>
-          req.id === requestId ? { ...req, ...updates } : req,
-        ),
-      );
-    },
-    [],
-  );
-
-  // Remove request optimistically
-  const removeRequestOptimistically = React.useCallback((requestId: string) => {
-    setAllRequests((prev) => prev.filter((req) => req.id !== requestId));
-  }, []);
-
   useEffect(() => {
     if (userId) {
       loadRequests();
@@ -554,8 +526,10 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
 
     // Cleanup debounce timer
     return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const timer = debounceTimerRef.current;
+      if (timer) {
+        clearTimeout(timer);
       }
     };
   }, [userId, loadRequests]);
@@ -589,14 +563,14 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       }
 
       alert("Request accepted successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error accepting request:", error);
       // Clear cache and reload on error to get correct state
       cacheRef.current = null;
       await loadRequests(true);
       const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
+        (error as ApiError).response?.data?.message ||
+        (error as ApiError).response?.data?.error ||
         "Failed to accept request";
       alert(errorMessage);
     } finally {
@@ -616,11 +590,14 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       cacheRef.current = null;
       await loadRequests(true);
       alert("Request declined");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error declining request:", error);
       cacheRef.current = null;
       await loadRequests(true);
-      alert(error.response?.data?.error || "Failed to decline request");
+      alert(
+        (error as ApiError).response?.data?.error ||
+          "Failed to decline request",
+      );
     } finally {
       setActionLoading(null);
     }
@@ -638,11 +615,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       cacheRef.current = null;
       await loadRequests(true);
       alert("Request cancelled");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error cancelling request:", error);
       cacheRef.current = null;
       await loadRequests(true);
-      alert(error.response?.data?.error || "Failed to cancel request");
+      alert(
+        (error as ApiError).response?.data?.error || "Failed to cancel request",
+      );
     } finally {
       setActionLoading(null);
     }
@@ -673,11 +652,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       await loadRequests(true);
       setEditingRequest(null);
       alert("Request updated successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating request:", error);
       cacheRef.current = null;
       await loadRequests(true);
-      alert(error.response?.data?.error || "Failed to update request");
+      alert(
+        (error as ApiError).response?.data?.error || "Failed to update request",
+      );
     } finally {
       setActionLoading(null);
     }
@@ -701,11 +682,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       cacheRef.current = null;
       await loadRequests(true);
       alert("Request deleted");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting request:", error);
       cacheRef.current = null;
       await loadRequests(true);
-      alert(error.response?.data?.error || "Failed to delete request");
+      alert(
+        (error as ApiError).response?.data?.error || "Failed to delete request",
+      );
     } finally {
       setActionLoading(null);
     }
@@ -747,14 +730,14 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       alert(
         "Item marked as returned successfully! The item is now available in your groups.",
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error marking as returned:", error);
       // Clear cache and reload to get actual state
       cacheRef.current = null;
       await loadRequests(true);
       const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
+        (error as ApiError).response?.data?.message ||
+        (error as ApiError).response?.data?.error ||
         "Failed to mark as returned";
       alert(errorMessage);
     } finally {
@@ -779,13 +762,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       alert(
         "Return initiated! The owner will be notified to confirm they received the item back.",
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error initiating return:", error);
       cacheRef.current = null;
       await loadRequests(true);
       alert(
-        error.response?.data?.message ||
-          error.response?.data?.error ||
+        (error as ApiError).response?.data?.message ||
+          (error as ApiError).response?.data?.error ||
           "Failed to initiate return",
       );
     } finally {
@@ -827,13 +810,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       alert(
         "Return confirmed! The item is now available in your groups again.",
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error confirming return:", error);
       cacheRef.current = null;
       await loadRequests(true);
       alert(
-        error.response?.data?.message ||
-          error.response?.data?.error ||
+        (error as ApiError).response?.data?.message ||
+          (error as ApiError).response?.data?.error ||
           "Failed to confirm return",
       );
     } finally {

@@ -69,6 +69,7 @@ const GearCard: React.FC<GearCardProps> = ({
             <img
               src={image}
               alt={title}
+              loading="lazy"
               className={`object-cover w-full h-full rounded-lg shadow-sm ${
                 isBorrowed ? "grayscale" : ""
               }`}

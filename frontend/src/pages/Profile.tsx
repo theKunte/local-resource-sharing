@@ -23,9 +23,10 @@ export default function Profile() {
     apiClient
       .get(`/api/resources?ownerId=${encodeURIComponent(user.uid)}`)
       .then((res) => {
-        setResourceCount(res.data.length);
+        const resources = res.data.data ?? res.data;
+        setResourceCount(resources.length);
         setSharedCount(
-          res.data.filter(
+          resources.filter(
             (r: { sharedWith?: unknown[] }) =>
               r.sharedWith && r.sharedWith.length > 0,
           ).length,
@@ -35,7 +36,10 @@ export default function Profile() {
 
     apiClient
       .get(`/api/groups?userId=${encodeURIComponent(user.uid)}`)
-      .then((res) => setGroupCount(res.data.length))
+      .then((res) => {
+        const groups = res.data.data ?? res.data;
+        setGroupCount(groups.length);
+      })
       .catch((err) => logError("Profile - loadGroups", err));
   }, [user]);
 

@@ -3,6 +3,7 @@ import apiClient from "../utils/apiClient";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useNavigate } from "react-router-dom";
 import { cropImageToSquare } from "../utils/cropImageToSquare";
+import { uploadBlobToStorage } from "../utils/firebaseStorage";
 import type { Group, CreateResourceRequest } from "../types/api.types";
 import { getErrorMessage, logError } from "../utils/errorHandler";
 
@@ -114,13 +115,18 @@ export default function PostResource() {
     setSubmitting(true);
 
     try {
-      const imageData = await cropImageToSquare(image, 200);
+      const imageBlob = await cropImageToSquare(image, 200);
+      const imageUrl = await uploadBlobToStorage(
+        imageBlob,
+        "resources",
+        "resource.png",
+      );
 
       // Create the resource
       const resourceData: CreateResourceRequest = {
         title,
         description,
-        image: imageData,
+        image: imageUrl,
         ownerId: user.uid,
       };
 

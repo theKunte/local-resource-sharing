@@ -1,7 +1,13 @@
-# Local Resource Sharing Platform
+<p align="center">
+  <img src="docs/GEARshare_LOGO.jpg" alt="GearShare Logo" width="200" />
+</p>
 
-[![Tests & Coverage](https://github.com/theKunte/local-resource-sharing/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/theKunte/local-resource-sharing/actions/workflows/test-coverage.yml)
-[![codecov](https://codecov.io/gh/theKunte/local-resource-sharing/graph/badge.svg)](https://codecov.io/gh/theKunte/local-resource-sharing)
+<h1 align="center">GearShare — Local Resource Sharing Platform</h1>
+
+<p align="center">
+  <a href="https://github.com/theKunte/local-resource-sharing/actions/workflows/test-coverage.yml"><img src="https://github.com/theKunte/local-resource-sharing/actions/workflows/test-coverage.yml/badge.svg" alt="Tests & Coverage" /></a>
+  <a href="https://codecov.io/gh/theKunte/local-resource-sharing"><img src="https://codecov.io/gh/theKunte/local-resource-sharing/graph/badge.svg" alt="codecov" /></a>
+</p>
 
 A community-based gear sharing platform built with React, TypeScript, and Firebase. Share equipment, tools, and resources within trusted groups of friends and neighbors.
 

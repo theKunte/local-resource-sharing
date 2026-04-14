@@ -218,6 +218,7 @@ const GearCard: React.FC<GearCardProps> = ({
             transition={{ duration: 0.3 }}
             src={image}
             alt={title}
+            loading="lazy"
             className={`w-full h-full object-cover ${
               isBorrowed ? "opacity-50 grayscale" : ""
             }`}

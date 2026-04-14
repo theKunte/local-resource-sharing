@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
+import { GroupRole } from "@prisma/client";
 import prisma from "../prisma";
 import {
   validateResourceInput,
-  validateBase64Image,
+  validateImageInput,
   sanitizeString,
 } from "../utils/validation";
 
@@ -164,7 +165,7 @@ export async function createResource(req: Request, res: Response) {
   }
 
   if (image && typeof image === "string") {
-    const imageValidation = validateBase64Image(image);
+    const imageValidation = validateImageInput(image);
     if (!imageValidation.valid) {
       return res.status(400).json({ error: imageValidation.error });
     }
@@ -213,7 +214,7 @@ export async function createResource(req: Request, res: Response) {
           userId: ownerId,
         },
         data: {
-          role: "owner",
+          role: GroupRole.OWNER,
         },
       });
     }

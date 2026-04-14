@@ -12,18 +12,24 @@ function setupMocks(imgWidth: number, imgHeight: number, triggerError = false) {
   };
   const canvas = {
     getContext: vi.fn(() => ctx),
-    toDataURL: vi.fn(() => "data:image/jpeg;base64,resized"),
+    toBlob: vi.fn(
+      (cb: (blob: Blob | null) => void, type: string, _quality: number) => {
+        cb(new Blob(["fake-image-data"], { type: type || "image/jpeg" }));
+      },
+    ),
     width: 0,
     height: 0,
   };
-  vi.spyOn(document, "createElement").mockReturnValue(canvas as any);
+  vi.spyOn(document, "createElement").mockReturnValue(
+    canvas as unknown as HTMLCanvasElement,
+  );
 
   const origImage = window.Image;
-  (window as any).Image = class MockImage {
+  (window as unknown as Record<string, unknown>).Image = class MockImage {
     width = imgWidth;
     height = imgHeight;
     onload: (() => void) | null = null;
-    onerror: ((e: any) => void) | null = null;
+    onerror: ((e: unknown) => void) | null = null;
     set src(_val: string) {
       if (triggerError) {
         setTimeout(() => this.onerror?.(new Error("load failed")), 0);
@@ -34,26 +40,28 @@ function setupMocks(imgWidth: number, imgHeight: number, triggerError = false) {
   };
 
   const origFileReader = window.FileReader;
-  (window as any).FileReader = class MockFileReader {
-    onload: ((e: any) => void) | null = null;
-    onerror: ((e: any) => void) | null = null;
-    readAsDataURL(_file: File) {
-      setTimeout(
-        () =>
-          this.onload?.({
-            target: { result: "data:image/png;base64,fakedata" },
-          }),
-        0,
-      );
-    }
-  };
+  (window as unknown as Record<string, unknown>).FileReader =
+    class MockFileReader {
+      onload: ((e: unknown) => void) | null = null;
+      onerror: ((e: unknown) => void) | null = null;
+      readAsDataURL(_file: File) {
+        setTimeout(
+          () =>
+            this.onload?.({
+              target: { result: "data:image/png;base64,fakedata" },
+            }),
+          0,
+        );
+      }
+    };
 
   return {
     canvas,
     ctx,
     restore() {
       window.Image = origImage;
-      (window as any).FileReader = origFileReader;
+      (window as unknown as Record<string, unknown>).FileReader =
+        origFileReader;
     },
   };
 }
@@ -71,7 +79,7 @@ describe("resizeGearImage", () => {
     restoreFn = restore;
     const result = await resizeGearImage(createMockFile());
 
-    expect(result).toBe("data:image/jpeg;base64,resized");
+    expect(result).toBeInstanceOf(Blob);
     expect(ctx.drawImage).toHaveBeenCalled();
     expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 600, 400);
   });
@@ -81,7 +89,7 @@ describe("resizeGearImage", () => {
     restoreFn = restore;
     const result = await resizeGearImage(createMockFile());
 
-    expect(result).toBe("data:image/jpeg;base64,resized");
+    expect(result).toBeInstanceOf(Blob);
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 
@@ -90,7 +98,7 @@ describe("resizeGearImage", () => {
     restoreFn = restore;
     const result = await resizeGearImage(createMockFile());
 
-    expect(result).toBe("data:image/jpeg;base64,resized");
+    expect(result).toBeInstanceOf(Blob);
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 

@@ -132,7 +132,7 @@ const authLimiter = rateLimit({
 
 app.use("/api/", limiter);
 app.use("/api/auth/", authLimiter);
-app.use(express.json({ limit: "5mb" }));
+app.use(express.json({ limit: "100kb" }));
 
 // Root route
 app.get("/", (req, res) => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { SESSION_CONFIG } from "../config/session";
@@ -7,19 +7,19 @@ const TIMEOUT_DURATION = SESSION_CONFIG.TIMEOUT;
 const WARNING_DURATION = SESSION_CONFIG.WARNING_TIME;
 
 export function useSessionTimeout() {
-  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
-  const warningIdRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const [showWarning, setShowWarning] = useState(false);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setShowWarning(false);
     signOut(auth).catch((error) => {
       console.error("Error during session timeout logout:", error);
     });
-  };
+  }, []);
 
-  const resetTimeout = () => {
+  const resetTimeout = useCallback(() => {
     lastActivityRef.current = Date.now();
     setShowWarning(false);
 
@@ -38,11 +38,11 @@ export function useSessionTimeout() {
 
     // Set logout timeout
     timeoutIdRef.current = setTimeout(logout, TIMEOUT_DURATION);
-  };
+  }, [logout]);
 
-  const extendSession = () => {
+  const extendSession = useCallback(() => {
     resetTimeout();
-  };
+  }, [resetTimeout]);
 
   useEffect(() => {
     // Only start timeout if user is logged in
@@ -79,7 +79,7 @@ export function useSessionTimeout() {
       }
       setShowWarning(false);
     };
-  }, [auth.currentUser]);
+  }, [resetTimeout]); // auth.currentUser omitted — outer-scope value, not a valid React dep
 
   return { showWarning, extendSession, logout };
 }

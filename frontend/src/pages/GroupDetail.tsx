@@ -89,6 +89,7 @@ export default function GroupDetail() {
 
   useEffect(() => {
     if (!authLoading && !user) {
+      setLoading(false);
       navigate("/");
       return;
     }
@@ -490,8 +491,8 @@ export default function GroupDetail() {
   }
 
   const userRole =
-    group.members.find((m) => m.userId === user?.uid)?.role || "member";
-  const isOwner = userRole === "owner";
+    group.members.find((m) => m.userId === user?.uid)?.role || "MEMBER";
+  const isOwner = userRole.toUpperCase() === "OWNER";
   const canManageMembers = isOwner;
 
   return (
@@ -791,7 +792,7 @@ export default function GroupDetail() {
 
                   {canManageMembers &&
                     member.userId !== user?.uid &&
-                    member.role !== "owner" && (
+                    member.role.toUpperCase() !== "OWNER" && (
                       <div className="flex items-center gap-2">
                         <select
                           value={member.role}

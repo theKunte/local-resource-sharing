@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const mockGet = vi.fn();
-const mockPost = vi.fn();
+const { mockGet, mockPost } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPost: vi.fn(),
+}));
 
 vi.mock("../../hooks/useFirebaseAuth", () => ({
   useFirebaseAuth: vi.fn(),
@@ -11,8 +13,8 @@ vi.mock("../../hooks/useFirebaseAuth", () => ({
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
-    post: (...args: any[]) => mockPost(...args),
+    get: mockGet,
+    post: mockPost,
   },
 }));
 
@@ -23,6 +25,15 @@ vi.mock("../../utils/errorHandler", () => ({
 
 vi.mock("../../utils/cropImageToSquare", () => ({
   cropImageToSquare: vi.fn().mockResolvedValue("data:image/png;base64,abc"),
+}));
+
+vi.mock("../../utils/firebaseStorage", () => ({
+  uploadBlobToStorage: vi
+    .fn()
+    .mockResolvedValue("https://example.com/image.jpg"),
+  uploadImageToStorage: vi
+    .fn()
+    .mockResolvedValue("https://example.com/image.jpg"),
 }));
 
 import PostResource from "../PostResource";
@@ -192,7 +203,7 @@ describe("PostResource", () => {
       loading: false,
     });
     mockGet.mockResolvedValue({ data: [] });
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(window, "alert").mockImplementation(() => {});
     mockPost.mockResolvedValueOnce({ data: { id: "r1", title: "My Item" } });
 
     render(

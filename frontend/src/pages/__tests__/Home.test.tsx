@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const mockGet = vi.fn();
+const { mockGet } = vi.hoisted(() => ({ mockGet: vi.fn() }));
 
 vi.mock("../../hooks/useFirebaseAuth", () => ({
   useFirebaseAuth: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock("../../hooks/useFirebaseAuth", () => ({
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
+    get: mockGet,
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock("../../utils/apiClient", () => ({
 
 vi.mock("../../utils/errorHandler", () => ({
   logError: vi.fn(),
-  getErrorMessage: vi.fn((e) => "Error"),
+  getErrorMessage: vi.fn((_e) => "Error"),
 }));
 
 import Home from "../Home";
@@ -208,14 +208,14 @@ describe("Home", () => {
         {
           id: "r1",
           title: "Tent",
-          description: "Tent",
+          description: "Camping tent",
           ownerId: "u2",
           status: "AVAILABLE",
         },
         {
           id: "r2",
           title: "Bag",
-          description: "Bag",
+          description: "Hiking bag",
           ownerId: "u2",
           status: "AVAILABLE",
         },

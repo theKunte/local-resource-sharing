@@ -1,8 +1,8 @@
 // This utility crops an image to a square and resizes it to 128x128px using a canvas.
 export async function cropImageToSquare(
   file: File,
-  size: number = 128
-): Promise<string> {
+  size: number = 128,
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const reader = new FileReader();
@@ -17,7 +17,14 @@ export async function cropImageToSquare(
         const ctx = canvas.getContext("2d");
         if (!ctx) return reject("No canvas context");
         ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
-        resolve(canvas.toDataURL("image/png"));
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return reject("Failed to create blob");
+            resolve(blob);
+          },
+          "image/jpeg",
+          0.8,
+        );
       };
       img.onerror = reject;
       img.src = e.target?.result as string;

@@ -3,12 +3,14 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import BorrowRequestModal from "../BorrowRequestModal";
 
-const mockPost = vi.fn();
-const mockNavigate = vi.fn();
+const { mockPost, mockNavigate } = vi.hoisted(() => ({
+  mockPost: vi.fn(),
+  mockNavigate: vi.fn(),
+}));
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    post: (...args: any[]) => mockPost(...args),
+    post: mockPost,
   },
 }));
 

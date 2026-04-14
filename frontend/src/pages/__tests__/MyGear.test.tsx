@@ -8,9 +8,11 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const mockGet = vi.fn();
-const mockPut = vi.fn();
-const mockDelete = vi.fn();
+const { mockGet, mockPut, mockDelete } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPut: vi.fn(),
+  mockDelete: vi.fn(),
+}));
 
 vi.mock("../../hooks/useFirebaseAuth", () => ({
   useFirebaseAuth: vi.fn(),
@@ -18,10 +20,10 @@ vi.mock("../../hooks/useFirebaseAuth", () => ({
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
+    get: mockGet,
     post: vi.fn(),
-    put: (...args: any[]) => mockPut(...args),
-    delete: (...args: any[]) => mockDelete(...args),
+    put: mockPut,
+    delete: mockDelete,
   },
 }));
 

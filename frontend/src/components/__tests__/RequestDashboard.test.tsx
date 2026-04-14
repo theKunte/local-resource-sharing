@@ -1,17 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
-const mockGet = vi.fn();
-const mockPost = vi.fn();
-const mockPut = vi.fn();
-const mockDelete = vi.fn();
+const { mockGet, mockPost, mockPut, mockDelete } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPost: vi.fn(),
+  mockPut: vi.fn(),
+  mockDelete: vi.fn(),
+}));
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
-    get: (...args: any[]) => mockGet(...args),
-    post: (...args: any[]) => mockPost(...args),
-    put: (...args: any[]) => mockPut(...args),
-    delete: (...args: any[]) => mockDelete(...args),
+    get: mockGet,
+    post: mockPost,
+    put: mockPut,
+    delete: mockDelete,
   },
 }));
 

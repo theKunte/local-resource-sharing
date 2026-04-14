@@ -77,6 +77,30 @@ export function validateBase64Image(dataUri: string): {
   return { valid: true };
 }
 
+/**
+ * Validates an image value — accepts either a Firebase Storage URL or a base64 data URI.
+ */
+export function validateImageInput(image: string): {
+  valid: boolean;
+  error?: string;
+} {
+  if (typeof image !== "string" || image.length === 0) {
+    return { valid: false, error: "Image must be a non-empty string" };
+  }
+
+  // Accept Firebase Storage URLs (both legacy and new domain formats)
+  if (
+    image.startsWith("https://firebasestorage.googleapis.com/") ||
+    image.startsWith("https://storage.googleapis.com/") ||
+    image.match(/^https:\/\/[a-zA-Z0-9.-]+\.firebasestorage\.app\//)
+  ) {
+    return { valid: true };
+  }
+
+  // Fall back to base64 validation for backwards compatibility
+  return validateBase64Image(image);
+}
+
 export function validateEmail(email: string): boolean {
   if (email.length > 254) return false;
   const parts = email.split("@");
@@ -88,7 +112,10 @@ export function validateEmail(email: string): boolean {
   if (domainParts.length < 2) return false;
   if (domainParts.some((p) => !p || p.length > 63)) return false;
   if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local)) return false;
-  if (domainParts.some((p) => !/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(p))) return false;
+  if (
+    domainParts.some((p) => !/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(p))
+  )
+    return false;
   return true;
 }
 
