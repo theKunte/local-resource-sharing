@@ -118,6 +118,9 @@ describe("groupController", () => {
 
     it("adds a member successfully", async () => {
       const member = { id: "m1", groupId: "g1", userId: "u2" };
+      mockPrisma.groupMember.findFirst
+        .mockResolvedValueOnce({ id: "req1", role: "OWNER" }) // requester is OWNER
+        .mockResolvedValueOnce(null); // user not already a member
       mockPrisma.groupMember.create.mockResolvedValue(member);
 
       const { req, res } = mockReqRes({ userId: "u2" }, { groupId: "g1" });
@@ -128,6 +131,9 @@ describe("groupController", () => {
     });
 
     it("returns 500 on database error", async () => {
+      mockPrisma.groupMember.findFirst
+        .mockResolvedValueOnce({ id: "req1", role: "OWNER" }) // requester is OWNER
+        .mockResolvedValueOnce(null); // user not already a member
       mockPrisma.groupMember.create.mockRejectedValue(new Error("fail"));
       jest.spyOn(console, "error").mockImplementation();
 
@@ -955,7 +961,7 @@ describe("groupController", () => {
       jest.spyOn(console, "error").mockImplementation();
 
       const { req, res } = mockReqRes(
-        { requesterId: "user-123", role: "admin" },
+        { requesterId: "user-123", role: "ADMIN" },
         { groupId: "g1", userId: "u2" },
       );
       await updateMemberRole(req, res);
