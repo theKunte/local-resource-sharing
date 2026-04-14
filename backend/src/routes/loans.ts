@@ -1,10 +1,20 @@
 import { Router } from "express";
-import { authenticateToken } from "../middleware/auth";
+import { authenticateToken, requireVerifiedEmail } from "../middleware/auth";
 import { requestReturn, confirmReturn } from "../controllers/loanController";
 
 const router = Router();
 
-router.post("/:id/request-return", authenticateToken, requestReturn);
-router.post("/:id/confirm-return", authenticateToken, confirmReturn);
+router.post(
+  "/:id/request-return",
+  authenticateToken,
+  requireVerifiedEmail,
+  requestReturn,
+);
+router.post(
+  "/:id/confirm-return",
+  authenticateToken,
+  requireVerifiedEmail,
+  confirmReturn,
+);
 
 export default router;
