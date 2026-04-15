@@ -11,6 +11,25 @@
     "dotenv": "^16.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "jest": "^30.3.0"
-  }
+  },
+  "name": "local-resource-sharing",
+  "description": "<p align=\"center\">\r   <img src=\"docs/GEARshare_LOGO.jpg\" alt=\"GearShare Logo\" width=\"200\" />\r </p>",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theKunte/local-resource-sharing.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/theKunte/local-resource-sharing/issues"
+  },
+  "homepage": "https://github.com/theKunte/local-resource-sharing#readme"
 }
