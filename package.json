@@ -5,7 +5,8 @@
     "test:frontend": "cd frontend && npm test",
     "test:coverage": "cd backend && npm run test:coverage && cd ../frontend && npm run test:coverage",
     "test:coverage:backend": "cd backend && npm run test:coverage",
-    "test:coverage:frontend": "cd frontend && npm run test:coverage"
+    "test:coverage:frontend": "cd frontend && npm run test:coverage",
+    "test:e2e": "node e2e-check.mjs"
   },
   "dependencies": {
     "dotenv": "^16.5.0"

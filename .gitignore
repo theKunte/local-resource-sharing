@@ -28,6 +28,10 @@ backend/prisma/*.db-journal
 backend/prisma/prisma/*.db
 backend/prisma/prisma/*.db-journal
 
+# E2E test artifacts
+e2e-screenshot.png
+e2e-screenshots/
+
 # Coverage reports
 coverage/
 backend/coverage/
