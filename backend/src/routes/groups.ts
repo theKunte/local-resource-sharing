@@ -14,7 +14,6 @@ import {
   getGroupDetails,
   removeGroupMember,
   updateMemberRole,
-  getUserGroups,
 } from "../controllers/groupController";
 
 const router = Router();
