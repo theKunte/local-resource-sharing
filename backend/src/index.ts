@@ -151,7 +151,7 @@ app.get("/health", async (req, res) => {
       uptime: process.uptime(),
       database: "connected",
     });
-  } catch (error) {
+  } catch (_error) {
     res.status(503).json({
       status: "unhealthy",
       timestamp: new Date().toISOString(),

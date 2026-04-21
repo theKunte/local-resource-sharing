@@ -10,9 +10,17 @@ import {
 // GET /api/resources
 export async function getResources(req: Request, res: Response) {
   try {
+    const authenticatedUserId = (req as any).user.uid;
     const userId = req.query.user as string | undefined;
     const ownerId = req.query.ownerId as string | undefined;
-    const authenticatedUserId = (req as any).user.uid;
+
+    if (ownerId && ownerId !== authenticatedUserId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    if (userId && userId !== authenticatedUserId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const skip = (page - 1) * limit;
@@ -178,7 +186,7 @@ export async function createResource(req: Request, res: Response) {
   }
 
   try {
-    const user = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { id: ownerId },
       update: {
         email: req.body.email ? req.body.email.toLowerCase() : undefined,
