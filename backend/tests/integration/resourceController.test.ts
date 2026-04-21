@@ -102,7 +102,7 @@ describe("resourceController", () => {
       const { req, res } = mockReqRes(
         {},
         {},
-        { ownerId: "u1", page: "1", limit: "200" },
+        { ownerId: "user-123", page: "1", limit: "200" },
       );
       await getResources(req, res);
 
@@ -152,7 +152,7 @@ describe("resourceController", () => {
       mockPrisma.resource.count.mockRejectedValue(new Error("DB fail"));
       jest.spyOn(console, "error").mockImplementation();
 
-      const { req, res } = mockReqRes({}, {}, { ownerId: "u1" });
+      const { req, res } = mockReqRes({}, {}, { ownerId: "user-123" });
       await getResources(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
 
