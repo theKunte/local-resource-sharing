@@ -39,5 +39,8 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5",
     "typescript-eslint": "^8.59.0"
+  },
+  "overrides": {
+    "protobufjs": ">=7.5.5"
   }
 }
