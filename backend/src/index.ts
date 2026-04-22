@@ -25,6 +25,7 @@ const requiredEnvVars = [
   "FIREBASE_PROJECT_ID",
   "FIREBASE_CLIENT_EMAIL",
   "FIREBASE_PRIVATE_KEY",
+  "ALLOWED_ORIGINS",
 ];
 
 const missingEnvVars = requiredEnvVars.filter(
