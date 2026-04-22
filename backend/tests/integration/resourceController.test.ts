@@ -113,36 +113,79 @@ describe("resourceController", () => {
 
     it("returns resources shared via groups for userId", async () => {
       mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
-      mockPrisma.resourceSharing.findMany.mockResolvedValue([
-        {
-          resource: { id: "r1", title: "Drill", ownerId: "other-user" },
-        },
-      ]);
+      const sharedResource = {
+        id: "r1",
+        title: "Drill",
+        ownerId: "other-user",
+      };
+      mockPrisma.resource.findMany.mockResolvedValue([sharedResource]);
+      mockPrisma.resource.count.mockResolvedValue(1);
 
       const { req, res } = mockReqRes({}, {}, { user: "user-123" });
       await getResources(req, res);
 
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            ownerId: { not: "user-123" },
+            sharedWith: { some: { groupId: { in: ["g1"] } } },
+          }),
+        }),
+      );
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: [expect.objectContaining({ id: "r1" })],
+          data: [sharedResource],
           pagination: expect.objectContaining({ total: 1 }),
         }),
       );
     });
 
-    it("excludes own resources from shared results", async () => {
+    it("excludes own resources from shared results via DB filter", async () => {
       mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
-      mockPrisma.resourceSharing.findMany.mockResolvedValue([
-        { resource: { id: "r1", title: "My Drill", ownerId: "user-123" } },
-      ]);
+      // DB filter (ownerId: { not: userId }) means the query returns nothing for own resources
+      mockPrisma.resource.findMany.mockResolvedValue([]);
+      mockPrisma.resource.count.mockResolvedValue(0);
 
       const { req, res } = mockReqRes({}, {}, { user: "user-123" });
       await getResources(req, res);
 
+      // Verify the where clause excludes the authenticated user's own resources
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ ownerId: { not: "user-123" } }),
+        }),
+      );
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           data: [],
           pagination: expect.objectContaining({ total: 0 }),
+        }),
+      );
+    });
+
+    it("paginates shared resources at the DB level with correct skip/take", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+      mockPrisma.resource.findMany.mockResolvedValue([]);
+      mockPrisma.resource.count.mockResolvedValue(25);
+
+      const { req, res } = mockReqRes(
+        {},
+        {},
+        { user: "user-123", page: "3", limit: "5" },
+      );
+      await getResources(req, res);
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 10, take: 5 }),
+      );
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pagination: expect.objectContaining({
+            page: 3,
+            limit: 5,
+            total: 25,
+            totalPages: 5,
+          }),
         }),
       );
     });

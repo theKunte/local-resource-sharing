@@ -87,44 +87,43 @@ export async function getResources(req: Request, res: Response) {
 
     const groupIds = userGroups.map((ug) => ug.groupId);
 
-    const resourceSharings = await prisma.resourceSharing.findMany({
-      where: {
-        groupId: { in: groupIds },
+    // Filter at the DB level: resources shared into any of the user's groups,
+    // excluding resources the user owns. Dedup is handled by Prisma's distinct.
+    const sharedResourcesWhere = {
+      ownerId: { not: userId },
+      sharedWith: {
+        some: {
+          groupId: { in: groupIds },
+        },
       },
-      include: {
-        resource: {
-          include: {
-            owner: {
-              select: { id: true, email: true, name: true },
-            },
-            currentLoan: {
-              select: {
-                id: true,
-                status: true,
-                startDate: true,
-                endDate: true,
-                returnedDate: true,
-                borrower: {
-                  select: { id: true, name: true, email: true },
-                },
+    };
+
+    const [paginatedResources, total] = await Promise.all([
+      prisma.resource.findMany({
+        where: sharedResourcesWhere,
+        skip,
+        take: limit,
+        include: {
+          owner: {
+            select: { id: true, email: true, name: true },
+          },
+          currentLoan: {
+            select: {
+              id: true,
+              status: true,
+              startDate: true,
+              endDate: true,
+              returnedDate: true,
+              borrower: {
+                select: { id: true, name: true, email: true },
               },
             },
           },
         },
-      },
-    });
+      }),
+      prisma.resource.count({ where: sharedResourcesWhere }),
+    ]);
 
-    const uniqueResources = new Map();
-    resourceSharings.forEach((sharing) => {
-      const resource = sharing.resource;
-      if (resource.ownerId !== userId && !uniqueResources.has(resource.id)) {
-        uniqueResources.set(resource.id, resource);
-      }
-    });
-
-    const allResources = Array.from(uniqueResources.values());
-    const total = allResources.length;
-    const paginatedResources = allResources.slice(skip, skip + limit);
     res.json({
       data: paginatedResources,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },

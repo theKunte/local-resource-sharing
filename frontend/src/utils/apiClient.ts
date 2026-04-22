@@ -6,8 +6,10 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import { auth } from "../firebase";
 
-// Get backend URL from environment
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// Get backend URL from environment.
+// In Docker, VITE_API_URL is "" so requests go to the same origin (nginx),
+// which proxies /api/ to the backend container. In local dev it falls back to localhost:3001.
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 // Create axios instance with base configuration
 // allowAbsoluteUrls: false prevents SSRF/cloud-metadata exfiltration (CVE-2025-27152)
