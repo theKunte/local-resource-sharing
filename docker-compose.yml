@@ -1,4 +1,25 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      # Exposed for local development (e.g. running `prisma migrate dev` from the host).
+      # Remove or restrict this binding in production environments.
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-appuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-localresourcesharing}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-appuser} -d ${POSTGRES_DB:-localresourcesharing}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -8,9 +29,11 @@ services:
       - ./backend/.env
     environment:
       - NODE_ENV=production
-    volumes:
-      # Persist SQLite database across container restarts
-      - db_data:/app/prisma
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-localresourcesharing}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - app
     restart: unless-stopped
