@@ -78,7 +78,8 @@ export function validateBase64Image(dataUri: string): {
 }
 
 /**
- * Validates an image value — accepts either a Firebase Storage URL or a base64 data URI.
+ * Validates an image value — only accepts Firebase Storage URLs.
+ * Base64 data URIs are no longer accepted to prevent DB bloat.
  */
 export function validateImageInput(image: string): {
   valid: boolean;
@@ -97,8 +98,10 @@ export function validateImageInput(image: string): {
     return { valid: true };
   }
 
-  // Fall back to base64 validation for backwards compatibility
-  return validateBase64Image(image);
+  return {
+    valid: false,
+    error: "Image must be a Firebase Storage URL. Upload the image first.",
+  };
 }
 
 export function validateEmail(email: string): boolean {

@@ -26,28 +26,3 @@ export function validateRequestSize(maxSizeBytes: number = 5 * 1024 * 1024) {
     next();
   };
 }
-
-export function validateImageSize(req: Request, res: Response, next: NextFunction) {
-  const { image } = req.body;
-  const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
-  
-  if (image && typeof image === 'string') {
-    // Base64 images are ~33% larger than raw bytes
-    const estimatedSize = (image.length * 0.75);
-    
-    if (estimatedSize > MAX_IMAGE_SIZE) {
-      logger.warn('Image size validation failed', {
-        endpoint: req.path,
-        estimatedSize: Math.round(estimatedSize / 1024 / 1024) + 'MB',
-      });
-      
-      return res.status(413).json({ 
-        error: 'Image too large',
-        maxSize: '10MB',
-        message: 'Please compress or resize your image',
-      });
-    }
-  }
-  
-  next();
-}

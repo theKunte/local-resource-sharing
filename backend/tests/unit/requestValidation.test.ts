@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import {
   validateRequestSize,
-  validateImageSize,
 } from "../../src/middleware/requestValidation";
 
 function mockReqResNext(overrides: Partial<Request> = {}) {
@@ -50,32 +49,5 @@ describe("validateRequestSize", () => {
     (req.get as jest.Mock).mockReturnValue(undefined);
     middleware(req, res, next);
     expect(next).toHaveBeenCalled();
-  });
-});
-
-describe("validateImageSize", () => {
-  it("calls next() when no image in body", () => {
-    const { req, res, next } = mockReqResNext();
-    validateImageSize(req, res, next);
-    expect(next).toHaveBeenCalled();
-  });
-
-  it("calls next() when image is small enough", () => {
-    const { req, res, next } = mockReqResNext();
-    req.body = { image: "a".repeat(100) };
-    validateImageSize(req, res, next);
-    expect(next).toHaveBeenCalled();
-  });
-
-  it("returns 413 when image is too large", () => {
-    const { req, res, next } = mockReqResNext();
-    // 10MB in base64 chars ~ 13.3M chars, use 15M to be safe
-    req.body = { image: "a".repeat(15_000_000) };
-    validateImageSize(req, res, next);
-    expect(res.status).toHaveBeenCalledWith(413);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ error: "Image too large" }),
-    );
-    expect(next).not.toHaveBeenCalled();
   });
 });
