@@ -119,7 +119,7 @@ export default function PostResource() {
       const imageUrl = await uploadBlobToStorage(
         imageBlob,
         "resources",
-        "resource.png",
+        "resource.webp",
       );
 
       // Create the resource

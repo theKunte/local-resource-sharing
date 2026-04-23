@@ -1,4 +1,4 @@
-// This utility crops an image to a square and resizes it to 128x128px using a canvas.
+// This utility crops an image to a square, resizes it, and encodes it as WebP using a canvas.
 export async function cropImageToSquare(
   file: File,
   size: number = 128,
@@ -22,8 +22,8 @@ export async function cropImageToSquare(
             if (!blob) return reject("Failed to create blob");
             resolve(blob);
           },
-          "image/jpeg",
-          0.8,
+          "image/webp",
+          0.75,
         );
       };
       img.onerror = reject;

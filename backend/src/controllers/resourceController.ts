@@ -1,11 +1,28 @@
 import { Request, Response } from "express";
 import { GroupRole } from "@prisma/client";
+import admin from "firebase-admin";
 import prisma from "../prisma";
 import {
   validateResourceInput,
   validateImageInput,
   sanitizeString,
 } from "../utils/validation";
+
+/**
+ * Extracts the Firebase Storage object path from a download URL so we can
+ * delete it via the Admin SDK.  Returns null for non-Storage URLs (e.g.
+ * legacy base64 values stored as strings).
+ */
+function storagePathFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const parts = parsed.pathname.split("/o/");
+    if (parts.length < 2) return null;
+    return decodeURIComponent(parts[1]);
+  } catch {
+    return null;
+  }
+}
 
 // GET /api/resources
 export async function getResources(req: Request, res: Response) {
@@ -320,7 +337,7 @@ export async function deleteResource(req: Request, res: Response) {
   try {
     const resource = await prisma.resource.findUnique({
       where: { id },
-      select: { ownerId: true, currentLoanId: true },
+      select: { ownerId: true, currentLoanId: true, image: true },
     });
     if (!resource) {
       return res.status(404).json({ error: "Resource not found" });
@@ -343,6 +360,28 @@ export async function deleteResource(req: Request, res: Response) {
     await prisma.borrowRequest.deleteMany({ where: { resourceId: id } });
     await prisma.resourceSharing.deleteMany({ where: { resourceId: id } });
     await prisma.resource.delete({ where: { id } });
+
+    // Best-effort: delete the image from Firebase Storage.
+    // This runs after the DB delete so a Storage failure never blocks the response.
+    if (resource.image) {
+      const storagePath = storagePathFromUrl(resource.image);
+      if (storagePath) {
+        const bucket = process.env.FIREBASE_STORAGE_BUCKET;
+        if (bucket) {
+          admin
+            .storage()
+            .bucket(bucket)
+            .file(storagePath)
+            .delete()
+            .catch((err) =>
+              console.error(
+                `Failed to delete Storage file ${storagePath}:`,
+                err,
+              ),
+            );
+        }
+      }
+    }
 
     res.status(204).end();
   } catch (error) {
