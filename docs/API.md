@@ -27,7 +27,7 @@ POST /resources
   "title": "Camping Tent",
   "description": "4-person tent, waterproof",
   "ownerId": "firebase-user-id",
-  "image": "base64-encoded-image" // optional
+  "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media" // optional, must be a Firebase Storage URL
 }
 ```
 
@@ -41,7 +41,7 @@ POST /resources
   "ownerId": "firebase-user-id",
   "status": "AVAILABLE",
   "currentLoanId": null,
-  "image": "base64-encoded-image"
+  "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media"
 }
 ```
 
@@ -61,7 +61,7 @@ GET /resources?ownerId={userId}
     "description": "4-person tent",
     "status": "AVAILABLE",
     "currentLoanId": null,
-    "image": "base64-encoded-image",
+    "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media",
     "owner": {
       "id": "user-id",
       "email": "user@example.com",
@@ -93,7 +93,7 @@ PUT /resources/:id
   "id": "resource-uuid",
   "title": "Updated Title",
   "description": "Updated description",
-  "image": "base64-encoded-image",
+  "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media",
   "ownerId": "user-id",
   "status": "AVAILABLE",
   "currentLoanId": null
@@ -157,7 +157,7 @@ POST /borrow-requests
       "id": "resource-uuid",
       "title": "Camping Tent",
       "description": "4-person tent",
-      "image": "base64-string"
+      "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media"
     },
     "borrower": {
       "id": "borrower-id",
@@ -224,7 +224,7 @@ GET /borrow-requests?userId={userId}&role={owner|borrower}&status={PENDING|APPRO
         "id": "resource-uuid",
         "title": "Camping Tent",
         "description": "4-person tent",
-        "image": "base64-string"
+        "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media"
       },
       "borrower": {
         "id": "borrower-id",
@@ -428,7 +428,7 @@ GET /groups/:id
       "title": "Camping Tent",
       "description": "4-person tent",
       "status": "AVAILABLE",
-      "image": "base64-string",
+      "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media",
       "owner": {
         "id": "owner-id",
         "email": "owner@example.com",
@@ -451,7 +451,7 @@ PUT /groups/:id
 {
   "name": "Updated Group Name",
   "description": "New description",
-  "avatar": "base64-encoded-image"
+  "avatar": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media"
 }
 ```
 
@@ -537,7 +537,7 @@ GET /resources/shared?userId={userId}
     "description": "4-person tent",
     "status": "AVAILABLE",
     "currentLoanId": null,
-    "image": "base64-string",
+    "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media",
     "owner": {
       "id": "owner-id",
       "email": "owner@example.com",
