@@ -208,7 +208,8 @@ describe("resourceController", () => {
       title: "Power Drill",
       description: "A great power drill for home projects",
       ownerId: "user-123",
-      image: "data:image/png;base64,iVBORw==",
+      image:
+        "https://firebasestorage.googleapis.com/v0/b/test-bucket/o/test-image.jpg?alt=media",
     };
 
     it("returns 400 on invalid input", async () => {
