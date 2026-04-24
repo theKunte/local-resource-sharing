@@ -222,9 +222,8 @@ This project is licensed under the MIT License.
 ---
 
 Made with ❤️ for building stronger communities through sharing
-...reactDom.configs.recommended.rules,
-},
-})
+
+
 
 ```
 
