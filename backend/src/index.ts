@@ -42,10 +42,15 @@ if (missingEnvVars.length > 0) {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust one proxy hop (nginx) so req.ip reflects the real client IP.
+// Without this, all requests appear to come from the Docker gateway IP,
+// collapsing all users into one shared rate-limit bucket.
+app.set("trust proxy", 1);
+
 // Request ID tracking - must be first middleware
 app.use(requestIdMiddleware);
 
-// TODO: Remove compression from Express once a reverse proxy (nginx, Cloudflare, AWS ALB, etc.) is in place — let the proxy handle it instead.
+// Compression is now handled by the nginx reverse proxy layer.
 app.use(compression());
 
 // Test database connection on startup
@@ -66,6 +71,7 @@ if (!admin.apps.length) {
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
       }),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
     console.log("âœ… Firebase Admin initialized");
   } catch (error) {

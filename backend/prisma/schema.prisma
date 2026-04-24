@@ -63,7 +63,7 @@ model Group {
   updatedAt   DateTime          @updatedAt
   members     GroupMember[]
   resources   ResourceSharing[]
-  avatar      String?           // TODO: Move to object storage (S3/R2/Firebase Storage) — base64 in DB causes bloat and slow queries
+  avatar      String?           // Firebase Storage URL
 }
 
 model GroupMember {
@@ -86,7 +86,7 @@ model Resource {
   id             String            @id @default(uuid())
   title          String
   description    String
-  image          String?           // TODO: Move to object storage (S3/R2/Firebase Storage) — base64 in DB causes bloat and slow queries
+  image          String?           // Firebase Storage URL
   ownerId        String
   status         ResourceStatus    @default(AVAILABLE)
   currentLoanId  String?           @unique
