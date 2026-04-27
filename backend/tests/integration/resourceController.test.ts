@@ -1,5 +1,17 @@
 import { Request, Response } from "express";
 
+// Mock firebase-admin before importing the controller
+const mockStorageFile = { delete: jest.fn() };
+const mockStorageBucket = { file: jest.fn(() => mockStorageFile) };
+const mockStorage = jest.fn(() => ({
+  bucket: jest.fn(() => mockStorageBucket),
+}));
+
+jest.mock("firebase-admin", () => ({
+  __esModule: true,
+  default: { storage: mockStorage },
+}));
+
 const mockPrisma = {
   resource: {
     findMany: jest.fn(),
@@ -41,6 +53,7 @@ import {
   getResourceGroups,
   addResourceToGroup,
   removeResourceFromGroup,
+  shareResource,
 } from "../../src/controllers/resourceController";
 
 function mockReqRes(
@@ -666,6 +679,178 @@ describe("resourceController", () => {
         { resourceId: "r1", groupId: "g1" },
       );
       await removeResourceFromGroup(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      jest.restoreAllMocks();
+    });
+  });
+
+  describe("getResources - authorization checks", () => {
+    it("returns 403 when ownerId does not match authenticated user", async () => {
+      const { req, res } = mockReqRes(
+        {},
+        {},
+        { ownerId: "other-user" },
+        "user-123",
+      );
+      await getResources(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("returns 403 when userId does not match authenticated user", async () => {
+      const { req, res } = mockReqRes(
+        {},
+        {},
+        { user: "other-user" },
+        "user-123",
+      );
+      await getResources(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+  });
+
+  describe("createResource - invalid image URL", () => {
+    it("returns 400 when image is not a Firebase Storage URL", async () => {
+      const { req, res } = mockReqRes({
+        title: "Power Drill",
+        description: "A great power drill for home projects",
+        ownerId: "user-123",
+        image: "data:image/png;base64,abc123",
+      });
+      await createResource(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+  });
+
+  describe("deleteResource - with Firebase Storage image cleanup", () => {
+    it("attempts to delete image from Firebase Storage when image URL is set", async () => {
+      process.env.FIREBASE_STORAGE_BUCKET = "test-bucket";
+      const firebaseUrl =
+        "https://firebasestorage.googleapis.com/v0/b/test-bucket/o/images%2Fphoto.jpg?alt=media";
+
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        ownerId: "user-123",
+        currentLoanId: null,
+        image: firebaseUrl,
+      });
+      mockPrisma.loan.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.borrowRequest.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resourceSharing.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resource.delete.mockResolvedValue({});
+      mockStorageFile.delete.mockResolvedValue(undefined);
+
+      const { req, res } = mockReqRes({}, { id: "r1" });
+      await deleteResource(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(204);
+      expect(mockStorageBucket.file).toHaveBeenCalledWith("images/photo.jpg");
+      delete process.env.FIREBASE_STORAGE_BUCKET;
+    });
+
+    it("skips Storage deletion when image URL is not a Firebase Storage URL", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        ownerId: "user-123",
+        currentLoanId: null,
+        image: "https://example.com/not-firebase.jpg",
+      });
+      mockPrisma.loan.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.borrowRequest.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resourceSharing.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resource.delete.mockResolvedValue({});
+
+      const { req, res } = mockReqRes({}, { id: "r1" });
+      await deleteResource(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(204);
+      expect(mockStorageBucket.file).not.toHaveBeenCalled();
+    });
+
+    it("skips Storage deletion when FIREBASE_STORAGE_BUCKET is not set", async () => {
+      delete process.env.FIREBASE_STORAGE_BUCKET;
+      const firebaseUrl =
+        "https://firebasestorage.googleapis.com/v0/b/test-bucket/o/photo.jpg?alt=media";
+
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        ownerId: "user-123",
+        currentLoanId: null,
+        image: firebaseUrl,
+      });
+      mockPrisma.loan.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.borrowRequest.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resourceSharing.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resource.delete.mockResolvedValue({});
+
+      const { req, res } = mockReqRes({}, { id: "r1" });
+      await deleteResource(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(204);
+      expect(mockStorageBucket.file).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("shareResource", () => {
+    it("returns 400 when groupId is missing", async () => {
+      const { req, res } = mockReqRes({}, { resourceId: "r1" });
+      await shareResource(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("returns 404 when resource not found", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue(null);
+
+      const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
+      await shareResource(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("returns 403 when user does not own the resource", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        ownerId: "other-user",
+      });
+
+      const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
+      await shareResource(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("returns 403 when user is not a group member", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({ ownerId: "user-123" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue(null);
+
+      const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
+      await shareResource(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("returns 400 when resource is already shared with the group", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({ ownerId: "user-123" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue({ id: "s1" });
+
+      const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
+      await shareResource(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("shares resource successfully and returns 201", async () => {
+      const sharing = { id: "s1", resourceId: "r1", groupId: "g1" };
+      mockPrisma.resource.findUnique.mockResolvedValue({ ownerId: "user-123" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue(null);
+      mockPrisma.resourceSharing.create.mockResolvedValue(sharing);
+
+      const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
+      await shareResource(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(sharing);
+    });
+
+    it("returns 500 on database error", async () => {
+      mockPrisma.resource.findUnique.mockRejectedValue(new Error("fail"));
+      jest.spyOn(console, "error").mockImplementation();
+
+      const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
+      await shareResource(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
       jest.restoreAllMocks();
     });

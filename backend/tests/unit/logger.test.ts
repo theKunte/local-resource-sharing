@@ -69,4 +69,53 @@ describe("Logger", () => {
     // ISO 8601 pattern
     expect(output).toMatch(/\[\d{4}-\d{2}-\d{2}T/);
   });
+
+  describe("production mode - sensitive field sanitization", () => {
+    let prodLogger: Logger;
+
+    beforeEach(() => {
+      process.env.NODE_ENV = "production";
+      prodLogger = new Logger();
+    });
+
+    afterEach(() => {
+      process.env.NODE_ENV = "development";
+    });
+
+    it("strips password from logged context in production", () => {
+      prodLogger.info("user action", {
+        userId: "u1",
+        password: "secret123",
+      });
+      const output = consoleSpy.log.mock.calls[0][0] as string;
+      expect(output).not.toContain("secret123");
+      expect(output).toContain('"userId":"u1"');
+    });
+
+    it("strips token from logged context in production", () => {
+      prodLogger.info("api call", { userId: "u1", token: "tok-abc" });
+      const output = consoleSpy.log.mock.calls[0][0] as string;
+      expect(output).not.toContain("tok-abc");
+    });
+
+    it("strips privateKey from logged context in production", () => {
+      prodLogger.info("key event", { privateKey: "-----BEGIN RSA-----" });
+      const output = consoleSpy.log.mock.calls[0][0] as string;
+      expect(output).not.toContain("-----BEGIN RSA-----");
+    });
+
+    it("strips secret from logged context in production", () => {
+      prodLogger.info("secret event", { secret: "mysecret", userId: "u1" });
+      const output = consoleSpy.log.mock.calls[0][0] as string;
+      expect(output).not.toContain("mysecret");
+      expect(output).toContain('"userId":"u1"');
+    });
+
+    it("does not strip non-sensitive fields in production", () => {
+      prodLogger.info("normal event", { userId: "u1", endpoint: "/api/res" });
+      const output = consoleSpy.log.mock.calls[0][0] as string;
+      expect(output).toContain('"userId":"u1"');
+      expect(output).toContain('"/api/res"');
+    });
+  });
 });
