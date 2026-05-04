@@ -4,6 +4,7 @@ import {
   validateResourceInput,
   validateGroupInput,
   validateBase64Image,
+  validateImageInput,
 } from "../../src/utils/validation";
 
 describe("validateEmail", () => {
@@ -193,6 +194,60 @@ describe("validateBase64Image", () => {
 
   it("accepts valid PNG data URI", () => {
     const result = validateBase64Image(validPngUri);
+    expect(result.valid).toBe(true);
+  });
+
+  it("rejects invalid base64 encoding characters", () => {
+    // Contains characters not valid in base64 (spaces between chars cause issues)
+    const result = validateBase64Image(
+      "data:image/jpeg;base64,!!!!INVALID!!!!",
+    );
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain("base64");
+  });
+});
+
+describe("validateImageInput", () => {
+  it("rejects non-string input", () => {
+    const result = validateImageInput(null as any);
+    expect(result.valid).toBe(false);
+  });
+
+  it("rejects empty string", () => {
+    const result = validateImageInput("");
+    expect(result.valid).toBe(false);
+  });
+
+  it("rejects non-Firebase URLs", () => {
+    const result = validateImageInput("https://example.com/photo.jpg");
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain("Firebase Storage");
+  });
+
+  it("rejects base64 data URIs", () => {
+    const result = validateImageInput("data:image/png;base64,iVBORw==");
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain("Firebase Storage");
+  });
+
+  it("accepts firebasestorage.googleapis.com URLs", () => {
+    const result = validateImageInput(
+      "https://firebasestorage.googleapis.com/v0/b/my-app/o/photo.jpg?alt=media",
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it("accepts storage.googleapis.com URLs", () => {
+    const result = validateImageInput(
+      "https://storage.googleapis.com/my-bucket/photo.jpg",
+    );
+    expect(result.valid).toBe(true);
+  });
+
+  it("accepts firebasestorage.app subdomain URLs", () => {
+    const result = validateImageInput(
+      "https://my-app.firebasestorage.app/v0/b/bucket/o/photo.jpg",
+    );
     expect(result.valid).toBe(true);
   });
 });
