@@ -34,7 +34,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-localresourcesharing}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,http://localhost:5173,http://localhost:5174}
     depends_on:
       postgres:
         condition: service_healthy
