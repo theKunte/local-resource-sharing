@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/GEARshare_LOGO.jpg" alt="GearShare Logo" width="200" />
+  <img src="docs/docs/logo.png" alt="GearShare Logo" width="200" />
 </p>
 
 <h1 align="center">GearShare — Local Resource Sharing Platform</h1>
@@ -36,7 +36,7 @@ A community-based gear sharing platform built with React, TypeScript, and Fireba
 
 - **Node.js** with Express
 - **TypeScript** for type safety
-- **Prisma** ORM with SQLite (dev) / PostgreSQL (prod)
+- **Prisma** ORM with PostgreSQL (via Docker)
 - **Firebase Admin SDK** for auth verification
 - **Helmet** for security headers
 - **Rate limiting** for API protection
@@ -44,6 +44,7 @@ A community-based gear sharing platform built with React, TypeScript, and Fireba
 ## 📋 Prerequisites
 
 - Node.js 18+ and npm
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — for running PostgreSQL and the full-stack setup
 - Firebase account
 - Git
 
@@ -93,20 +94,50 @@ cp .env.example .env
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env with your Firebase service account credentials
+# Edit .env with your Firebase credentials and DATABASE_URL
+```
+
+Set `ALLOWED_ORIGINS` to a comma-separated list of allowed frontend origins (defaults to `http://localhost:5173,http://localhost:5174` if unset):
+
+```
+ALLOWED_ORIGINS=http://localhost,http://localhost:5173,http://localhost:5174
 ```
 
 See [SETUP_AUTH.md](SETUP_AUTH.md) for detailed Firebase configuration.
 
 ### 5. Database Setup
 
+GearShare uses **PostgreSQL**. The quickest way to start it is with Docker:
+
 ```bash
+# Start only the database container
+docker-compose up postgres -d
+
+# Apply migrations
 cd backend
-npx prisma generate
 npx prisma migrate dev
 ```
 
+> **Skipping local dev?** If you're running the full stack with Docker Compose (Option A below), skip this step — migrations run automatically on container start.
+
 ### 6. Run the Application
+
+#### Option A — Full Stack with Docker Compose (recommended)
+
+Runs the database, backend, and frontend in one command:
+
+```bash
+# Copy and configure the root .env with your Firebase credentials
+cp .env.example .env
+
+docker-compose up --build
+```
+
+The app will be available at `http://localhost`
+
+#### Option B — Local Development Servers
+
+Requires Docker running the database (step 5 above).
 
 **Terminal 1 - Backend:**
 
@@ -122,7 +153,7 @@ cd frontend
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+The frontend will be available at `http://localhost:5173`
 
 ## 📁 Project Structure
 
@@ -217,13 +248,12 @@ This project is licensed under the MIT License.
 - Built with [React](https://react.dev/)
 - Styled with [Tailwind CSS](https://tailwindcss.com/)
 - Powered by [Firebase](https://firebase.google.com/)
-- Database by [Prisma](https://www.prisma.io/)
+- Database ORM by [Prisma](https://www.prisma.io/)
+- Database by [PostgreSQL](https://www.postgresql.org/)
 
 ---
 
 Made with ❤️ for building stronger communities through sharing
-
-
 
 ```
 
