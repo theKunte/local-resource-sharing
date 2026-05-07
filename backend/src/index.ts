@@ -7,6 +7,7 @@ import admin from "firebase-admin";
 import helmet from "helmet";
 import prisma from "./prisma";
 import { requestIdMiddleware } from "./middleware/requestId";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 
 // Route imports
 import resourceRoutes from "./routes/resources";
@@ -16,6 +17,7 @@ import borrowRequestRoutes from "./routes/borrowRequests";
 import loanRoutes from "./routes/loans";
 import notificationRoutes from "./routes/notifications";
 import userRoutes from "./routes/users";
+import testErrorRoutes from "./routes/testErrors";
 
 dotenv.config();
 
@@ -149,7 +151,7 @@ app.get("/", (req, res) => {
 });
 
 // Health check endpoint for load balancers and orchestrators
-app.get("/health", async (req, res) => {
+app.get("/health", async (req, res, next) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.status(200).json({
@@ -158,7 +160,9 @@ app.get("/health", async (req, res) => {
       uptime: process.uptime(),
       database: "connected",
     });
-  } catch (_error) {
+  } catch (error) {
+    // Return unhealthy status but don't throw to error handler
+    // Health checks should be handled directly
     res.status(503).json({
       status: "unhealthy",
       timestamp: new Date().toISOString(),
@@ -177,9 +181,51 @@ app.use("/api/loans", loanRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
 
-app.listen(PORT, () => {
+// Test routes for error handler (development only)
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api/test-errors", testErrorRoutes);
+  console.log("⚠️  Test error routes enabled at /api/test-errors");
+}
+
+// 404 handler - must come AFTER all valid routes
+app.use(notFoundHandler);
+
+// Global error handler - must be LAST middleware (after 404 handler)
+app.use(errorHandler);
+
+const server = app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
 });
+
+// Graceful shutdown handler
+function gracefulShutdown(signal: string) {
+  console.log(`\n${signal} received, starting graceful shutdown...`);
+
+  server.close(() => {
+    console.log("HTTP server closed");
+
+    prisma
+      .$disconnect()
+      .then(() => {
+        console.log("Database connection closed");
+        process.exit(0);
+      })
+      .catch((error) => {
+        console.error("Error during shutdown:", error);
+        process.exit(1);
+      });
+  });
+
+  // Force shutdown after 30 seconds
+  setTimeout(() => {
+    console.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 30000);
+}
+
+// Listen for termination signals
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 // Global error handlers to prevent crashes
 process.on("uncaughtException", (error) => {
@@ -187,6 +233,7 @@ process.on("uncaughtException", (error) => {
   console.error("Stack:", error.stack);
   console.error("Time:", new Date().toISOString());
 
+  // Critical errors that require shutdown
   if (
     error.message &&
     (error.message.includes("FATAL") ||
@@ -196,6 +243,17 @@ process.on("uncaughtException", (error) => {
     console.error("Critical error detected, initiating graceful shutdown...");
     prisma.$disconnect().finally(() => process.exit(1));
   }
+});
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (reason: any, promise) => {
+  console.error("âŒ Unhandled Rejection at:", promise);
+  console.error("Reason:", reason);
+  console.error("Stack:", reason?.stack);
+  console.error("Time:", new Date().toISOString());
+
+  // Don't exit on promise rejections, but log them
+  // In production, you might want to send alerts for these
 });
 
 process.on("unhandledRejection", (reason, promise) => {
