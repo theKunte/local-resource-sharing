@@ -337,6 +337,18 @@ describe("resourceController", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    it("returns 400 when description is too long", async () => {
+      const { req, res } = mockReqRes(
+        {
+          title: "Valid Title",
+          description: "x".repeat(2001),
+        },
+        { id: "r1" },
+      );
+      await updateResource(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
     it("returns 400 when title is too long", async () => {
       const { req, res } = mockReqRes(
         { title: "x".repeat(201), description: "A valid description here" },
@@ -459,6 +471,93 @@ describe("resourceController", () => {
       expect(mockPrisma.loan.deleteMany).toHaveBeenCalled();
       expect(mockPrisma.borrowRequest.deleteMany).toHaveBeenCalled();
       expect(mockPrisma.resourceSharing.deleteMany).toHaveBeenCalled();
+    });
+
+    it("deletes Firebase Storage image when resource has valid storage URL", async () => {
+      const storageUrl =
+        "https://firebasestorage.googleapis.com/v0/b/test-bucket/o/images%2Ftest.jpg?alt=media";
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        ownerId: "user-123",
+        currentLoanId: null,
+        image: storageUrl,
+      });
+      mockPrisma.loan.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.borrowRequest.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resourceSharing.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resource.delete.mockResolvedValue({});
+      mockStorageFile.delete.mockResolvedValue({});
+
+      const originalBucket = process.env.FIREBASE_STORAGE_BUCKET;
+      process.env.FIREBASE_STORAGE_BUCKET = "test-bucket";
+
+      const { req, res } = mockReqRes({}, { id: "r1" });
+      await deleteResource(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(204);
+      // Storage deletion is fire-and-forget, just verify the chain was called
+      expect(mockStorageBucket.file).toHaveBeenCalled();
+
+      process.env.FIREBASE_STORAGE_BUCKET = originalBucket;
+    });
+
+    it("handles Firebase Storage deletion error gracefully (fire-and-forget)", async () => {
+      const storageUrl =
+        "https://firebasestorage.googleapis.com/v0/b/test-bucket/o/images%2Ftest.jpg?alt=media";
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        ownerId: "user-123",
+        currentLoanId: null,
+        image: storageUrl,
+      });
+      mockPrisma.loan.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.borrowRequest.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resourceSharing.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resource.delete.mockResolvedValue({});
+
+      // Mock storage deletion to throw an error
+      mockStorageFile.delete.mockRejectedValue(new Error("Storage error"));
+
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+
+      const originalBucket = process.env.FIREBASE_STORAGE_BUCKET;
+      process.env.FIREBASE_STORAGE_BUCKET = "test-bucket";
+
+      const { req, res } = mockReqRes({}, { id: "r1" });
+      await deleteResource(req, res);
+
+      // The deletion is fire-and-forget, so it should still return 204
+      expect(res.status).toHaveBeenCalledWith(204);
+
+      // Wait a bit for the async catch to execute
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Verify the error was logged
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to delete Storage file"),
+        expect.any(Error),
+      );
+
+      process.env.FIREBASE_STORAGE_BUCKET = originalBucket;
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("does not try to delete storage image when URL is not a Firebase Storage URL", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        ownerId: "user-123",
+        currentLoanId: null,
+        image: "not-a-valid-url!!!",
+      });
+      mockPrisma.loan.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.borrowRequest.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resourceSharing.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resource.delete.mockResolvedValue({});
+
+      mockStorageBucket.file.mockClear();
+      const { req, res } = mockReqRes({}, { id: "r1" });
+      await deleteResource(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(204);
+      // storagePathFromUrl should return null for invalid URL -> no storage deletion
+      expect(mockStorageBucket.file).not.toHaveBeenCalled();
     });
 
     it("returns 500 on database error", async () => {

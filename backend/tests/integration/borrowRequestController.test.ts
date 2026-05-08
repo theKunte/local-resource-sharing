@@ -244,6 +244,131 @@ describe("borrowRequestController", () => {
       );
     });
 
+    it("returns 400 when start date is in the past", async () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const pastDate = yesterday.toISOString().split("T")[0];
+
+      const { req, res } = mockReqRes({
+        resourceId: "r1",
+        borrowerId: "user-123",
+        startDate: pastDate,
+        endDate: futureDate(5),
+      });
+      await createBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Start date cannot be in the past",
+        }),
+      );
+    });
+
+    it("returns 409 when duplicate APPROVED request with active loan exists", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        id: "r1",
+        ownerId: "owner-1",
+        owner: { id: "owner-1", email: "o@b.com", name: "Owner" },
+      });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue({ groupId: "g1" });
+      mockPrisma.loan.findMany.mockResolvedValue([]);
+      // Existing APPROVED request with an ACTIVE loan
+      mockPrisma.borrowRequest.findMany.mockResolvedValue([
+        {
+          id: "br-existing",
+          status: "APPROVED",
+          startDate: new Date(),
+          endDate: new Date(),
+          loan: { id: "l1", status: "ACTIVE" },
+        },
+      ]);
+
+      const { req, res } = mockReqRes({
+        resourceId: "r1",
+        borrowerId: "user-123",
+        startDate: futureDate(1),
+        endDate: futureDate(5),
+      });
+      await createBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: "Duplicate request" }),
+      );
+    });
+
+    it("returns 409 with 'approved' type when existing APPROVED request has no loan", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        id: "r1",
+        ownerId: "owner-1",
+        owner: { id: "owner-1", email: "o@b.com", name: "Owner" },
+      });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue({ groupId: "g1" });
+      mockPrisma.loan.findMany.mockResolvedValue([]);
+      mockPrisma.borrowRequest.findMany.mockResolvedValue([
+        {
+          id: "br-existing",
+          status: "APPROVED",
+          startDate: new Date(),
+          endDate: new Date(),
+          loan: null,
+        },
+      ]);
+
+      const { req, res } = mockReqRes({
+        resourceId: "r1",
+        borrowerId: "user-123",
+        startDate: futureDate(1),
+        endDate: futureDate(5),
+      });
+      await createBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("approved"),
+        }),
+      );
+    });
+
+    it("does not block when existing APPROVED request has a RETURNED loan", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        id: "r1",
+        ownerId: "owner-1",
+        owner: { id: "owner-1", email: "o@b.com", name: "Owner" },
+      });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue({ groupId: "g1" });
+      mockPrisma.loan.findMany.mockResolvedValue([]);
+      // APPROVED request whose loan is already RETURNED — should be filtered out
+      mockPrisma.borrowRequest.findMany.mockResolvedValue([
+        {
+          id: "br-old",
+          status: "APPROVED",
+          startDate: new Date(),
+          endDate: new Date(),
+          loan: { id: "l1", status: "RETURNED" },
+        },
+      ]);
+      mockPrisma.borrowRequest.create.mockResolvedValue({
+        id: "br-new",
+        resourceId: "r1",
+        borrowerId: "user-123",
+        ownerId: "owner-1",
+        status: "PENDING",
+        resource: { id: "r1", title: "Drill", description: "", image: null },
+        borrower: { id: "user-123", email: "u@b.com", name: "User" },
+        owner: { id: "owner-1", email: "o@b.com", name: "Owner" },
+      });
+
+      const { req, res } = mockReqRes({
+        resourceId: "r1",
+        borrowerId: "user-123",
+        startDate: futureDate(1),
+        endDate: futureDate(5),
+      });
+      await createBorrowRequest(req, res);
+      // Should NOT return 409 — the returned loan doesn't block the new request
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
     it("returns 500 on database error", async () => {
       mockPrisma.resource.findUnique.mockRejectedValue(new Error("DB error"));
       const { req, res } = mockReqRes({
@@ -254,6 +379,47 @@ describe("borrowRequestController", () => {
       });
       await createBorrowRequest(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    it("does not block when overlapping request has non-PENDING/APPROVED status", async () => {
+      // Status DECLINED is neither PENDING nor APPROVED → falls to return false in filter
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        id: "r1",
+        ownerId: "owner-1",
+        owner: { id: "owner-1", email: "o@b.com", name: "Owner" },
+      });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue({ groupId: "g1" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "gm1" });
+      mockPrisma.loan.findMany.mockResolvedValue([]);
+      mockPrisma.borrowRequest.findMany.mockResolvedValue([
+        {
+          id: "br-declined",
+          status: "DECLINED",
+          startDate: new Date(futureDate(1)),
+          endDate: new Date(futureDate(5)),
+          loan: null,
+        },
+      ]);
+      mockPrisma.borrowRequest.create.mockResolvedValue({
+        id: "br-new",
+        resourceId: "r1",
+        borrowerId: "user-123",
+        ownerId: "owner-1",
+        status: "PENDING",
+        resource: { id: "r1", title: "Drill", description: "", image: null },
+        borrower: { id: "user-123", email: "u@b.com", name: "User" },
+        owner: { id: "owner-1", email: "o@b.com", name: "Owner" },
+      });
+
+      const { req, res } = mockReqRes({
+        resourceId: "r1",
+        borrowerId: "user-123",
+        startDate: futureDate(1),
+        endDate: futureDate(5),
+      });
+      await createBorrowRequest(req, res);
+      // DECLINED request is filtered out, so the new request is allowed
+      expect(res.status).toHaveBeenCalledWith(201);
     });
 
     it("returns 403 when resource not shared with specified group", async () => {
@@ -380,6 +546,27 @@ describe("borrowRequestController", () => {
       );
     });
 
+    it("filters by status query parameter", async () => {
+      mockPrisma.borrowRequest.count.mockResolvedValue(0);
+      mockPrisma.borrowRequest.findMany.mockResolvedValue([]);
+
+      const { req, res } = mockReqRes(
+        {},
+        {},
+        { userId: "user-123", role: "owner", status: "pending" },
+      );
+      await getBorrowRequests(req, res);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      );
+      // Verify the status was uppercased and used as a filter
+      expect(mockPrisma.borrowRequest.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ status: "PENDING" }),
+        }),
+      );
+    });
+
     it("returns 500 on database error", async () => {
       mockPrisma.borrowRequest.count.mockRejectedValue(new Error("DB error"));
       const { req, res } = mockReqRes(
@@ -387,8 +574,10 @@ describe("borrowRequestController", () => {
         {},
         { userId: "user-123", role: "owner" },
       );
+      jest.spyOn(console, "error").mockImplementation();
       await getBorrowRequests(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+      jest.restoreAllMocks();
     });
   });
 
@@ -509,6 +698,76 @@ describe("borrowRequestController", () => {
         expect.objectContaining({ success: true }),
       );
     });
+
+    it("returns 500 with error message when transaction throws with status change", async () => {
+      mockPrisma.borrowRequest.findUnique.mockResolvedValue({
+        id: "br1",
+        ownerId: "user-123",
+        borrowerId: "user-2",
+        resourceId: "r1",
+        status: "PENDING",
+        startDate: new Date(),
+        endDate: new Date(),
+        resource: { id: "r1", title: "Drill" },
+        borrower: { id: "user-2", email: "b@b.com", name: "B" },
+        owner: { id: "user-123", email: "o@b.com", name: "O" },
+      });
+      mockPrisma.loan.findMany.mockResolvedValue([]);
+      // Transaction throws because status changed
+      mockPrisma.$transaction.mockImplementation(async (fn: any) => {
+        const tx = {
+          borrowRequest: {
+            findUnique: jest
+              .fn()
+              .mockResolvedValue({ status: "APPROVED" }), // status changed
+            update: jest.fn(),
+            updateMany: jest.fn(),
+          },
+          loan: { create: jest.fn() },
+          resource: { update: jest.fn() },
+        };
+        return fn(tx);
+      });
+      jest.spyOn(console, "error").mockImplementation();
+
+      const { req, res } = mockReqRes({ userId: "user-123" }, { id: "br1" });
+      await acceptBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Request status changed. Please refresh and try again.",
+        }),
+      );
+      jest.restoreAllMocks();
+    });
+
+    it("returns 500 with generic message when non-Error is thrown", async () => {
+      mockPrisma.borrowRequest.findUnique.mockResolvedValue({
+        id: "br1",
+        ownerId: "user-123",
+        borrowerId: "user-2",
+        resourceId: "r1",
+        status: "PENDING",
+        startDate: new Date(),
+        endDate: new Date(),
+        resource: { id: "r1", title: "Drill" },
+        borrower: { id: "user-2", email: "b@b.com", name: "B" },
+        owner: { id: "user-123", email: "o@b.com", name: "O" },
+      });
+      mockPrisma.loan.findMany.mockResolvedValue([]);
+      mockPrisma.$transaction.mockRejectedValue("string-error");
+      jest.spyOn(console, "error").mockImplementation();
+
+      const { req, res } = mockReqRes({ userId: "user-123" }, { id: "br1" });
+      await acceptBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Failed to accept borrow request",
+        }),
+      );
+      jest.restoreAllMocks();
+    });
   });
 
   // ─── declineBorrowRequest ─────────────────────────────────────
@@ -582,6 +841,17 @@ describe("borrowRequestController", () => {
         }),
       );
     });
+
+    it("returns 500 on database error", async () => {
+      mockPrisma.borrowRequest.findUnique.mockRejectedValue(
+        new Error("DB error"),
+      );
+      jest.spyOn(console, "error").mockImplementation();
+      const { req, res } = mockReqRes({ userId: "user-123" }, { id: "br1" });
+      await declineBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      jest.restoreAllMocks();
+    });
   });
 
   // ─── cancelBorrowRequest ──────────────────────────────────────
@@ -650,6 +920,17 @@ describe("borrowRequestController", () => {
         }),
       );
     });
+
+    it("returns 500 on database error", async () => {
+      mockPrisma.borrowRequest.findUnique.mockRejectedValue(
+        new Error("DB error"),
+      );
+      jest.spyOn(console, "error").mockImplementation();
+      const { req, res } = mockReqRes({ userId: "user-123" }, { id: "br1" });
+      await cancelBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      jest.restoreAllMocks();
+    });
   });
 
   // ─── updateBorrowRequest ──────────────────────────────────────
@@ -691,6 +972,46 @@ describe("borrowRequestController", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    it("returns 400 when start date is invalid format", async () => {
+      mockPrisma.borrowRequest.findUnique.mockResolvedValue({
+        id: "br1",
+        borrowerId: "user-123",
+        ownerId: "owner-1",
+        status: "PENDING",
+        startDate: new Date("2026-06-01"),
+        endDate: new Date("2026-06-10"),
+      });
+      const { req, res } = mockReqRes(
+        { userId: "user-123", startDate: "not-a-date" },
+        { id: "br1" },
+      );
+      await updateBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: "Invalid start date format" }),
+      );
+    });
+
+    it("returns 400 when end date is invalid format", async () => {
+      mockPrisma.borrowRequest.findUnique.mockResolvedValue({
+        id: "br1",
+        borrowerId: "user-123",
+        ownerId: "owner-1",
+        status: "PENDING",
+        startDate: new Date("2026-06-01"),
+        endDate: new Date("2026-06-10"),
+      });
+      const { req, res } = mockReqRes(
+        { userId: "user-123", endDate: "not-a-date" },
+        { id: "br1" },
+      );
+      await updateBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: "Invalid end date format" }),
+      );
+    });
+
     it("returns 400 when end date is before start date", async () => {
       mockPrisma.borrowRequest.findUnique.mockResolvedValue({
         id: "br1",
@@ -701,7 +1022,11 @@ describe("borrowRequestController", () => {
         endDate: new Date("2026-06-10"),
       });
       const { req, res } = mockReqRes(
-        { userId: "user-123", startDate: "2026-06-10", endDate: "2026-06-01" },
+        {
+          userId: "user-123",
+          startDate: "2026-06-10",
+          endDate: "2026-06-01",
+        },
         { id: "br1" },
       );
       await updateBorrowRequest(req, res);
@@ -726,7 +1051,12 @@ describe("borrowRequestController", () => {
       });
 
       const { req, res } = mockReqRes(
-        { userId: "user-123", message: "Updated message" },
+        {
+          userId: "user-123",
+          startDate: "2026-06-05",
+          endDate: "2026-06-15",
+          message: "Updated message",
+        },
         { id: "br1" },
       );
       await updateBorrowRequest(req, res);
@@ -736,6 +1066,17 @@ describe("borrowRequestController", () => {
           message: "Borrow request updated",
         }),
       );
+    });
+
+    it("returns 500 on database error", async () => {
+      mockPrisma.borrowRequest.findUnique.mockRejectedValue(
+        new Error("DB error"),
+      );
+      jest.spyOn(console, "error").mockImplementation();
+      const { req, res } = mockReqRes({ userId: "user-123" }, { id: "br1" });
+      await updateBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      jest.restoreAllMocks();
     });
   });
 
@@ -819,6 +1160,17 @@ describe("borrowRequestController", () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true }),
       );
+    });
+
+    it("returns 500 on database error", async () => {
+      mockPrisma.borrowRequest.findUnique.mockRejectedValue(
+        new Error("DB error"),
+      );
+      jest.spyOn(console, "error").mockImplementation();
+      const { req, res } = mockReqRes({ userId: "user-123" }, { id: "br1" });
+      await deleteBorrowRequest(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      jest.restoreAllMocks();
     });
   });
 });

@@ -164,6 +164,67 @@ describe("Error Handler Middleware", () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
     });
 
+    it("should handle Prisma unknown error code as 500 (default case)", () => {
+      const prismaError = new Prisma.PrismaClientKnownRequestError(
+        "Unknown Prisma error",
+        { code: "P9999", clientVersion: "5.0.0" },
+      );
+
+      errorHandler(
+        prismaError,
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+
+    it("should handle ValidationError (name === 'ValidationError')", () => {
+      const error = new Error("Validation failed") as any;
+      error.name = "ValidationError";
+
+      errorHandler(
+        error,
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false }),
+      );
+    });
+
+    it("should handle UnauthorizedError (name === 'UnauthorizedError')", () => {
+      const error = new Error("Unauthorized") as any;
+      error.name = "UnauthorizedError";
+
+      errorHandler(
+        error,
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+    });
+
+    it("should handle errors with 'unauthorized' in message", () => {
+      const error = new Error("access unauthorized");
+
+      errorHandler(
+        error,
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+    });
+
     it("should handle Prisma validation error", () => {
       const prismaError = new Prisma.PrismaClientValidationError(
         "Invalid data",
