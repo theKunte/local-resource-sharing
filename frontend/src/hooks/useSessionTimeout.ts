@@ -13,6 +13,7 @@ export function useSessionTimeout() {
   const [showWarning, setShowWarning] = useState(false);
 
   const logout = useCallback(() => {
+    if (!auth) return;
     setShowWarning(false);
     signOut(auth).catch((error) => {
       console.error("Error during session timeout logout:", error);
@@ -46,7 +47,7 @@ export function useSessionTimeout() {
 
   useEffect(() => {
     // Only start timeout if user is logged in
-    if (!auth.currentUser) {
+    if (!auth?.currentUser) {
       return;
     }
 

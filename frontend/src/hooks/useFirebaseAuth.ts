@@ -28,6 +28,11 @@ export function useFirebaseAuth() {
   };
 
   useEffect(() => {
+    if (!auth) {
+      // Firebase not initialized, stay in loading state
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
@@ -41,12 +46,16 @@ export function useFirebaseAuth() {
       (error) => {
         console.error("Firebase auth state change error:", error);
         setLoading(false);
-      }
+      },
     );
     return unsubscribe;
   }, []);
 
   const signInWithGoogle = async () => {
+    if (!auth) {
+      console.error("Firebase auth not initialized");
+      return false;
+    }
     const provider = new GoogleAuthProvider();
     try {
       console.debug("[useFirebaseAuth] starting Google sign-in (popup)");
@@ -65,6 +74,7 @@ export function useFirebaseAuth() {
   };
 
   const signOutUser = async () => {
+    if (!auth) return;
     await signOut(auth);
   };
 

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { GroupRole } from "@prisma/client";
 import prisma from "../prisma";
+import { validateEmail } from "../utils/validation";
 
 // GET /api/debug/users (dev only)
 export async function debugListUsers(req: Request, res: Response) {
@@ -34,6 +35,11 @@ export async function registerUser(req: Request, res: Response) {
 
   if (uid !== authenticatedUid) {
     return res.status(403).json({ error: "You can only register yourself" });
+  }
+
+  // Validate email format if provided
+  if (email && !validateEmail(email)) {
+    return res.status(400).json({ error: "Invalid email format" });
   }
 
   try {

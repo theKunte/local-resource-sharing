@@ -17,9 +17,6 @@ export const SESSION_CONFIG = {
   // Enable/disable session timeout
   DISABLE_SESSION_TIMEOUT: false,
 
-  // Enable/disable server-side validation
-  ENFORCE_SERVER_VALIDATION: false,
-
-  // Debug mode
-  DEBUG: true,
+  // Debug mode (only enabled in development)
+  DEBUG: import.meta.env.DEV,
 };
