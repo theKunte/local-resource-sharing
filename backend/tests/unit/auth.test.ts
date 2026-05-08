@@ -28,6 +28,10 @@ function mockReqResNext(overrides: Partial<Request> = {}) {
 }
 
 describe("authenticateToken", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("returns 401 when no authorization header", async () => {
     const { req, res, next } = mockReqResNext();
     await authenticateToken(req, res, next);

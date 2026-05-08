@@ -500,6 +500,46 @@ describe("resourceController", () => {
       process.env.FIREBASE_STORAGE_BUCKET = originalBucket;
     });
 
+    it("handles Firebase Storage deletion error gracefully (fire-and-forget)", async () => {
+      const storageUrl =
+        "https://firebasestorage.googleapis.com/v0/b/test-bucket/o/images%2Ftest.jpg?alt=media";
+      mockPrisma.resource.findUnique.mockResolvedValue({
+        ownerId: "user-123",
+        currentLoanId: null,
+        image: storageUrl,
+      });
+      mockPrisma.loan.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.borrowRequest.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resourceSharing.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrisma.resource.delete.mockResolvedValue({});
+
+      // Mock storage deletion to throw an error
+      mockStorageFile.delete.mockRejectedValue(new Error("Storage error"));
+
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+
+      const originalBucket = process.env.FIREBASE_STORAGE_BUCKET;
+      process.env.FIREBASE_STORAGE_BUCKET = "test-bucket";
+
+      const { req, res } = mockReqRes({}, { id: "r1" });
+      await deleteResource(req, res);
+
+      // The deletion is fire-and-forget, so it should still return 204
+      expect(res.status).toHaveBeenCalledWith(204);
+
+      // Wait a bit for the async catch to execute
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Verify the error was logged
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to delete Storage file"),
+        expect.any(Error),
+      );
+
+      process.env.FIREBASE_STORAGE_BUCKET = originalBucket;
+      consoleErrorSpy.mockRestore();
+    });
+
     it("does not try to delete storage image when URL is not a Firebase Storage URL", async () => {
       mockPrisma.resource.findUnique.mockResolvedValue({
         ownerId: "user-123",

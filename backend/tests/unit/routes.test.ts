@@ -125,9 +125,8 @@ describe("routes/borrowRequests", () => {
   let app: express.Application;
 
   beforeAll(async () => {
-    const { default: borrowRouter } = await import(
-      "../../src/routes/borrowRequests"
-    );
+    const { default: borrowRouter } =
+      await import("../../src/routes/borrowRequests");
     app = makeApp(borrowRouter);
   });
 
@@ -275,9 +274,8 @@ describe("routes/notifications", () => {
   let app: express.Application;
 
   beforeAll(async () => {
-    const { default: notifRouter } = await import(
-      "../../src/routes/notifications"
-    );
+    const { default: notifRouter } =
+      await import("../../src/routes/notifications");
     app = makeApp(notifRouter);
   });
 
@@ -293,9 +291,8 @@ describe("routes/resources", () => {
   let app: express.Application;
 
   beforeAll(async () => {
-    const { default: resourcesRouter } = await import(
-      "../../src/routes/resources"
-    );
+    const { default: resourcesRouter } =
+      await import("../../src/routes/resources");
     app = makeApp(resourcesRouter);
   });
 
@@ -367,9 +364,8 @@ describe("routes/testErrors", () => {
   let app: express.Application;
 
   beforeAll(async () => {
-    const { default: testErrorsRouter } = await import(
-      "../../src/routes/testErrors"
-    );
+    const { default: testErrorsRouter } =
+      await import("../../src/routes/testErrors");
     app = makeApp(testErrorsRouter);
     // Add a simple error handler so synchronous throws return a proper response
     app.use((err: any, _req: any, res: any, _next: any) => {
@@ -404,6 +400,16 @@ describe("routes/testErrors", () => {
 
   it("GET /test-json-error throws SyntaxError (500)", async () => {
     const res = await request(app).get("/test-json-error");
+    expect(res.status).toBe(500);
+  });
+
+  it("GET /test-async-error throws async error (500)", async () => {
+    const res = await request(app).get("/test-async-error");
+    expect(res.status).toBe(500);
+  }, 10000); // Increase timeout for async delay
+
+  it("GET /test-unexpected-error throws unexpected error (500)", async () => {
+    const res = await request(app).get("/test-unexpected-error");
     expect(res.status).toBe(500);
   });
 
