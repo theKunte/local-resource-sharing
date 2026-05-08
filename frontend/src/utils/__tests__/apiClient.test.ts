@@ -374,7 +374,7 @@ describe("apiClient", () => {
       const error = {
         config: { __cacheKey: "GET:/api/resources:{}" },
         response: { status: 500 },
-      } as AxiosError;
+      } as unknown as AxiosError;
 
       const interceptor = (
         apiClient.interceptors.response as unknown as {
@@ -391,7 +391,7 @@ describe("apiClient", () => {
       const error = {
         config: { __cacheKey: "GET:/api/resources:{}" },
         response: { status: 401 },
-      } as AxiosError;
+      } as unknown as AxiosError;
 
       const interceptor = (
         apiClient.interceptors.response as unknown as {
@@ -414,7 +414,7 @@ describe("apiClient", () => {
       const error = {
         config: { __cacheKey: "GET:/api/resources:{}" },
         response: { status: 500 },
-      } as AxiosError;
+      } as unknown as AxiosError;
 
       const interceptor = (
         apiClient.interceptors.response as unknown as {
@@ -434,7 +434,7 @@ describe("apiClient", () => {
       const error = {
         config: { __cacheKey: "GET:/api/resources:{}" },
         message: "Network Error",
-      } as AxiosError;
+      } as unknown as AxiosError;
 
       const interceptor = (
         apiClient.interceptors.response as unknown as {
