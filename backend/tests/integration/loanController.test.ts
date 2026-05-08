@@ -157,6 +157,47 @@ describe("loanController", () => {
       );
     });
 
+    it("returns 500 with error message when transaction detects status change", async () => {
+      mockPrisma.loan.findUnique.mockResolvedValue({
+        id: "l1",
+        borrowerId: "user-123",
+        lenderId: "owner-1",
+        status: "ACTIVE",
+        resource: {
+          id: "r1",
+          title: "Drill",
+          description: "",
+          image: null,
+          status: "BORROWED",
+        },
+        borrower: { id: "user-123", email: "b@b.com", name: "B" },
+        lender: { id: "owner-1", email: "o@b.com", name: "O" },
+      });
+      // Simulate status already changed inside the transaction
+      mockPrisma.$transaction.mockImplementation(async (fn: any) => {
+        const tx = {
+          loan: {
+            findUnique: jest
+              .fn()
+              .mockResolvedValue({ status: "RETURNED" }), // status changed
+            update: jest.fn(),
+          },
+        };
+        return fn(tx);
+      });
+      jest.spyOn(console, "error").mockImplementation();
+
+      const { req, res } = mockReqRes({ userId: "user-123" }, { id: "l1" });
+      await requestReturn(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Loan status changed. Please refresh and try again.",
+        }),
+      );
+      jest.restoreAllMocks();
+    });
+
     it("returns 500 on database error", async () => {
       mockPrisma.loan.findUnique.mockRejectedValue(new Error("DB error"));
       const { req, res } = mockReqRes({ userId: "user-123" }, { id: "l1" });
@@ -305,6 +346,46 @@ describe("loanController", () => {
       );
     });
 
+    it("returns 500 with error message when transaction detects status change", async () => {
+      mockPrisma.loan.findUnique.mockResolvedValue({
+        id: "l1",
+        borrowerId: "user-2",
+        lenderId: "user-123",
+        status: "PENDING_RETURN_CONFIRMATION",
+        resource: {
+          id: "r1",
+          title: "Drill",
+          description: "",
+          image: null,
+          status: "BORROWED",
+          currentLoanId: "l1",
+        },
+        borrower: { id: "user-2", email: "b@b.com", name: "B" },
+        lender: { id: "user-123", email: "o@b.com", name: "O" },
+      });
+      mockPrisma.$transaction.mockImplementation(async (fn: any) => {
+        const tx = {
+          loan: {
+            findUnique: jest.fn().mockResolvedValue({ status: "RETURNED" }), // changed
+            update: jest.fn(),
+          },
+          resource: { update: jest.fn() },
+        };
+        return fn(tx);
+      });
+      jest.spyOn(console, "error").mockImplementation();
+
+      const { req, res } = mockReqRes({ userId: "user-123" }, { id: "l1" });
+      await confirmReturn(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Loan status changed. Please refresh and try again.",
+        }),
+      );
+      jest.restoreAllMocks();
+    });
+
     it("returns 500 on database error", async () => {
       mockPrisma.loan.findUnique.mockRejectedValue(new Error("DB error"));
       const { req, res } = mockReqRes({ userId: "user-123" }, { id: "l1" });
@@ -409,6 +490,40 @@ describe("loanController", () => {
           message: "Item marked as returned successfully",
         }),
       );
+    });
+
+    it("returns 500 with error message when transaction detects status change", async () => {
+      mockPrisma.borrowRequest.findUnique.mockResolvedValue({
+        id: "br1",
+        ownerId: "user-123",
+        resourceId: "r1",
+        status: "APPROVED",
+        loan: { id: "l1", status: "ACTIVE" },
+        resource: { id: "r1" },
+      });
+      mockPrisma.$transaction.mockImplementation(async (fn: any) => {
+        const tx = {
+          loan: {
+            findUnique: jest
+              .fn()
+              .mockResolvedValue({ status: "RETURNED" }), // status changed
+            update: jest.fn(),
+          },
+          resource: { update: jest.fn() },
+        };
+        return fn(tx);
+      });
+      jest.spyOn(console, "error").mockImplementation();
+
+      const { req, res } = mockReqRes({ userId: "user-123" }, { id: "br1" });
+      await markReturned(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Loan status changed. Please refresh and try again.",
+        }),
+      );
+      jest.restoreAllMocks();
     });
 
     it("returns 500 on database error", async () => {

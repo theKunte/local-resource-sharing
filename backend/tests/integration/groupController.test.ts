@@ -116,6 +116,43 @@ describe("groupController", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    it("returns 403 when requester is not found in group", async () => {
+      mockPrisma.groupMember.findFirst.mockResolvedValueOnce(null);
+      const { req, res } = mockReqRes({ userId: "u2" }, { groupId: "g1" });
+      await addMember(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Forbidden",
+          message: "Only group owners and admins can add members",
+        }),
+      );
+    });
+
+    it("returns 403 when requester is a regular member (not OWNER/ADMIN)", async () => {
+      mockPrisma.groupMember.findFirst.mockResolvedValueOnce({
+        id: "req1",
+        role: "MEMBER",
+      });
+      const { req, res } = mockReqRes({ userId: "u2" }, { groupId: "g1" });
+      await addMember(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("returns 409 when user is already a member", async () => {
+      mockPrisma.groupMember.findFirst
+        .mockResolvedValueOnce({ id: "req1", role: "OWNER" })
+        .mockResolvedValueOnce({ id: "m-existing" }); // already a member
+      const { req, res } = mockReqRes({ userId: "u2" }, { groupId: "g1" });
+      await addMember(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "User is already a member of this group",
+        }),
+      );
+    });
+
     it("adds a member successfully", async () => {
       const member = { id: "m1", groupId: "g1", userId: "u2" };
       mockPrisma.groupMember.findFirst
@@ -469,6 +506,31 @@ describe("groupController", () => {
       );
       await updateGroup(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("updates group with valid avatar (null) successfully", async () => {
+      mockPrisma.groupMember.findFirst.mockResolvedValue({
+        role: "OWNER",
+        group: { id: "g1", name: "Old", avatar: null, createdById: "user-123" },
+      });
+      const updated = {
+        id: "g1",
+        name: "Old",
+        avatar: null,
+        description: "Updated",
+        members: [],
+      };
+      mockPrisma.group.update.mockResolvedValue(updated);
+
+      // Pass avatar: null (falsy) — this clears the avatar without triggering URL validation
+      const { req, res } = mockReqRes(
+        { userId: "user-123", avatar: null, description: "Updated" },
+        { groupId: "g1" },
+      );
+      await updateGroup(req, res);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      );
     });
 
     it("updates group name and description successfully", async () => {

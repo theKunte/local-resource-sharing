@@ -115,6 +115,29 @@ describe("authenticateToken", () => {
 
     jest.restoreAllMocks();
   });
+
+  it("returns 403 when rejection is not an Error instance", async () => {
+    // Rejecting with a non-Error value (e.g. a string or plain object)
+    (admin.auth as jest.Mock).mockReturnValue({
+      verifyIdToken: jest.fn().mockRejectedValue("some-string-rejection"),
+    });
+
+    const { req, res, next } = mockReqResNext({
+      headers: { authorization: "Bearer bad-token" },
+    } as any);
+
+    jest.spyOn(console, "error").mockImplementation();
+
+    await authenticateToken(req, res, next);
+
+    // Non-Error rejection has errorMessage === "Unknown error", no timeout
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: "Invalid or expired token" }),
+    );
+
+    jest.restoreAllMocks();
+  });
 });
 
 describe("requireVerifiedEmail", () => {
