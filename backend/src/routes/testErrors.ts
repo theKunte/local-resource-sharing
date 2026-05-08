@@ -14,9 +14,13 @@ router.get("/test-sync-error", (_req, _res) => {
 });
 
 // Test 2: Async error
-router.get("/test-async-error", async (_req, _res) => {
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  throw new AppError("This is a test async error", 500);
+router.get("/test-async-error", async (_req, _res, next) => {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    throw new AppError("This is a test async error", 500);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Test 3: Unexpected programming error (uncaught)
