@@ -21,7 +21,7 @@ router.get("/test-async-error", async (_req, _res) => {
 
 // Test 3: Unexpected programming error (uncaught)
 router.get("/test-unexpected-error", (_req, _res) => {
-  // @ts-ignore - intentionally accessing undefined
+  // @ts-expect-error - intentionally accessing undefined
   const result = undefined.somethingThatDoesntExist;
   _res.json({ result });
 });

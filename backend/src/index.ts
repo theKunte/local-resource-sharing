@@ -151,7 +151,7 @@ app.get("/", (req, res) => {
 });
 
 // Health check endpoint for load balancers and orchestrators
-app.get("/health", async (req, res, next) => {
+app.get("/health", async (req, res, _next) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.status(200).json({
@@ -160,7 +160,7 @@ app.get("/health", async (req, res, next) => {
       uptime: process.uptime(),
       database: "connected",
     });
-  } catch (error) {
+  } catch (_error) {
     // Return unhealthy status but don't throw to error handler
     // Health checks should be handled directly
     res.status(503).json({

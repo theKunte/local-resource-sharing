@@ -19,10 +19,10 @@ function sanitizeErrorMessage(message: string, statusCode: number): string {
   // For client errors (4xx), we can be more specific but still cautious
   // Remove any file paths, stack traces, or technical details
   return message
-    .replace(/\/[\w\/.-]+\.(ts|js|json)/g, "[file]") // Remove file paths
+    .replace(/[\w/.-]+\.(ts|js|json)/g, "[file]") // Remove file paths
     .replace(/at .+:\d+:\d+/g, "") // Remove stack trace lines
     .replace(/\b[A-Z]:\\[\w\\.-]+/g, "[path]") // Remove Windows paths
-    .replace(/\b\/[\w\/.-]+/g, "[path]") // Remove Unix paths
+    .replace(/\b[\w/.-]+/g, "[path]") // Remove Unix paths
     .substring(0, 200); // Limit length
 }
 
@@ -186,7 +186,7 @@ export function errorHandler(
   // Never send stack traces to client in production
   const response: any = {
     success: false,
-    message,
+    message: sanitizeErrorMessage(message, statusCode),
     requestId: (req as any).requestId,
   };
 
