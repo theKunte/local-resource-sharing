@@ -9,6 +9,7 @@ import {
 import { getMessaging, isSupported } from "firebase/messaging";
 import { logError } from "./utils/errorHandler";
 import { loadRuntimeConfig } from "./config/runtimeConfig";
+import { configureApiClient } from "./utils/apiClient";
 
 // Firebase will be initialized asynchronously after runtime config loads
 let app: FirebaseApp | null = null;
@@ -35,6 +36,9 @@ export async function initializeFirebase(): Promise<void> {
     try {
       // Load runtime configuration
       const config = await loadRuntimeConfig();
+
+      // Configure API client with runtime API URL
+      configureApiClient(config.API_URL);
 
       const firebaseConfig = {
         apiKey: config.FIREBASE_API_KEY,

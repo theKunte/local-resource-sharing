@@ -54,16 +54,19 @@ describe("apiClient", () => {
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    // Mock window.location
+    // Mock window.location with writable href property
     originalLocation = window.location;
     delete (window as { location?: Location }).location;
-    window.location = { ...originalLocation, href: "" } as Location;
+    (window as { location: Partial<Location> }).location = {
+      ...originalLocation,
+      href: "",
+    };
   });
 
   afterEach(() => {
     consoleErrorSpy?.mockRestore();
     consoleLogSpy?.mockRestore();
-    window.location = originalLocation;
+    (window as { location: Location }).location = originalLocation;
     vi.resetModules(); // Clear module cache between tests
   });
 
@@ -106,6 +109,39 @@ describe("apiClient", () => {
     expect(typeof apiClient.post).toBe("function");
     expect(typeof apiClient.put).toBe("function");
     expect(typeof apiClient.delete).toBe("function");
+  });
+
+  describe("configureApiClient", () => {
+    it("updates the base URL when called with a valid URL", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      const newBaseUrl = "https://api.example.com";
+      configureApiClient(newBaseUrl);
+
+      expect(apiClient.defaults.baseURL).toBe(newBaseUrl);
+    });
+
+    it("falls back to default URL when called with empty string", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      configureApiClient("");
+
+      expect(apiClient.defaults.baseURL).toBe("http://localhost:3001");
+    });
+
+    it("logs the configured base URL", async () => {
+      const { configureApiClient } = await import("../apiClient");
+
+      const newBaseUrl = "https://api.production.com";
+      configureApiClient(newBaseUrl);
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "API client configured with base URL:",
+        newBaseUrl,
+      );
+    });
   });
 
   describe("Request Interceptor", () => {
