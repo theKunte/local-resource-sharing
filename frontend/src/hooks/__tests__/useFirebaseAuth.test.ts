@@ -187,4 +187,54 @@ describe("useFirebaseAuth", () => {
     expect(result.current.user).toBe(fakeUser);
     consoleSpy.mockRestore();
   });
+
+  it("signInWithGoogle handles alert error gracefully", async () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {
+      throw new Error("alert blocked");
+    });
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    mockOnAuthStateChanged.mockImplementation(() => vi.fn());
+    mockSignInWithPopup.mockRejectedValue(new Error("popup blocked"));
+
+    const { result } = renderHook(() => useFirebaseAuth());
+
+    let success: boolean | undefined;
+    await act(async () => {
+      success = await result.current.signInWithGoogle();
+    });
+
+    expect(success).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith("Sign-in error:", expect.any(Error));
+    expect(debugSpy).toHaveBeenCalledWith(
+      "[useFirebaseAuth] alert failed",
+      expect.any(Error),
+    );
+
+    alertSpy.mockRestore();
+    debugSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("logs debug messages during Google sign-in", async () => {
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    mockOnAuthStateChanged.mockImplementation(() => vi.fn());
+    mockSignInWithPopup.mockResolvedValue({});
+
+    const { result } = renderHook(() => useFirebaseAuth());
+
+    await act(async () => {
+      await result.current.signInWithGoogle();
+    });
+
+    expect(debugSpy).toHaveBeenCalledWith(
+      "[useFirebaseAuth] starting Google sign-in (popup)",
+    );
+    expect(debugSpy).toHaveBeenCalledWith(
+      "[useFirebaseAuth] Google sign-in popup completed",
+    );
+
+    debugSpy.mockRestore();
+  });
 });
