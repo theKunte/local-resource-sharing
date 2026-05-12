@@ -4,6 +4,10 @@ import { renderHook, waitFor } from "@testing-library/react";
 // Mock firebase as null (not initialized)
 vi.mock("../../firebase", () => ({
   auth: null,
+  getFirebaseAuth: vi.fn(() => null),
+  getFirebaseApp: vi.fn(() => null),
+  initializeFirebase: vi.fn().mockResolvedValue(undefined),
+  firebaseInitError: null,
 }));
 
 // Mock firebase/auth functions (won't be called but need to exist)

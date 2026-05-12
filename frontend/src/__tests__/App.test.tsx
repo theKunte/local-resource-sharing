@@ -25,6 +25,9 @@ vi.mock("../firebase", () => ({
   },
   auth: { currentUser: null },
   app: {},
+  getFirebaseAuth: vi.fn(() => ({ currentUser: null })),
+  getFirebaseApp: vi.fn(() => ({})),
+  initializeFirebase: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock heavy page components so imports don't fail

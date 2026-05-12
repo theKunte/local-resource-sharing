@@ -1,20 +1,42 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { AxiosError } from "axios";
 
-let mockCurrentUser: { getIdToken: () => Promise<string> } | null = null;
+const {
+  mockGetIdToken,
+  mockSignOut,
+  mockGetFirebaseAuth,
+  mockAuth,
+  currentUserState,
+} = vi.hoisted(() => {
+  const mockGetIdToken = vi.fn();
+  const mockSignOut = vi.fn();
+  const mockGetFirebaseAuth = vi.fn();
 
-const { mockGetIdToken, mockSignOut } = vi.hoisted(() => ({
-  mockGetIdToken: vi.fn(),
-  mockSignOut: vi.fn(),
-}));
+  // Mutable state object that can be updated in tests
+  const currentUserState = {
+    value: null as { getIdToken: () => Promise<string> } | null,
+  };
 
-vi.mock("../../firebase", () => ({
-  auth: {
+  const mockAuth = {
     get currentUser() {
-      return mockCurrentUser;
+      return currentUserState.value;
     },
     signOut: mockSignOut,
-  },
+  };
+
+  return {
+    mockGetIdToken,
+    mockSignOut,
+    mockGetFirebaseAuth,
+    mockAuth,
+    currentUserState,
+  };
+});
+
+vi.mock("../../firebase", () => ({
+  auth: mockAuth,
+  getFirebaseAuth: mockGetFirebaseAuth,
+  initializeFirebase: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("apiClient", () => {
@@ -25,9 +47,10 @@ describe("apiClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetIdToken.mockResolvedValue("test-token");
-    mockCurrentUser = {
+    currentUserState.value = {
       getIdToken: mockGetIdToken,
     };
+    mockGetFirebaseAuth.mockReturnValue(mockAuth);
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -135,7 +158,7 @@ describe("apiClient", () => {
     });
 
     it("does not add auth token when user is not authenticated", async () => {
-      mockCurrentUser = null;
+      currentUserState.value = null;
       const { default: apiClient } = await import("../apiClient");
 
       const config = {

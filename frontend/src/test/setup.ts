@@ -1,15 +1,28 @@
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
-// Mock firebase modules globally for all tests
+// Mock firebase modules globally for all tests with async initialization support
 vi.mock("../firebase", () => ({
+  // Legacy exports for backward compatibility (deprecated)
   auth: {
     currentUser: null,
     onAuthStateChanged: vi.fn(),
     signInWithPopup: vi.fn(),
     signOut: vi.fn(),
   },
+  app: {},
   db: {},
+  firebaseInitError: null,
+
+  // New async initialization API
+  initializeFirebase: vi.fn().mockResolvedValue(undefined),
+  getFirebaseAuth: vi.fn(() => ({
+    currentUser: null,
+    onAuthStateChanged: vi.fn(),
+    signInWithPopup: vi.fn(),
+    signOut: vi.fn(),
+  })),
+  getFirebaseApp: vi.fn(() => ({})),
 }));
 
 // Mock react-router-dom's useNavigate
