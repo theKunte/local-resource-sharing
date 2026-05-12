@@ -135,6 +135,15 @@ docker-compose up --build
 
 The app will be available at `http://localhost`
 
+**🔒 Security Note**: Firebase credentials are injected at container startup, **not baked into image layers**. This means:
+
+- ✅ Same image works in dev/staging/production
+- ✅ Credentials can be rotated without rebuilding
+- ✅ `docker history` shows no secrets
+- ✅ Images can be pushed to registries safely
+
+See [SECURITY_FIXES.md](SECURITY_FIXES.md#8-firebase-credentials-in-docker-images--fixed) for details.
+
 #### Option B — Local Development Servers
 
 Requires Docker running the database (step 5 above).
@@ -216,9 +225,11 @@ local-resource-sharing/
 
 ## 📚 Documentation
 
+- [Deployment Guide](DEPLOYMENT.md) - Production deployment with Docker
 - [API Documentation](docs/API.md) - API endpoints and usage
 - [Database Schema](docs/DATABASE_SCHEMA.md) - Database structure
 - [Authentication Setup](SETUP_AUTH.md) - Firebase configuration guide
+- [Security Fixes](SECURITY_FIXES.md) - Security vulnerabilities and fixes
 
 ## 🔐 Security
 

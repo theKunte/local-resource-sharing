@@ -9,6 +9,7 @@ This document details the critical security vulnerabilities that were identified
 **Issue**: `/api/debug/users` endpoint exposed all user emails and IDs without authentication.
 
 **Fix Applied**:
+
 - Added `authenticateToken` middleware to the endpoint
 - Endpoint now returns 404 when `NODE_ENV=production`
 - Protected user data from unauthorized access
@@ -24,6 +25,7 @@ This document details the critical security vulnerabilities that were identified
 **Issue**: Any authenticated user could share any resource to any group, even resources they didn't own.
 
 **Fix Applied**:
+
 - Added ownership verification (user must own the resource)
 - Added membership verification (user must be member of the group)
 - Added duplicate sharing prevention
@@ -37,6 +39,7 @@ This document details the critical security vulnerabilities that were identified
 **Issue**: Rate limit of 1000 requests per 15 minutes was too permissive.
 
 **Fix Applied**:
+
 - Reduced to 100 requests per 15 minutes (from 1000)
 - Added standard headers for rate limit info
 - This prevents brute force attacks more effectively
@@ -52,6 +55,7 @@ This document details the critical security vulnerabilities that were identified
 **Issue**: CORS policy allowed all requests with no origin header, bypassing protection.
 
 **Fix Applied**:
+
 - Requests without origin headers now rejected in production
 - Development mode still allows no-origin for testing tools
 - Environment-aware CORS policy
@@ -65,6 +69,7 @@ This document details the critical security vulnerabilities that were identified
 **Issue**: User inputs stored directly in database without sanitization.
 
 **Fix Applied**:
+
 - Added `sanitizeString()` calls to all user inputs:
   - Resource titles and descriptions
   - Group names
@@ -73,6 +78,7 @@ This document details the critical security vulnerabilities that were identified
 - Trim whitespace and remove dangerous characters
 
 **Files**:
+
 - `backend/src/index.ts` - Multiple endpoints
 - `backend/src/utils/validation.ts` - Validation improvements
 
@@ -83,6 +89,7 @@ This document details the critical security vulnerabilities that were identified
 **Issue**: Silent failure of `setPersistence` could leave users logged in indefinitely.
 
 **Fix Applied**:
+
 - Added error handling with user notification
 - Signs out user if persistence configuration fails
 - Prevents security downgrade from session-only to local storage
@@ -96,11 +103,45 @@ This document details the critical security vulnerabilities that were identified
 **Issue**: Firebase token verification didn't check for revoked tokens.
 
 **Fix Applied**:
+
 - Added `checkRevoked: true` parameter to `verifyIdToken()`
 - Improved error logging without exposing sensitive details
 - Added `requireVerifiedEmail` middleware for future use
 
 **File**: `backend/src/index.ts`
+
+---
+
+### 8. Firebase Credentials in Docker Images ✅ FIXED
+
+**Issue**: Firebase credentials were being baked into Docker image layers via build arguments, making them visible to anyone with access to the image using `docker history`.
+
+**Fix Applied**:
+
+- Removed all `ARG` declarations for Firebase credentials from `frontend/Dockerfile`
+- Created runtime configuration injection via `docker-entrypoint.sh`
+- Credentials now injected as container environment variables at runtime
+- Created `/config.js` at container startup (not during build)
+- Updated CI/CD pipeline to work without credentials during build
+
+**Files**:
+
+- `frontend/Dockerfile` - Removed build args
+- `frontend/docker-entrypoint.sh` - NEW: Generates runtime config
+- `frontend/src/config/runtimeConfig.ts` - NEW: Loads runtime config
+- `frontend/src/firebase.ts` - Async initialization
+- `frontend/vite.config.ts` - Dev mode support
+- `docker-compose.yml` - Runtime environment variables
+
+**Benefits**:
+
+- Credentials never baked into image layers (verified with `docker history`)
+- Same image can be deployed to dev/staging/production with different credentials
+- Credential rotation without rebuilding images
+- Service worker can access runtime configuration
+- Development workflow works with or without credentials
+
+**Verification**: Run `docker history frontend-security-test:latest | grep -i "FIREBASE\|API_KEY"` → No results
 
 ---
 
@@ -127,6 +168,7 @@ Enhanced Helmet configuration with custom CSP directives.
 ### 10. Database Indexes ✅ IMPLEMENTED
 
 **Added** performance and security indexes on:
+
 - `GroupMember`: `groupId`, `userId`, unique constraint
 - `Resource`: `ownerId`, `status`
 - `ResourceSharing`: `resourceId`, `groupId`, unique constraint
@@ -136,6 +178,7 @@ Enhanced Helmet configuration with custom CSP directives.
 **File**: `backend/prisma/schema.prisma`
 
 **Benefits**:
+
 - Faster queries
 - Prevents duplicate sharing relationships
 - Improves authorization checks performance
@@ -145,6 +188,7 @@ Enhanced Helmet configuration with custom CSP directives.
 ### 11. Authorization Checks Added ✅ IMPLEMENTED
 
 **Enhanced authorization** in multiple endpoints:
+
 - Group creation (user can only create for themselves)
 - Borrow request creation (user can only create for themselves)
 - Resource update/delete (ownership verification)
@@ -156,6 +200,7 @@ Enhanced Helmet configuration with custom CSP directives.
 ### 12. Improved Validation ✅ IMPLEMENTED
 
 **Updated** validation logic to be more flexible:
+
 - Image validation only when explicitly required
 - Better error messages
 - Consistent validation across endpoints
@@ -167,14 +212,17 @@ Enhanced Helmet configuration with custom CSP directives.
 ## 📦 New Files Created
 
 ### 1. Backend Environment Template
+
 **File**: `backend/.env.example`
 
 Documents all required environment variables with examples.
 
 ### 2. Security Documentation
+
 **File**: `SECURITY.md`
 
 Comprehensive security guide including:
+
 - Implemented security features
 - Known limitations
 - Production deployment checklist
@@ -201,6 +249,7 @@ This will create a new migration for the database indexes.
 Ensure your `.env` files include:
 
 **Backend** (`.env` in `backend/` directory):
+
 ```env
 NODE_ENV=development
 DATABASE_URL="file:./dev.db"
@@ -212,6 +261,7 @@ ALLOWED_ORIGINS="http://localhost:5173,http://localhost:5174"
 ```
 
 **Frontend** (`.env` in `frontend/` directory):
+
 ```env
 VITE_FIREBASE_API_KEY="your-api-key"
 VITE_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
@@ -284,15 +334,15 @@ After applying fixes, test:
 
 ## 📊 Impact Summary
 
-| Vulnerability | Severity | Status | Impact |
-|--------------|----------|--------|--------|
-| Unauthenticated Debug Endpoint | 🔴 Critical | ✅ Fixed | User data exposure prevented |
-| Missing Resource Sharing Auth | 🔴 Critical | ✅ Fixed | Unauthorized sharing prevented |
-| Weak Rate Limiting | 🔴 Critical | ✅ Fixed | DoS attacks mitigated |
-| Insecure CORS | 🔴 Critical | ✅ Fixed | CORS bypass prevented |
-| No Input Sanitization | 🔴 Critical | ✅ Fixed | Injection attacks mitigated |
-| Firebase Persistence Risk | 🔴 Critical | ✅ Fixed | Session security improved |
-| Weak Token Verification | 🔴 Critical | ✅ Fixed | Token revocation enforced |
+| Vulnerability                  | Severity    | Status   | Impact                         |
+| ------------------------------ | ----------- | -------- | ------------------------------ |
+| Unauthenticated Debug Endpoint | 🔴 Critical | ✅ Fixed | User data exposure prevented   |
+| Missing Resource Sharing Auth  | 🔴 Critical | ✅ Fixed | Unauthorized sharing prevented |
+| Weak Rate Limiting             | 🔴 Critical | ✅ Fixed | DoS attacks mitigated          |
+| Insecure CORS                  | 🔴 Critical | ✅ Fixed | CORS bypass prevented          |
+| No Input Sanitization          | 🔴 Critical | ✅ Fixed | Injection attacks mitigated    |
+| Firebase Persistence Risk      | 🔴 Critical | ✅ Fixed | Session security improved      |
+| Weak Token Verification        | 🔴 Critical | ✅ Fixed | Token revocation enforced      |
 
 ---
 

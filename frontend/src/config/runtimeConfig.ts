@@ -49,8 +49,12 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
     // In production (Docker), load from config.js
     if (import.meta.env.PROD) {
       try {
-        // Fetch the runtime config.js file
-        await import("/config.js");
+        // Fetch and execute the runtime config.js file
+        const response = await fetch("/config.js");
+        const scriptContent = await response.text();
+        // Execute the script to populate window.RUNTIME_CONFIG
+        // eslint-disable-next-line no-eval
+        eval(scriptContent);
 
         if (window.RUNTIME_CONFIG) {
           configLoaded = true;
