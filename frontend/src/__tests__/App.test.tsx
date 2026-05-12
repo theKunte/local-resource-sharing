@@ -17,6 +17,16 @@ vi.mock("../hooks/useNotifications", () => ({
   useNotifications: vi.fn(),
 }));
 
+let mockFirebaseInitError: string | null = null;
+
+vi.mock("../firebase", () => ({
+  get firebaseInitError() {
+    return mockFirebaseInitError;
+  },
+  auth: { currentUser: null },
+  app: {},
+}));
+
 // Mock heavy page components so imports don't fail
 vi.mock("../pages/Home", () => ({ default: () => <div>HomeMock</div> }));
 vi.mock("../pages/PostResource", () => ({
@@ -43,6 +53,8 @@ describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
+    // Reset firebase error state
+    mockFirebaseInitError = null;
   });
 
   it("shows loading spinner while auth is loading", () => {
@@ -57,8 +69,8 @@ describe("App", () => {
     expect(screen.getByText(/share outdoor gear/i)).toBeInTheDocument();
   });
 
-  it("shows firebase error screen when firebase_init_error in sessionStorage", () => {
-    sessionStorage.setItem("firebase_init_error", "Firebase init failed");
+  it("shows firebase error screen when firebaseInitError is set", () => {
+    mockFirebaseInitError = "Firebase init failed";
     mockAuth.mockReturnValue({ user: null, loading: false });
     render(<App />);
     expect(screen.getByText("Authentication Error")).toBeInTheDocument();
@@ -66,7 +78,7 @@ describe("App", () => {
   });
 
   it("shows Refresh Page button on firebase error", () => {
-    sessionStorage.setItem("firebase_init_error", "Some error");
+    mockFirebaseInitError = "Some error";
     mockAuth.mockReturnValue({ user: null, loading: false });
     render(<App />);
     expect(screen.getByText("Refresh Page")).toBeInTheDocument();

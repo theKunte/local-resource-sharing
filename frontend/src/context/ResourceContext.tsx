@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState } from "react";
 
 export type Resource = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   image?: string;
@@ -14,7 +14,7 @@ type ResourceContextType = {
 };
 
 const ResourceContext = createContext<ResourceContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -23,7 +23,10 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({
   const [resources, setResources] = useState<Resource[]>([]);
 
   const addResource = (resource: Omit<Resource, "id">) => {
-    setResources((prev) => [{ ...resource, id: Date.now() }, ...prev]);
+    setResources((prev) => [
+      { ...resource, id: Date.now().toString() },
+      ...prev,
+    ]);
   };
 
   return (

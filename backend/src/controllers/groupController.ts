@@ -117,10 +117,11 @@ export async function getGroups(req: Request, res: Response) {
           group: {
             include: {
               members: {
-                include: {
-                  user: {
-                    select: { id: true, email: true, name: true },
-                  },
+                select: {
+                  id: true,
+                  userId: true,
+                  role: true,
+                  // Omit user.email and user.name to prevent PII leak
                 },
               },
             },
@@ -151,7 +152,20 @@ export async function getGroups(req: Request, res: Response) {
 // GET /api/groups/:groupId/resources
 export async function getGroupResources(req: Request, res: Response) {
   const { groupId } = req.params;
+  const requestingUserId = (req as any).user.uid;
+
   try {
+    // Check if the requesting user is a member of the group
+    const requesterMembership = await prisma.groupMember.findFirst({
+      where: { groupId, userId: requestingUserId },
+    });
+
+    if (!requesterMembership) {
+      return res
+        .status(403)
+        .json({ error: "You are not a member of this group" });
+    }
+
     const shared = await prisma.resourceSharing.findMany({
       where: { groupId },
       include: { resource: true },

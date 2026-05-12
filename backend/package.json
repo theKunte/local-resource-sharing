@@ -41,6 +41,7 @@
     "typescript-eslint": "^8.59.0"
   },
   "overrides": {
-    "protobufjs": ">=7.5.5"
+    "protobufjs": ">=7.5.5",
+    "fast-xml-builder": ">=1.2.0"
   }
 }

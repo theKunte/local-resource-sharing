@@ -1,7 +1,7 @@
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { auth } from "../firebase";
+import { auth, app } from "../firebase";
 
-const storage = getStorage();
+const storage = app ? getStorage(app) : null;
 
 /**
  * Uploads an image file to Firebase Storage and returns the download URL.
@@ -11,6 +11,9 @@ export async function uploadImageToStorage(
   file: File,
   path: string,
 ): Promise<string> {
+  if (!auth || !storage) {
+    throw new Error("Firebase not initialized");
+  }
   const user = auth.currentUser;
   if (!user) {
     throw new Error("Must be authenticated to upload images");
@@ -19,7 +22,7 @@ export async function uploadImageToStorage(
   const timestamp = Date.now();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storageRef = ref(
-    storage,
+    storage!,
     `${path}/${user.uid}/${timestamp}_${safeName}`,
   );
 
@@ -39,6 +42,9 @@ export async function uploadBlobToStorage(
   path: string,
   filename: string,
 ): Promise<string> {
+  if (!auth || !storage) {
+    throw new Error("Firebase not initialized");
+  }
   const user = auth.currentUser;
   if (!user) {
     throw new Error("Must be authenticated to upload images");
@@ -46,7 +52,7 @@ export async function uploadBlobToStorage(
 
   const timestamp = Date.now();
   const storageRef = ref(
-    storage,
+    storage!,
     `${path}/${user.uid}/${timestamp}_${filename}`,
   );
 

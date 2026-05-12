@@ -51,7 +51,7 @@ This document outlines the security measures implemented in this application and
 
 #### ✅ Rate Limiting
 
-- 100 requests per 15 minutes per IP address
+- 150 requests per 15 minutes per IP address
 - Applied to all `/api/*` endpoints
 - Prevents brute force and DoS attacks
 - Can be adjusted via environment variables in future

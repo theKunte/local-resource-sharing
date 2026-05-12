@@ -14,6 +14,7 @@ import BottomNavigation from "./components/BottomNavigation";
 import { useFirebaseAuth } from "./hooks/useFirebaseAuth";
 import { useSessionTimeout } from "./hooks/useSessionTimeout";
 import { useNotifications } from "./hooks/useNotifications";
+import { firebaseInitError } from "./firebase";
 
 function App() {
   const { user, loading } = useFirebaseAuth();
@@ -27,9 +28,8 @@ function App() {
 
   // Check for Firebase initialization errors
   useEffect(() => {
-    const error = sessionStorage.getItem("firebase_init_error");
-    if (error) {
-      setFirebaseError(error);
+    if (firebaseInitError) {
+      setFirebaseError(firebaseInitError);
     }
   }, []);
 
