@@ -48,7 +48,8 @@ export async function initializeFirebase(): Promise<void> {
 
       // Check if Firebase config is present
       if (!firebaseConfig.apiKey) {
-        firebaseInitError = "Firebase configuration missing! Check your environment variables.";
+        firebaseInitError =
+          "Firebase configuration missing! Check your environment variables.";
         logError("Firebase Config", firebaseInitError);
         return;
       }
@@ -57,7 +58,7 @@ export async function initializeFirebase(): Promise<void> {
       app = initializeApp(firebaseConfig);
       auth = getAuth(app);
 
-      console.log('Firebase initialized successfully');
+      console.log("Firebase initialized successfully");
     } catch (error) {
       firebaseInitError = `Failed to initialize Firebase: ${error}`;
       logError("Firebase Init", firebaseInitError);

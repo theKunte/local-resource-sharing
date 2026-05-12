@@ -14,12 +14,12 @@ let firebaseApp = null;
 let messaging = null;
 
 // Fetch runtime config and initialize Firebase
-fetch('/config.js')
-  .then(response => response.text())
-  .then(scriptContent => {
+fetch("/config.js")
+  .then((response) => response.text())
+  .then((scriptContent) => {
     // Execute the config.js script to populate window.RUNTIME_CONFIG
     eval(scriptContent);
-    
+
     if (self.RUNTIME_CONFIG) {
       firebaseApp = firebase.initializeApp({
         apiKey: self.RUNTIME_CONFIG.FIREBASE_API_KEY,
@@ -29,15 +29,15 @@ fetch('/config.js')
         messagingSenderId: self.RUNTIME_CONFIG.FIREBASE_MESSAGING_SENDER_ID,
         appId: self.RUNTIME_CONFIG.FIREBASE_APP_ID,
       });
-      
+
       messaging = firebase.messaging();
-      console.log('Firebase initialized in service worker with runtime config');
+      console.log("Firebase initialized in service worker with runtime config");
     } else {
-      console.error('RUNTIME_CONFIG not found in config.js');
+      console.error("RUNTIME_CONFIG not found in config.js");
     }
   })
-  .catch(error => {
-    console.error('Failed to load runtime config in service worker:', error);
+  .catch((error) => {
+    console.error("Failed to load runtime config in service worker:", error);
   });
 
 // Handle background messages (when app is not in focus)

@@ -1,9 +1,9 @@
 /**
  * Runtime Configuration Loader
- * 
+ *
  * Loads configuration from a dynamically generated config.js file
  * instead of baking credentials into the Docker image at build time.
- * 
+ *
  * This allows:
  * - Credential rotation without rebuilding images
  * - Same image deployed to multiple environments
@@ -50,27 +50,30 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
     if (import.meta.env.PROD) {
       try {
         // Fetch the runtime config.js file
-        await import('/config.js');
-        
+        await import("/config.js");
+
         if (window.RUNTIME_CONFIG) {
           configLoaded = true;
           return window.RUNTIME_CONFIG;
         }
       } catch (error) {
-        console.error('Failed to load runtime config:', error);
+        console.error("Failed to load runtime config:", error);
       }
     }
 
     // Fallback to build-time env vars (development mode)
     const fallbackConfig: RuntimeConfig = {
-      FIREBASE_API_KEY: import.meta.env.VITE_FIREBASE_API_KEY || '',
-      FIREBASE_AUTH_DOMAIN: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-      FIREBASE_PROJECT_ID: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-      FIREBASE_STORAGE_BUCKET: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-      FIREBASE_MESSAGING_SENDER_ID: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-      FIREBASE_APP_ID: import.meta.env.VITE_FIREBASE_APP_ID || '',
-      FIREBASE_MEASUREMENT_ID: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || '',
-      API_URL: import.meta.env.VITE_API_URL || '',
+      FIREBASE_API_KEY: import.meta.env.VITE_FIREBASE_API_KEY || "",
+      FIREBASE_AUTH_DOMAIN: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+      FIREBASE_PROJECT_ID: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+      FIREBASE_STORAGE_BUCKET:
+        import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+      FIREBASE_MESSAGING_SENDER_ID:
+        import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+      FIREBASE_APP_ID: import.meta.env.VITE_FIREBASE_APP_ID || "",
+      FIREBASE_MEASUREMENT_ID:
+        import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
+      API_URL: import.meta.env.VITE_API_URL || "",
     };
 
     configLoaded = true;
@@ -86,7 +89,9 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
  */
 export function getRuntimeConfig(): RuntimeConfig {
   if (!window.RUNTIME_CONFIG) {
-    throw new Error('Runtime config not loaded. Call loadRuntimeConfig() first.');
+    throw new Error(
+      "Runtime config not loaded. Call loadRuntimeConfig() first.",
+    );
   }
   return window.RUNTIME_CONFIG;
 }
