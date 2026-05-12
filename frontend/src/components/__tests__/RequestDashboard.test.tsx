@@ -300,4 +300,460 @@ describe("RequestDashboard", () => {
       expect(screen.getByText("Pending Return")).toBeInTheDocument();
     });
   });
+
+  it("calls cancel API when Cancel is clicked", async () => {
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockResolvedValue({ data: {} });
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Cancel")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Cancel"));
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledWith(
+        "/api/borrow-requests/req1/cancel",
+        { userId: "borrower1" },
+      );
+    });
+  });
+
+  it("handles cancel API error", async () => {
+    const alertSpy = vi.spyOn(window, "alert");
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockRejectedValue(new Error("Cancel failed"));
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Cancel")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Cancel"));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Failed to cancel request");
+    });
+  });
+
+  it("does not cancel when user cancels confirmation", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } });
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Cancel")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Cancel"));
+
+    expect(mockPut).not.toHaveBeenCalled();
+  });
+
+  it("opens edit modal when Edit is clicked", async () => {
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } });
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Edit"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit Request")).toBeInTheDocument();
+    });
+  });
+
+  it("updates request when Save Changes is clicked in edit modal", async () => {
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPut.mockResolvedValue({ data: {} });
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Edit"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit Request")).toBeInTheDocument();
+    });
+
+    // Change the message
+    const messageInput = screen.getByPlaceholderText(/add a note/i);
+    fireEvent.change(messageInput, { target: { value: "Updated message" } });
+
+    fireEvent.click(screen.getByText("Save Changes"));
+
+    await waitFor(() => {
+      expect(mockPut).toHaveBeenCalledWith(
+        "/api/borrow-requests/req1",
+        expect.objectContaining({
+          message: "Updated message",
+        }),
+      );
+    });
+  });
+
+  it("handles update request error", async () => {
+    const alertSpy = vi.spyOn(window, "alert");
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPut.mockRejectedValue(new Error("Update failed"));
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Edit"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit Request")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Save Changes"));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Failed to update request");
+    });
+  });
+
+  it("closes edit modal when Cancel button is clicked", async () => {
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } });
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Edit"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit Request")).toBeInTheDocument();
+    });
+
+    // Click the Cancel button in the modal (not the one on the card)
+    const cancelButtons = screen.getAllByText("Cancel");
+    fireEvent.click(cancelButtons[cancelButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Edit Request")).not.toBeInTheDocument();
+    });
+  });
+
+  it("calls delete API when Delete is clicked", async () => {
+    const rejectedRequest = {
+      ...basePendingOwner,
+      id: "req5",
+      status: "REJECTED",
+    };
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [rejectedRequest] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockDelete.mockResolvedValue({ data: {} });
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Delete")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Delete"));
+
+    await waitFor(() => {
+      expect(mockDelete).toHaveBeenCalledWith("/api/borrow-requests/req5", {
+        data: { userId: "borrower1" },
+      });
+    });
+  });
+
+  it("handles delete API error", async () => {
+    const alertSpy = vi.spyOn(window, "alert");
+    const rejectedRequest = {
+      ...basePendingOwner,
+      id: "req5",
+      status: "REJECTED",
+    };
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [rejectedRequest] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockDelete.mockRejectedValue(new Error("Delete failed"));
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Delete")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Delete"));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Failed to delete request");
+    });
+  });
+
+  it("calls mark returned API when Mark as Returned is clicked", async () => {
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [activeRequest] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockResolvedValue({ data: {} });
+
+    render(<RequestDashboard userId="owner1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Mark as Returned")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Mark as Returned"));
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledWith(
+        "/api/borrow-requests/req2/mark-returned",
+        { userId: "owner1" },
+      );
+    });
+  });
+
+  it("handles mark returned API error", async () => {
+    const alertSpy = vi.spyOn(window, "alert");
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [activeRequest] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockRejectedValue(new Error("Mark returned failed"));
+
+    render(<RequestDashboard userId="owner1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Mark as Returned")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Mark as Returned"));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Failed to mark as returned");
+    });
+  });
+
+  it("calls initiate return API when I Returned This is clicked", async () => {
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [activeRequest] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockResolvedValue({ data: {} });
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("I Returned This")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("I Returned This"));
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledWith("/api/loans/loan1/request-return", {
+        userId: "borrower1",
+      });
+    });
+  });
+
+  it("handles initiate return API error", async () => {
+    const alertSpy = vi.spyOn(window, "alert");
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [activeRequest] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockRejectedValue(new Error("Initiate return failed"));
+
+    render(<RequestDashboard userId="borrower1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("I Returned This")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("I Returned This"));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Failed to initiate return");
+    });
+  });
+
+  it("calls confirm return API when Confirm Return is clicked", async () => {
+    mockGet
+      .mockResolvedValueOnce({
+        data: { requests: [pendingReturnRequest] },
+      })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockResolvedValue({ data: {} });
+
+    render(<RequestDashboard userId="owner1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Confirm Return")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Confirm Return"));
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledWith("/api/loans/loan3/confirm-return", {
+        userId: "owner1",
+      });
+    });
+  });
+
+  it("handles confirm return API error", async () => {
+    const alertSpy = vi.spyOn(window, "alert");
+    mockGet
+      .mockResolvedValueOnce({
+        data: { requests: [pendingReturnRequest] },
+      })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockRejectedValue(new Error("Confirm return failed"));
+
+    render(<RequestDashboard userId="owner1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Confirm Return")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Confirm Return"));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Failed to confirm return");
+    });
+  });
+
+  it("filters requests when filter tabs are clicked", async () => {
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } })
+      .mockResolvedValueOnce({ data: { requests: [activeRequest] } });
+
+    render(<RequestDashboard userId="owner1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Camping Tent").length).toBeGreaterThan(0);
+    });
+
+    // Click on Borrowed tab
+    const borrowedTab = screen.getByText(/Borrowed \(/);
+    fireEvent.click(borrowedTab);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Accept")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows Overdue badge for overdue active loans", async () => {
+    const overdueEnd = new Date();
+    overdueEnd.setDate(overdueEnd.getDate() - 2); // 2 days ago
+    const overdueStart = new Date();
+    overdueStart.setMonth(overdueStart.getMonth() - 1);
+    const overdueRequest = {
+      ...activeRequest,
+      startDate: overdueStart.toISOString(),
+      endDate: overdueEnd.toISOString(),
+      loan: {
+        ...activeRequest.loan,
+        startDate: overdueStart.toISOString(),
+        endDate: overdueEnd.toISOString(),
+      },
+    };
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [overdueRequest] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+
+    render(<RequestDashboard userId="owner1" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Overdue/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it("handles accept API error", async () => {
+    const alertSpy = vi.spyOn(window, "alert");
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockRejectedValue(new Error("Accept failed"));
+
+    render(<RequestDashboard userId="owner1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Accept")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Accept"));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Failed to accept request");
+    });
+  });
+
+  it("handles decline API error", async () => {
+    const alertSpy = vi.spyOn(window, "alert");
+    mockGet
+      .mockResolvedValueOnce({ data: { requests: [basePendingOwner] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } })
+      .mockResolvedValueOnce({ data: { requests: [] } });
+    mockPost.mockRejectedValue(new Error("Decline failed"));
+
+    render(<RequestDashboard userId="owner1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Decline")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Decline"));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Failed to decline request");
+    });
+  });
 });
