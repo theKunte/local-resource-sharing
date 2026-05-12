@@ -91,7 +91,7 @@ apiClient.interceptors.request.use(
     }
 
     try {
-      const user = auth.currentUser;
+      const user = auth?.currentUser;
 
       if (user) {
         // Get fresh ID token from Firebase
@@ -138,7 +138,7 @@ apiClient.interceptors.response.use(
       // Token expired or invalid - redirect to landing page
       console.error("Authentication failed. Please log in again.");
       // Sign out user and redirect to home (which shows Landing page)
-      auth.signOut();
+      auth?.signOut();
       window.location.href = "/";
     }
     return Promise.reject(error);

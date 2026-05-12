@@ -125,7 +125,7 @@ app.use(
 // Rate limiting - prevent abuse
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 150,
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
@@ -264,12 +264,10 @@ process.on("unhandledRejection", (reason, promise) => {
 
 process.on("SIGTERM", async () => {
   console.log("SIGTERM received, closing server gracefully...");
-  await prisma.$disconnect();
-  process.exit(0);
+  gracefulShutdown("SIGTERM");
 });
 
 process.on("SIGINT", async () => {
   console.log("\nSIGINT received, closing server gracefully...");
-  await prisma.$disconnect();
-  process.exit(0);
+  gracefulShutdown("SIGINT");
 });

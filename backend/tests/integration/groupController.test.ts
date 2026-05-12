@@ -216,7 +216,19 @@ describe("groupController", () => {
   });
 
   describe("getGroupResources", () => {
+    it("returns 403 when requester is not a member", async () => {
+      mockPrisma.groupMember.findFirst.mockResolvedValue(null);
+
+      const { req, res } = mockReqRes({}, { groupId: "g1" });
+      await getGroupResources(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "You are not a member of this group",
+      });
+    });
+
     it("returns resources shared with a group", async () => {
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
       const shared = [
         { resource: { id: "r1", title: "Drill" } },
         { resource: { id: "r2", title: "Saw" } },
@@ -233,6 +245,7 @@ describe("groupController", () => {
     });
 
     it("returns 500 on database error", async () => {
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
       mockPrisma.resourceSharing.findMany.mockRejectedValue(new Error("fail"));
       jest.spyOn(console, "error").mockImplementation();
 

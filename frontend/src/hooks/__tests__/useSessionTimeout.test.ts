@@ -99,4 +99,51 @@ describe("useSessionTimeout", () => {
 
     expect(mockSignOut).not.toHaveBeenCalled();
   });
+
+  it("handles signOut error gracefully", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockSignOut.mockRejectedValueOnce(new Error("signOut failed"));
+
+    const { result } = renderHook(() => useSessionTimeout());
+
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Error during session timeout logout:",
+      expect.any(Error),
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it("activity events trigger resetTimeout", () => {
+    const { result } = renderHook(() => useSessionTimeout());
+
+    // Advance to warning time (TIMEOUT - WARNING_TIME = 500ms)
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(result.current.showWarning).toBe(true);
+
+    // Simulate user activity (mousedown event)
+    act(() => {
+      window.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    });
+
+    // Warning should be cleared because resetTimeout was called
+    expect(result.current.showWarning).toBe(false);
+
+    // Also test keydown event - advance to trigger warning again
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(result.current.showWarning).toBe(true);
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+    });
+
+    expect(result.current.showWarning).toBe(false);
+  });
 });

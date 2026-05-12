@@ -47,6 +47,18 @@ describe("authController", () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
+    it("returns 400 when email format is invalid", async () => {
+      const { req, res } = mockReqRes({
+        uid: "user-123",
+        email: "invalid-email",
+      });
+      await registerUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "Invalid email format",
+      });
+    });
+
     it("registers a new user successfully", async () => {
       const user = { id: "user-123", email: "a@b.com", name: "Test" };
       mockPrisma.user.upsert.mockResolvedValue(user);
