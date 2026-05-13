@@ -53,7 +53,6 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         const response = await fetch("/config.js");
         const scriptContent = await response.text();
         // Execute the script to populate window.RUNTIME_CONFIG
-        // eslint-disable-next-line no-eval
         eval(scriptContent);
 
         if (window.RUNTIME_CONFIG) {

@@ -6,11 +6,13 @@
  */
 
 import { vi } from "vitest";
+import type { Auth, User } from "firebase/auth";
+import type { FirebaseApp } from "firebase/app";
 
 /**
  * Creates a mock Firebase auth instance
  */
-export function createMockAuth(overrides: Partial<any> = {}) {
+export function createMockAuth(overrides: Partial<Auth> = {}) {
   return {
     currentUser: null,
     onAuthStateChanged: vi.fn(() => vi.fn()), // Returns unsubscribe function
@@ -23,7 +25,7 @@ export function createMockAuth(overrides: Partial<any> = {}) {
 /**
  * Creates a mock Firebase app instance
  */
-export function createMockApp(overrides: Partial<any> = {}) {
+export function createMockApp(overrides: Partial<FirebaseApp> = {}) {
   return {
     name: "[DEFAULT]",
     options: {},
@@ -45,8 +47,8 @@ export function createMockApp(overrides: Partial<any> = {}) {
  */
 export function createFirebaseMock(
   options: {
-    auth?: Partial<any>;
-    app?: Partial<any>;
+    auth?: Partial<Auth>;
+    app?: Partial<FirebaseApp>;
     initError?: string | null;
   } = {},
 ) {
@@ -97,7 +99,7 @@ export async function waitForFirebaseInit() {
 /**
  * Creates a mock user for Firebase auth testing
  */
-export function createMockUser(overrides: Partial<any> = {}) {
+export function createMockUser(overrides: Partial<User> = {}) {
   return {
     uid: "test-user-123",
     email: "test@example.com",
