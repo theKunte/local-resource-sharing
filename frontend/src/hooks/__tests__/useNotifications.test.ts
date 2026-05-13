@@ -11,6 +11,9 @@ const { mockGetToken, mockOnMessage, mockPost, mockGetFirebaseMessaging } =
 
 vi.mock("../../firebase", () => ({
   getFirebaseMessaging: mockGetFirebaseMessaging,
+  initializeFirebase: vi.fn().mockResolvedValue(undefined),
+  getFirebaseAuth: vi.fn(() => null),
+  getFirebaseApp: vi.fn(() => null),
 }));
 
 vi.mock("firebase/messaging", () => ({

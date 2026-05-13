@@ -1,36 +1,96 @@
-// Firebase config and initialization
-import { initializeApp } from "firebase/app";
+// Firebase config and initialization with runtime configuration support
+import { initializeApp, FirebaseApp } from "firebase/app";
 import {
   getAuth,
+  Auth,
   setPersistence,
   browserSessionPersistence,
 } from "firebase/auth";
 import { getMessaging, isSupported } from "firebase/messaging";
 import { logError } from "./utils/errorHandler";
+import { loadRuntimeConfig } from "./config/runtimeConfig";
+import { configureApiClient } from "./utils/apiClient";
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-};
-
-// Check if Firebase config is present
+// Firebase will be initialized asynchronously after runtime config loads
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
 let firebaseInitError: string | null = null;
-if (!firebaseConfig.apiKey) {
-  firebaseInitError = "Firebase configuration missing! Check your .env file.";
-  logError("Firebase Config", firebaseInitError);
-  // Don't throw here - let the app render and show error UI
+let initPromise: Promise<void> | null = null;
+
+/**
+ * Initialize Firebase with runtime configuration
+ * This loads config from config.js (production) or .env (development)
+ */
+export async function initializeFirebase(): Promise<void> {
+  // Return existing initialization promise if already in progress
+  if (initPromise) {
+    return initPromise;
+  }
+
+  // Already initialized successfully
+  if (app) {
+    return;
+  }
+
+  initPromise = (async () => {
+    try {
+      // Load runtime configuration
+      const config = await loadRuntimeConfig();
+
+      // Configure API client with runtime API URL
+      configureApiClient(config.API_URL);
+
+      const firebaseConfig = {
+        apiKey: config.FIREBASE_API_KEY,
+        authDomain: config.FIREBASE_AUTH_DOMAIN,
+        projectId: config.FIREBASE_PROJECT_ID,
+        storageBucket: config.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: config.FIREBASE_MESSAGING_SENDER_ID,
+        appId: config.FIREBASE_APP_ID,
+        measurementId: config.FIREBASE_MEASUREMENT_ID,
+      };
+
+      // Check if Firebase config is present
+      if (!firebaseConfig.apiKey) {
+        firebaseInitError =
+          "Firebase configuration missing! Check your environment variables.";
+        logError("Firebase Config", firebaseInitError);
+        return;
+      }
+
+      // Initialize Firebase
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+
+      console.log("Firebase initialized successfully");
+    } catch (error) {
+      firebaseInitError = `Failed to initialize Firebase: ${error}`;
+      logError("Firebase Init", firebaseInitError);
+    }
+  })();
+
+  return initPromise;
 }
 
-const app = firebaseInitError ? null : initializeApp(firebaseConfig);
-export const auth = app ? getAuth(app) : null;
+/**
+ * Get Firebase app instance (must call initializeFirebase first)
+ */
+export function getFirebaseApp(): FirebaseApp | null {
+  return app;
+}
 
-// Export app and error so other modules can check them
-export { firebaseInitError, app };
+/**
+ * Get Firebase auth instance (must call initializeFirebase first)
+ */
+export function getFirebaseAuth(): Auth | null {
+  return auth;
+}
+
+// Export error state
+export { firebaseInitError };
+
+// Legacy exports for backward compatibility - these will be null until initialized
+export { app, auth };
 
 // Lazy-initialized Firebase Cloud Messaging (only in supported browsers)
 let _messaging: ReturnType<typeof getMessaging> | null = null;

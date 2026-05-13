@@ -9,18 +9,29 @@ import { auth } from "../firebase";
 // Get backend URL from environment.
 // In Docker, VITE_API_URL is "" so requests go to the same origin (nginx),
 // which proxies /api/ to the backend container. In local dev it falls back to localhost:3001.
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+// NOTE: The baseURL will be updated at runtime after loading config.js
+const DEFAULT_API_URL = "http://localhost:3001";
 
 // Create axios instance with base configuration
 // allowAbsoluteUrls: false prevents SSRF/cloud-metadata exfiltration (CVE-2025-27152)
 // by ensuring all requests are resolved relative to baseURL only.
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_URL || DEFAULT_API_URL,
   allowAbsoluteUrls: false,
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+/**
+ * Update the API client base URL from runtime configuration
+ * Called during application initialization after config.js is loaded
+ */
+export function configureApiClient(apiUrl: string): void {
+  const baseURL = apiUrl || DEFAULT_API_URL;
+  apiClient.defaults.baseURL = baseURL;
+  console.log("API client configured with base URL:", baseURL);
+}
 
 // ---------------------------------------------------------------------------
 // SSRF / NO_PROXY hostname-normalization bypass guard
@@ -82,7 +93,9 @@ apiClient.interceptors.request.use(
     // Block requests that target private networks or cloud-metadata endpoints.
     // This guards against the NO_PROXY hostname normalization bypass where
     // Axios skips proxy denylists for uppercase/trailing-dot hostname variants.
-    if (isBlockedUrl(config.url, API_BASE_URL)) {
+    if (
+      isBlockedUrl(config.url, apiClient.defaults.baseURL || DEFAULT_API_URL)
+    ) {
       return Promise.reject(
         new Error(
           "Request blocked: target resolves to a restricted network address.",
