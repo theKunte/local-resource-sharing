@@ -10,6 +10,7 @@ globalThis.fetch = vi.fn();
 // Helper to reset module state between tests
 async function resetRuntimeConfig() {
   // Clear window.RUNTIME_CONFIG
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   delete (window as any).RUNTIME_CONFIG;
 
   // Re-import the module to reset its internal state
@@ -41,10 +42,10 @@ describe("runtimeConfig", () => {
       };
 
       // Mock successful fetch
-      (globalThis.fetch as any).mockResolvedValueOnce({
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce({
         text: async () =>
           `window.RUNTIME_CONFIG = ${JSON.stringify(mockConfig)};`,
-      });
+      } as Response);
 
       const { loadRuntimeConfig } = await import("../runtimeConfig");
       const config = await loadRuntimeConfig();
@@ -56,7 +57,7 @@ describe("runtimeConfig", () => {
 
     it("should handle fetch errors and fall back to env vars", async () => {
       // Mock fetch failure
-      (globalThis.fetch as any).mockRejectedValueOnce(
+      vi.mocked(globalThis.fetch).mockRejectedValueOnce(
         new Error("Network error"),
       );
 
@@ -90,7 +91,7 @@ describe("runtimeConfig", () => {
       };
 
       // Mock fetch with delay to test concurrent behavior
-      (globalThis.fetch as any).mockImplementationOnce(
+      vi.mocked(globalThis.fetch).mockImplementationOnce(
         () =>
           new Promise((resolve) =>
             setTimeout(
@@ -98,7 +99,7 @@ describe("runtimeConfig", () => {
                 resolve({
                   text: async () =>
                     `window.RUNTIME_CONFIG = ${JSON.stringify(mockConfig)};`,
-                }),
+                } as Response),
               50,
             ),
           ),
@@ -132,10 +133,10 @@ describe("runtimeConfig", () => {
         API_URL: "http://cached.com",
       };
 
-      (globalThis.fetch as any).mockResolvedValueOnce({
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce({
         text: async () =>
           `window.RUNTIME_CONFIG = ${JSON.stringify(mockConfig)};`,
-      });
+      } as Response);
 
       const { loadRuntimeConfig } = await import("../runtimeConfig");
 
@@ -238,9 +239,9 @@ describe("runtimeConfig", () => {
 
     it("should handle config.js that doesn't set window.RUNTIME_CONFIG", async () => {
       // Mock fetch returning invalid script
-      (globalThis.fetch as any).mockResolvedValueOnce({
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce({
         text: async () => "console.log('no config here');",
-      });
+      } as Response);
 
       vi.stubEnv("VITE_FIREBASE_API_KEY", "fallback-key");
       vi.stubEnv("VITE_API_URL", "http://fallback.com");
@@ -255,9 +256,9 @@ describe("runtimeConfig", () => {
 
     it("should handle malformed config.js gracefully", async () => {
       // Mock fetch returning invalid JavaScript
-      (globalThis.fetch as any).mockResolvedValueOnce({
+      vi.mocked(globalThis.fetch).mockResolvedValueOnce({
         text: async () => "this is not valid javascript {{{",
-      });
+      } as Response);
 
       vi.stubEnv("VITE_FIREBASE_API_KEY", "safe-fallback");
 
