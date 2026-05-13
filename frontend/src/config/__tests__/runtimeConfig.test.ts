@@ -41,7 +41,7 @@ describe("runtimeConfig", () => {
       };
 
       // Mock successful fetch
-      (global.fetch as any).mockResolvedValueOnce({
+      (globalThis.fetch as any).mockResolvedValueOnce({
         text: async () =>
           `window.RUNTIME_CONFIG = ${JSON.stringify(mockConfig)};`,
       });
@@ -49,14 +49,16 @@ describe("runtimeConfig", () => {
       const { loadRuntimeConfig } = await import("../runtimeConfig");
       const config = await loadRuntimeConfig();
 
-      expect(global.fetch).toHaveBeenCalledWith("/config.js");
+      expect(globalThis.fetch).toHaveBeenCalledWith("/config.js");
       expect(config).toEqual(mockConfig);
       expect(window.RUNTIME_CONFIG).toEqual(mockConfig);
     });
 
     it("should handle fetch errors and fall back to env vars", async () => {
       // Mock fetch failure
-      (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
+      (globalThis.fetch as any).mockRejectedValueOnce(
+        new Error("Network error"),
+      );
 
       // Mock environment variables
       vi.stubEnv("VITE_FIREBASE_API_KEY", "dev-api-key");
@@ -88,7 +90,7 @@ describe("runtimeConfig", () => {
       };
 
       // Mock fetch with delay to test concurrent behavior
-      (global.fetch as any).mockImplementationOnce(
+      (globalThis.fetch as any).mockImplementationOnce(
         () =>
           new Promise((resolve) =>
             setTimeout(
@@ -112,7 +114,7 @@ describe("runtimeConfig", () => {
       ]);
 
       // Should only fetch once
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
       expect(config1).toEqual(mockConfig);
       expect(config2).toEqual(mockConfig);
       expect(config3).toEqual(mockConfig);
@@ -130,7 +132,7 @@ describe("runtimeConfig", () => {
         API_URL: "http://cached.com",
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      (globalThis.fetch as any).mockResolvedValueOnce({
         text: async () =>
           `window.RUNTIME_CONFIG = ${JSON.stringify(mockConfig)};`,
       });
@@ -139,11 +141,11 @@ describe("runtimeConfig", () => {
 
       // First call loads from fetch
       await loadRuntimeConfig();
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
       // Second call should return cached without fetching
       const config2 = await loadRuntimeConfig();
-      expect(global.fetch).toHaveBeenCalledTimes(1); // Still only 1 call
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1); // Still only 1 call
       expect(config2).toEqual(mockConfig);
     });
   });
@@ -236,7 +238,7 @@ describe("runtimeConfig", () => {
 
     it("should handle config.js that doesn't set window.RUNTIME_CONFIG", async () => {
       // Mock fetch returning invalid script
-      (global.fetch as any).mockResolvedValueOnce({
+      (globalThis.fetch as any).mockResolvedValueOnce({
         text: async () => "console.log('no config here');",
       });
 
@@ -253,7 +255,7 @@ describe("runtimeConfig", () => {
 
     it("should handle malformed config.js gracefully", async () => {
       // Mock fetch returning invalid JavaScript
-      (global.fetch as any).mockResolvedValueOnce({
+      (globalThis.fetch as any).mockResolvedValueOnce({
         text: async () => "this is not valid javascript {{{",
       });
 

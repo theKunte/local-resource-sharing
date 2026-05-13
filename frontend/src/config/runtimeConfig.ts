@@ -27,7 +27,6 @@ declare global {
   }
 }
 
-let configLoaded = false;
 let configPromise: Promise<RuntimeConfig> | null = null;
 
 /**
@@ -35,14 +34,9 @@ let configPromise: Promise<RuntimeConfig> | null = null;
  * In development, falls back to Vite environment variables
  */
 export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
-  // Return cached promise if already loading
+  // Return cached promise if already loading or loaded
   if (configPromise) {
     return configPromise;
-  }
-
-  // Return immediately if already loaded
-  if (configLoaded && window.RUNTIME_CONFIG) {
-    return window.RUNTIME_CONFIG;
   }
 
   configPromise = (async () => {
@@ -56,7 +50,6 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         eval(scriptContent);
 
         if (window.RUNTIME_CONFIG) {
-          configLoaded = true;
           return window.RUNTIME_CONFIG;
         }
       } catch (error) {
@@ -79,7 +72,6 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
       API_URL: import.meta.env.VITE_API_URL || "",
     };
 
-    configLoaded = true;
     window.RUNTIME_CONFIG = fallbackConfig;
     return fallbackConfig;
   })();
