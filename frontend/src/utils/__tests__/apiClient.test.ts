@@ -312,6 +312,148 @@ describe("apiClient", () => {
       expect(result).toBeDefined();
     });
 
+    it("blocks requests to AWS metadata endpoint when baseURL contains blocked hostname", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      // Configure baseURL to a blocked hostname to trigger the SSRF protection
+      configureApiClient("http://169.254.169.254");
+
+      const config = {
+        url: "/latest/meta-data/",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests to Google metadata endpoint", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      // Configure baseURL to Google metadata endpoint
+      configureApiClient("http://metadata.google.internal");
+
+      const config = {
+        url: "/computeMetadata/v1/",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests to private IP 10.x.x.x ranges", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      configureApiClient("http://10.0.0.1");
+
+      const config = {
+        url: "/admin",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests to private IP 192.168.x.x ranges", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      configureApiClient("http://192.168.1.1");
+
+      const config = {
+        url: "/router/admin",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests to localhost 127.0.0.1", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      configureApiClient("http://127.0.0.1:8080");
+
+      const config = {
+        url: "/secret",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests with malformed URLs in catch block", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      // Set an invalid baseURL to trigger URL parsing errors
+      configureApiClient("not-a-valid-url");
+
+      const config = {
+        url: "/api/test",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      // Should block malformed URLs (catch block returns true)
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
     it("has SSRF protection code for AWS metadata endpoint", async () => {
       const { default: apiClient } = await import("../apiClient");
 
