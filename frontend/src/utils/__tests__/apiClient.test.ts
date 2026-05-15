@@ -1,20 +1,42 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { AxiosError } from "axios";
 
-let mockCurrentUser: { getIdToken: () => Promise<string> } | null = null;
+const {
+  mockGetIdToken,
+  mockSignOut,
+  mockGetFirebaseAuth,
+  mockAuth,
+  currentUserState,
+} = vi.hoisted(() => {
+  const mockGetIdToken = vi.fn();
+  const mockSignOut = vi.fn();
+  const mockGetFirebaseAuth = vi.fn();
 
-const { mockGetIdToken, mockSignOut } = vi.hoisted(() => ({
-  mockGetIdToken: vi.fn(),
-  mockSignOut: vi.fn(),
-}));
+  // Mutable state object that can be updated in tests
+  const currentUserState = {
+    value: null as { getIdToken: () => Promise<string> } | null,
+  };
 
-vi.mock("../../firebase", () => ({
-  auth: {
+  const mockAuth = {
     get currentUser() {
-      return mockCurrentUser;
+      return currentUserState.value;
     },
     signOut: mockSignOut,
-  },
+  };
+
+  return {
+    mockGetIdToken,
+    mockSignOut,
+    mockGetFirebaseAuth,
+    mockAuth,
+    currentUserState,
+  };
+});
+
+vi.mock("../../firebase", () => ({
+  auth: mockAuth,
+  getFirebaseAuth: mockGetFirebaseAuth,
+  initializeFirebase: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("apiClient", () => {
@@ -25,22 +47,26 @@ describe("apiClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetIdToken.mockResolvedValue("test-token");
-    mockCurrentUser = {
+    currentUserState.value = {
       getIdToken: mockGetIdToken,
     };
+    mockGetFirebaseAuth.mockReturnValue(mockAuth);
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    // Mock window.location
+    // Mock window.location with writable href property
     originalLocation = window.location;
     delete (window as { location?: Location }).location;
-    window.location = { ...originalLocation, href: "" } as Location;
+    (window as { location: Partial<Location> }).location = {
+      ...originalLocation,
+      href: "",
+    };
   });
 
   afterEach(() => {
     consoleErrorSpy?.mockRestore();
     consoleLogSpy?.mockRestore();
-    window.location = originalLocation;
+    (window as { location: Location }).location = originalLocation;
     vi.resetModules(); // Clear module cache between tests
   });
 
@@ -83,6 +109,39 @@ describe("apiClient", () => {
     expect(typeof apiClient.post).toBe("function");
     expect(typeof apiClient.put).toBe("function");
     expect(typeof apiClient.delete).toBe("function");
+  });
+
+  describe("configureApiClient", () => {
+    it("updates the base URL when called with a valid URL", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      const newBaseUrl = "https://api.example.com";
+      configureApiClient(newBaseUrl);
+
+      expect(apiClient.defaults.baseURL).toBe(newBaseUrl);
+    });
+
+    it("falls back to default URL when called with empty string", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      configureApiClient("");
+
+      expect(apiClient.defaults.baseURL).toBe("http://localhost:3001");
+    });
+
+    it("logs the configured base URL", async () => {
+      const { configureApiClient } = await import("../apiClient");
+
+      const newBaseUrl = "https://api.production.com";
+      configureApiClient(newBaseUrl);
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "API client configured with base URL:",
+        newBaseUrl,
+      );
+    });
   });
 
   describe("Request Interceptor", () => {
@@ -135,7 +194,7 @@ describe("apiClient", () => {
     });
 
     it("does not add auth token when user is not authenticated", async () => {
-      mockCurrentUser = null;
+      currentUserState.value = null;
       const { default: apiClient } = await import("../apiClient");
 
       const config = {
@@ -251,6 +310,148 @@ describe("apiClient", () => {
       // But the protection code is still in place for defensive purposes
       const result = await interceptor.fulfilled(config);
       expect(result).toBeDefined();
+    });
+
+    it("blocks requests to AWS metadata endpoint when baseURL contains blocked hostname", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      // Configure baseURL to a blocked hostname to trigger the SSRF protection
+      configureApiClient("http://169.254.169.254");
+
+      const config = {
+        url: "/latest/meta-data/",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests to Google metadata endpoint", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      // Configure baseURL to Google metadata endpoint
+      configureApiClient("http://metadata.google.internal");
+
+      const config = {
+        url: "/computeMetadata/v1/",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests to private IP 10.x.x.x ranges", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      configureApiClient("http://10.0.0.1");
+
+      const config = {
+        url: "/admin",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests to private IP 192.168.x.x ranges", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      configureApiClient("http://192.168.1.1");
+
+      const config = {
+        url: "/router/admin",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests to localhost 127.0.0.1", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      configureApiClient("http://127.0.0.1:8080");
+
+      const config = {
+        url: "/secret",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
+    });
+
+    it("blocks requests with malformed URLs in catch block", async () => {
+      const { default: apiClient, configureApiClient } =
+        await import("../apiClient");
+
+      // Set an invalid baseURL to trigger URL parsing errors
+      configureApiClient("not-a-valid-url");
+
+      const config = {
+        url: "/api/test",
+        method: "GET",
+        headers: {},
+      };
+
+      const interceptor = (
+        apiClient.interceptors.request as unknown as {
+          handlers: Array<{ fulfilled: (config: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      // Should block malformed URLs (catch block returns true)
+      await expect(interceptor.fulfilled(config)).rejects.toThrow(
+        "Request blocked: target resolves to a restricted network address.",
+      );
     });
 
     it("has SSRF protection code for AWS metadata endpoint", async () => {

@@ -1,12 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
-const { mockSignOut } = vi.hoisted(() => ({ mockSignOut: vi.fn() }));
+const { mockSignOut, mockGetFirebaseAuth, mockAuth } = vi.hoisted(() => {
+  const mockAuth = {
+    currentUser: { uid: "u1" },
+  };
+  return {
+    mockSignOut: vi.fn(),
+    mockGetFirebaseAuth: vi.fn(),
+    mockAuth,
+  };
+});
 
 vi.mock("../../firebase", () => ({
-  auth: {
-    currentUser: { uid: "u1" },
-  },
+  auth: mockAuth,
+  getFirebaseAuth: mockGetFirebaseAuth,
+  initializeFirebase: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("firebase/auth", () => ({
@@ -28,6 +37,7 @@ describe("useSessionTimeout", () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     mockSignOut.mockResolvedValue(undefined);
+    mockGetFirebaseAuth.mockReturnValue(mockAuth);
   });
 
   afterEach(() => {

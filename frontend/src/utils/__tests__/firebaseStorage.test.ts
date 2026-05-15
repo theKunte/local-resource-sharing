@@ -4,6 +4,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("../../firebase", () => ({
   auth: null,
   app: null,
+  getFirebaseAuth: vi.fn(() => null),
+  getFirebaseApp: vi.fn(() => null),
+  initializeFirebase: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock firebase/storage
