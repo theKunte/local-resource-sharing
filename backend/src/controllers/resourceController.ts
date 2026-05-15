@@ -7,6 +7,7 @@ import {
   validateImageInput,
   sanitizeString,
 } from "../utils/validation";
+import { RESOURCE_LIMITS, LIMIT_ERROR_MESSAGES } from "../config/limits";
 
 /**
  * Extracts the Firebase Storage object path from a download URL so we can
@@ -495,6 +496,38 @@ export async function addResourceToGroup(req: Request, res: Response) {
         .json({ error: "Resource is already shared with this group" });
     }
 
+    // Check resources per group limit
+    const resourcesInGroup = await prisma.resourceSharing.count({
+      where: { groupId },
+    });
+
+    if (resourcesInGroup >= RESOURCE_LIMITS.MAX_RESOURCES_PER_GROUP) {
+      return res
+        .status(400)
+        .json(
+          LIMIT_ERROR_MESSAGES.MAX_RESOURCES_PER_GROUP(
+            resourcesInGroup,
+            RESOURCE_LIMITS.MAX_RESOURCES_PER_GROUP,
+          ),
+        );
+    }
+
+    // Check groups per resource limit
+    const groupsForResource = await prisma.resourceSharing.count({
+      where: { resourceId },
+    });
+
+    if (groupsForResource >= RESOURCE_LIMITS.MAX_GROUPS_PER_RESOURCE) {
+      return res
+        .status(400)
+        .json(
+          LIMIT_ERROR_MESSAGES.MAX_GROUPS_PER_RESOURCE(
+            groupsForResource,
+            RESOURCE_LIMITS.MAX_GROUPS_PER_RESOURCE,
+          ),
+        );
+    }
+
     await prisma.resourceSharing.create({
       data: {
         resourceId,
@@ -591,6 +624,38 @@ export async function shareResource(req: Request, res: Response) {
       return res
         .status(400)
         .json({ error: "Resource already shared with this group" });
+    }
+
+    // Check resources per group limit
+    const resourcesInGroup = await prisma.resourceSharing.count({
+      where: { groupId },
+    });
+
+    if (resourcesInGroup >= RESOURCE_LIMITS.MAX_RESOURCES_PER_GROUP) {
+      return res
+        .status(400)
+        .json(
+          LIMIT_ERROR_MESSAGES.MAX_RESOURCES_PER_GROUP(
+            resourcesInGroup,
+            RESOURCE_LIMITS.MAX_RESOURCES_PER_GROUP,
+          ),
+        );
+    }
+
+    // Check groups per resource limit
+    const groupsForResource = await prisma.resourceSharing.count({
+      where: { resourceId },
+    });
+
+    if (groupsForResource >= RESOURCE_LIMITS.MAX_GROUPS_PER_RESOURCE) {
+      return res
+        .status(400)
+        .json(
+          LIMIT_ERROR_MESSAGES.MAX_GROUPS_PER_RESOURCE(
+            groupsForResource,
+            RESOURCE_LIMITS.MAX_GROUPS_PER_RESOURCE,
+          ),
+        );
     }
 
     const sharing = await prisma.resourceSharing.create({

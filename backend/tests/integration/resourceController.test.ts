@@ -27,6 +27,7 @@ const mockPrisma = {
     create: jest.fn(),
     delete: jest.fn(),
     deleteMany: jest.fn(),
+    count: jest.fn(),
   },
   groupMember: {
     findMany: jest.fn(),
@@ -698,6 +699,9 @@ describe("resourceController", () => {
       mockPrisma.resource.findUnique.mockResolvedValue({ ownerId: "user-123" });
       mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
       mockPrisma.resourceSharing.findFirst.mockResolvedValue(null);
+      mockPrisma.resourceSharing.count
+        .mockResolvedValueOnce(10) // resourcesInGroup count (< 500)
+        .mockResolvedValueOnce(5); // groupsForResource count (< 20)
       mockPrisma.resourceSharing.create.mockResolvedValue({ id: "s1" });
 
       const { req, res } = mockReqRes(
@@ -707,6 +711,48 @@ describe("resourceController", () => {
       await addResourceToGroup(req, res);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true }),
+      );
+    });
+
+    it("returns 400 when MAX_RESOURCES_PER_GROUP limit is reached", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({ ownerId: "user-123" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue(null);
+      mockPrisma.resourceSharing.count.mockResolvedValueOnce(500); // At limit
+
+      const { req, res } = mockReqRes(
+        { userId: "user-123" },
+        { resourceId: "r1", groupId: "g1" },
+      );
+      await addResourceToGroup(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Resource limit reached",
+          limit: 500,
+        }),
+      );
+    });
+
+    it("returns 400 when MAX_GROUPS_PER_RESOURCE limit is reached", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({ ownerId: "user-123" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue(null);
+      mockPrisma.resourceSharing.count
+        .mockResolvedValueOnce(10) // resourcesInGroup count (under limit)
+        .mockResolvedValueOnce(20); // groupsForResource count (at limit)
+
+      const { req, res } = mockReqRes(
+        { userId: "user-123" },
+        { resourceId: "r1", groupId: "g1" },
+      );
+      await addResourceToGroup(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Sharing limit reached",
+          limit: 20,
+        }),
       );
     });
 
@@ -935,6 +981,9 @@ describe("resourceController", () => {
       mockPrisma.resource.findUnique.mockResolvedValue({ ownerId: "user-123" });
       mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
       mockPrisma.resourceSharing.findFirst.mockResolvedValue(null);
+      mockPrisma.resourceSharing.count
+        .mockResolvedValueOnce(10) // resourcesInGroup count (< 500)
+        .mockResolvedValueOnce(5); // groupsForResource count (< 20)
       mockPrisma.resourceSharing.create.mockResolvedValue(sharing);
 
       const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
@@ -942,6 +991,42 @@ describe("resourceController", () => {
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(sharing);
+    });
+
+    it("returns 400 when MAX_RESOURCES_PER_GROUP limit is reached", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({ ownerId: "user-123" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue(null);
+      mockPrisma.resourceSharing.count.mockResolvedValueOnce(500); // At limit
+
+      const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
+      await shareResource(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Resource limit reached",
+          limit: 500,
+        }),
+      );
+    });
+
+    it("returns 400 when MAX_GROUPS_PER_RESOURCE limit is reached", async () => {
+      mockPrisma.resource.findUnique.mockResolvedValue({ ownerId: "user-123" });
+      mockPrisma.groupMember.findFirst.mockResolvedValue({ id: "m1" });
+      mockPrisma.resourceSharing.findFirst.mockResolvedValue(null);
+      mockPrisma.resourceSharing.count
+        .mockResolvedValueOnce(10) // resourcesInGroup count (under limit)
+        .mockResolvedValueOnce(20); // groupsForResource count (at limit)
+
+      const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
+      await shareResource(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Sharing limit reached",
+          limit: 20,
+        }),
+      );
     });
 
     it("returns 500 on database error", async () => {
