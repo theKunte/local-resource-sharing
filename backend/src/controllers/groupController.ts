@@ -7,6 +7,7 @@ import {
   sanitizeString,
   validateEmail,
 } from "../utils/validation";
+import { RESOURCE_LIMITS, LIMIT_ERROR_MESSAGES } from "../config/limits";
 
 // POST /api/groups
 export async function createGroup(req: Request, res: Response) {
@@ -27,6 +28,21 @@ export async function createGroup(req: Request, res: Response) {
   }
 
   try {
+    // Check user's group ownership count
+    const userGroupCount = await prisma.groupMember.count({
+      where: { userId: createdById, role: GroupRole.OWNER },
+    });
+
+    if (userGroupCount >= RESOURCE_LIMITS.MAX_GROUPS_PER_USER) {
+      return res
+        .status(400)
+        .json(
+          LIMIT_ERROR_MESSAGES.MAX_GROUPS_PER_USER(
+            userGroupCount,
+            RESOURCE_LIMITS.MAX_GROUPS_PER_USER,
+          ),
+        );
+    }
     const group = await prisma.group.create({
       data: {
         name: sanitizedName,
@@ -76,6 +92,22 @@ export async function addMember(req: Request, res: Response) {
         error: "Forbidden",
         message: "Only group owners and admins can add members",
       });
+    }
+
+    // Check group member count before adding
+    const memberCount = await prisma.groupMember.count({
+      where: { groupId },
+    });
+
+    if (memberCount >= RESOURCE_LIMITS.MAX_MEMBERS_PER_GROUP) {
+      return res
+        .status(400)
+        .json(
+          LIMIT_ERROR_MESSAGES.MAX_MEMBERS_PER_GROUP(
+            memberCount,
+            RESOURCE_LIMITS.MAX_MEMBERS_PER_GROUP,
+          ),
+        );
     }
 
     const existingMembership = await prisma.groupMember.findFirst({
@@ -260,6 +292,22 @@ export async function inviteToGroup(req: Request, res: Response) {
         error: "Already a member",
         message: `${email} is already a member of this group`,
       });
+    }
+
+    // Check group member count before inviting
+    const memberCount = await prisma.groupMember.count({
+      where: { groupId },
+    });
+
+    if (memberCount >= RESOURCE_LIMITS.MAX_MEMBERS_PER_GROUP) {
+      return res
+        .status(400)
+        .json(
+          LIMIT_ERROR_MESSAGES.MAX_MEMBERS_PER_GROUP(
+            memberCount,
+            RESOURCE_LIMITS.MAX_MEMBERS_PER_GROUP,
+          ),
+        );
     }
 
     const member = await prisma.groupMember.create({
