@@ -6,6 +6,7 @@ const mockPrisma = {
     findUnique: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    count: jest.fn(),
   },
   groupMember: {
     findMany: jest.fn(),
@@ -61,7 +62,7 @@ function mockReqRes(
 }
 
 describe("groupController", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => jest.resetAllMocks());
 
   describe("createGroup", () => {
     it("returns 400 on invalid input", async () => {
@@ -81,6 +82,7 @@ describe("groupController", () => {
 
     it("creates a group successfully", async () => {
       const group = { id: "g1", name: "Book Club", createdById: "user-123" };
+      mockPrisma.groupMember.count.mockResolvedValue(10); // Under the limit
       mockPrisma.group.create.mockResolvedValue(group);
       mockPrisma.groupMember.updateMany.mockResolvedValue({ count: 1 });
 
@@ -94,7 +96,26 @@ describe("groupController", () => {
       expect(res.json).toHaveBeenCalledWith(group);
     });
 
+    it("returns 400 when MAX_GROUPS_PER_USER limit is reached", async () => {
+      mockPrisma.groupMember.count.mockResolvedValue(50); // At the limit
+
+      const { req, res } = mockReqRes({
+        name: "Book Club",
+        createdById: "user-123",
+      });
+      await createGroup(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Group limit reached",
+          limit: 50,
+        }),
+      );
+    });
+
     it("returns 500 on database error", async () => {
+      mockPrisma.groupMember.count.mockResolvedValue(10); // Under limit
       mockPrisma.group.create.mockRejectedValue(new Error("fail"));
       jest.spyOn(console, "error").mockImplementation();
 
@@ -158,6 +179,7 @@ describe("groupController", () => {
       mockPrisma.groupMember.findFirst
         .mockResolvedValueOnce({ id: "req1", role: "OWNER" }) // requester is OWNER
         .mockResolvedValueOnce(null); // user not already a member
+      mockPrisma.groupMember.count.mockResolvedValue(50); // Under the limit
       mockPrisma.groupMember.create.mockResolvedValue(member);
 
       const { req, res } = mockReqRes({ userId: "u2" }, { groupId: "g1" });
@@ -165,6 +187,24 @@ describe("groupController", () => {
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(member);
+    });
+
+    it("returns 400 when MAX_MEMBERS_PER_GROUP limit is reached", async () => {
+      mockPrisma.groupMember.findFirst
+        .mockResolvedValueOnce({ id: "req1", role: "OWNER" }) // requester is OWNER
+        .mockResolvedValueOnce(null); // user not already a member
+      mockPrisma.groupMember.count.mockResolvedValue(100); // At the limit
+
+      const { req, res } = mockReqRes({ userId: "u2" }, { groupId: "g1" });
+      await addMember(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Member limit reached",
+          limit: 100,
+        }),
+      );
     });
 
     it("returns 500 on database error", async () => {
@@ -218,6 +258,7 @@ describe("groupController", () => {
   describe("getGroupResources", () => {
     it("returns 403 when requester is not a member", async () => {
       mockPrisma.groupMember.findFirst.mockResolvedValue(null);
+      mockPrisma.resourceSharing.findMany.mockResolvedValue([]);
 
       const { req, res } = mockReqRes({}, { groupId: "g1" });
       await getGroupResources(req, res);
@@ -352,6 +393,7 @@ describe("groupController", () => {
       mockPrisma.groupMember.findFirst
         .mockResolvedValueOnce({ id: "m1" }) // inviter membership
         .mockResolvedValueOnce(null); // no existing membership
+      mockPrisma.groupMember.count.mockResolvedValue(50); // Under the limit
       mockPrisma.user.findFirst.mockResolvedValue({
         id: "u2",
         email: "b@c.com",
@@ -372,6 +414,30 @@ describe("groupController", () => {
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true }),
+      );
+    });
+
+    it("returns 400 when MAX_MEMBERS_PER_GROUP limit is reached", async () => {
+      mockPrisma.groupMember.findFirst
+        .mockResolvedValueOnce({ id: "m1" }) // inviter membership
+        .mockResolvedValueOnce(null); // no existing membership
+      mockPrisma.groupMember.count.mockResolvedValue(100); // At the limit
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: "u2",
+        email: "b@c.com",
+      });
+
+      const { req, res } = mockReqRes(
+        { email: "b@c.com", invitedBy: "user-123" },
+        { groupId: "g1" },
+      );
+      await inviteToGroup(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "Member limit reached",
+          limit: 100,
+        }),
       );
     });
 
