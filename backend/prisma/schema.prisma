@@ -86,6 +86,7 @@ model Resource {
   id             String            @id @default(uuid())
   title          String
   description    String
+  category       String[]          @default([]) // Multiple categories for filtering and search
   image          String?           // Firebase Storage URL
   ownerId        String
   status         ResourceStatus    @default(AVAILABLE)
@@ -100,7 +101,9 @@ model Resource {
 
   @@index([ownerId])
   @@index([status])
+  @@index([category])
   @@index([ownerId, status])
+  @@index([status, category])
 }
 
 model ResourceSharing {

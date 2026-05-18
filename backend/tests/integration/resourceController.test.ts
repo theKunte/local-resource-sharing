@@ -38,7 +38,11 @@ const mockPrisma = {
   user: { upsert: jest.fn() },
   group: { create: jest.fn() },
   borrowRequest: { count: jest.fn(), deleteMany: jest.fn() },
-  loan: { deleteMany: jest.fn() },
+  loan: {
+    deleteMany: jest.fn(),
+    findMany: jest.fn(),
+    groupBy: jest.fn(),
+  },
 };
 jest.mock("../../src/prisma", () => ({
   __esModule: true,
@@ -55,6 +59,8 @@ import {
   addResourceToGroup,
   removeResourceFromGroup,
   shareResource,
+  searchResources,
+  getRecommendations,
 } from "../../src/controllers/resourceController";
 
 function mockReqRes(
@@ -1036,6 +1042,507 @@ describe("resourceController", () => {
       const { req, res } = mockReqRes({ groupId: "g1" }, { resourceId: "r1" });
       await shareResource(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+      jest.restoreAllMocks();
+    });
+  });
+
+  describe("searchResources", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("searches resources by text query (title and description)", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([
+        { groupId: "g1" },
+        { groupId: "g2" },
+      ]);
+
+      const mockResources = [
+        {
+          id: "r1",
+          title: "Laptop",
+          description: "Gaming laptop",
+          category: ["Electronics"],
+          status: "AVAILABLE",
+          ownerId: "user-123",
+        },
+        {
+          id: "r2",
+          title: "MacBook Pro",
+          description: "Powerful laptop",
+          category: ["Electronics"],
+          status: "AVAILABLE",
+          ownerId: "other-user",
+        },
+      ];
+
+      mockPrisma.resource.findMany.mockResolvedValue(mockResources);
+      mockPrisma.resource.count.mockResolvedValue(2);
+
+      const { req, res } = mockReqRes(
+        {},
+        {},
+        { q: "laptop", page: "1", limit: "50" },
+      );
+      await searchResources(req, res);
+
+      expect(mockPrisma.groupMember.findMany).toHaveBeenCalledWith({
+        where: { userId: "user-123" },
+        select: { groupId: true },
+      });
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  { title: { contains: "laptop", mode: "insensitive" } },
+                  { description: { contains: "laptop", mode: "insensitive" } },
+                ]),
+              }),
+            ]),
+          }),
+        }),
+      );
+
+      expect(res.json).toHaveBeenCalledWith({
+        data: mockResources,
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: 2,
+          totalPages: 1,
+        },
+        filters: {
+          query: "laptop",
+          category: null,
+          status: null,
+        },
+      });
+    });
+
+    it("filters resources by category", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+
+      const mockResources = [
+        {
+          id: "r1",
+          title: "Laptop",
+          category: "Electronics",
+          status: "AVAILABLE",
+          ownerId: "user-123",
+        },
+      ];
+
+      mockPrisma.resource.findMany.mockResolvedValue(mockResources);
+      mockPrisma.resource.count.mockResolvedValue(1);
+
+      const { req, res } = mockReqRes({}, {}, { category: "Electronics" });
+      await searchResources(req, res);
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([{ category: { has: "Electronics" } }]),
+          }),
+        }),
+      );
+
+      expect(res.json).toHaveBeenCalled();
+    });
+
+    it("filters resources by status", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+
+      const mockResources = [
+        {
+          id: "r1",
+          title: "Laptop",
+          status: "AVAILABLE",
+          ownerId: "user-123",
+        },
+      ];
+
+      mockPrisma.resource.findMany.mockResolvedValue(mockResources);
+      mockPrisma.resource.count.mockResolvedValue(1);
+
+      const { req, res } = mockReqRes({}, {}, { status: "AVAILABLE" });
+      await searchResources(req, res);
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([{ status: "AVAILABLE" }]),
+          }),
+        }),
+      );
+
+      expect(res.json).toHaveBeenCalled();
+    });
+
+    it("combines multiple filters (query + category + status)", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+
+      const mockResources = [
+        {
+          id: "r1",
+          title: "Gaming Laptop",
+          category: ["Electronics"],
+          status: "AVAILABLE",
+          ownerId: "user-123",
+        },
+      ];
+
+      mockPrisma.resource.findMany.mockResolvedValue(mockResources);
+      mockPrisma.resource.count.mockResolvedValue(1);
+
+      const { req, res } = mockReqRes(
+        {},
+        {},
+        {
+          q: "gaming",
+          category: "Electronics",
+          status: "AVAILABLE",
+        },
+      );
+      await searchResources(req, res);
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  { title: { contains: "gaming", mode: "insensitive" } },
+                  { description: { contains: "gaming", mode: "insensitive" } },
+                ]),
+              }),
+              { category: { has: "Electronics" } },
+              { status: "AVAILABLE" },
+            ]),
+          }),
+        }),
+      );
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: {
+            query: "gaming",
+            category: "Electronics",
+            status: "AVAILABLE",
+          },
+        }),
+      );
+    });
+
+    it("returns empty results when no matches found", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+      mockPrisma.resource.findMany.mockResolvedValue([]);
+      mockPrisma.resource.count.mockResolvedValue(0);
+
+      const { req, res } = mockReqRes({}, {}, { q: "nonexistent" });
+      await searchResources(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: 0,
+          totalPages: 0,
+        },
+        filters: {
+          query: "nonexistent",
+          category: null,
+          status: null,
+        },
+      });
+    });
+
+    it("paginates search results correctly", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+      mockPrisma.resource.findMany.mockResolvedValue([]);
+      mockPrisma.resource.count.mockResolvedValue(75);
+
+      const { req, res } = mockReqRes({}, {}, { page: "2", limit: "25" });
+      await searchResources(req, res);
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 25,
+          take: 25,
+        }),
+      );
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pagination: {
+            page: 2,
+            limit: 25,
+            total: 75,
+            totalPages: 3,
+          },
+        }),
+      );
+    });
+
+    it("searches in user's own resources and shared resources", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([
+        { groupId: "g1" },
+        { groupId: "g2" },
+      ]);
+      mockPrisma.resource.findMany.mockResolvedValue([]);
+      mockPrisma.resource.count.mockResolvedValue(0);
+
+      const { req, res } = mockReqRes({}, {}, { q: "test" });
+      await searchResources(req, res);
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: [
+                  { ownerId: "user-123" },
+                  {
+                    AND: [
+                      { ownerId: { not: "user-123" } },
+                      {
+                        sharedWith: { some: { groupId: { in: ["g1", "g2"] } } },
+                      },
+                    ],
+                  },
+                ],
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+
+    it("returns 500 on database error", async () => {
+      mockPrisma.groupMember.findMany.mockRejectedValue(new Error("DB fail"));
+      jest.spyOn(console, "error").mockImplementation();
+
+      const { req, res } = mockReqRes({}, {}, { q: "test" });
+      await searchResources(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "Failed to search resources",
+      });
+      jest.restoreAllMocks();
+    });
+  });
+
+  describe("getRecommendations", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("returns personalized recommendations based on borrow history", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+
+      // Mock borrow history with category preferences
+      mockPrisma.loan.findMany.mockResolvedValue([
+        {
+          resourceId: "r1",
+          borrowerId: "user-123",
+          resource: { category: ["Electronics"] },
+        },
+        {
+          resourceId: "r2",
+          borrowerId: "user-123",
+          resource: { category: ["Electronics"] },
+        },
+        {
+          resourceId: "r3",
+          borrowerId: "user-123",
+          resource: { category: ["Books"] },
+        },
+      ]);
+
+      const mockRecommendations = [
+        {
+          id: "r4",
+          title: "Tablet",
+          category: ["Electronics"],
+          status: "AVAILABLE",
+          ownerId: "other-user",
+        },
+      ];
+
+      mockPrisma.resource.findMany.mockResolvedValue(mockRecommendations);
+
+      const { req, res } = mockReqRes({}, {}, { limit: "10" });
+      await getRecommendations(req, res);
+
+      expect(mockPrisma.loan.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { borrowerId: "user-123" },
+          include: {
+            resource: {
+              select: { category: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        }),
+      );
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              { status: "AVAILABLE" },
+              {
+                category: { hasSome: expect.arrayContaining(["Electronics"]) },
+              },
+              { id: { notIn: ["r1", "r2", "r3"] } },
+              { ownerId: { not: "user-123" } },
+              { sharedWith: { some: { groupId: { in: ["g1"] } } } },
+            ]),
+          }),
+          take: 10,
+        }),
+      );
+
+      expect(res.json).toHaveBeenCalledWith({
+        data: mockRecommendations,
+        recommendationType: "personalized",
+        basedOnCategories: expect.arrayContaining(["Electronics"]),
+      });
+    });
+
+    it("returns popular recommendations when no borrow history", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+
+      // Empty borrow history
+      mockPrisma.loan.findMany.mockResolvedValue([]);
+
+      // Mock popular resources
+      mockPrisma.loan.groupBy.mockResolvedValue([
+        { resourceId: "r5", _count: { id: 10 } },
+        { resourceId: "r6", _count: { id: 8 } },
+      ]);
+
+      const mockRecommendations = [
+        {
+          id: "r5",
+          title: "Popular Book",
+          status: "AVAILABLE",
+          ownerId: "other-user",
+        },
+      ];
+
+      mockPrisma.resource.findMany.mockResolvedValue(mockRecommendations);
+
+      const { req, res } = mockReqRes({}, {}, { limit: "10" });
+      await getRecommendations(req, res);
+
+      expect(mockPrisma.loan.groupBy).toHaveBeenCalledWith({
+        by: ["resourceId"],
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 20,
+      });
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              { id: { in: ["r5", "r6"] } },
+              { status: "AVAILABLE" },
+              { ownerId: { not: "user-123" } },
+              { sharedWith: { some: { groupId: { in: ["g1"] } } } },
+            ]),
+          }),
+        }),
+      );
+
+      expect(res.json).toHaveBeenCalledWith({
+        data: mockRecommendations,
+        recommendationType: "popular",
+        basedOnCategories: null,
+      });
+    });
+
+    it("excludes user's own resources from recommendations", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+      mockPrisma.loan.findMany.mockResolvedValue([
+        {
+          resourceId: "r1",
+          resource: { category: ["Electronics"] },
+        },
+      ]);
+      mockPrisma.resource.findMany.mockResolvedValue([]);
+
+      const { req, res } = mockReqRes({}, {}, {});
+      await getRecommendations(req, res);
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([{ ownerId: { not: "user-123" } }]),
+          }),
+        }),
+      );
+    });
+
+    it("excludes already borrowed resources from recommendations", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+      mockPrisma.loan.findMany.mockResolvedValue([
+        {
+          resourceId: "r1",
+          resource: { category: ["Electronics"] },
+        },
+        {
+          resourceId: "r2",
+          resource: { category: ["Books"] },
+        },
+      ]);
+      mockPrisma.resource.findMany.mockResolvedValue([]);
+
+      const { req, res } = mockReqRes({}, {}, {});
+      await getRecommendations(req, res);
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([{ id: { notIn: ["r1", "r2"] } }]),
+          }),
+        }),
+      );
+    });
+
+    it("respects limit parameter with max cap of 50", async () => {
+      mockPrisma.groupMember.findMany.mockResolvedValue([{ groupId: "g1" }]);
+      mockPrisma.loan.findMany.mockResolvedValue([]);
+      mockPrisma.loan.groupBy.mockResolvedValue([]);
+      mockPrisma.resource.findMany.mockResolvedValue([]);
+
+      const { req, res } = mockReqRes({}, {}, { limit: "100" });
+      await getRecommendations(req, res);
+
+      expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 50, // Capped at 50
+        }),
+      );
+    });
+
+    it("returns 500 on database error", async () => {
+      mockPrisma.groupMember.findMany.mockRejectedValue(new Error("DB fail"));
+      jest.spyOn(console, "error").mockImplementation();
+
+      const { req, res } = mockReqRes({}, {}, {});
+      await getRecommendations(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        error: "Failed to generate recommendations",
+      });
       jest.restoreAllMocks();
     });
   });

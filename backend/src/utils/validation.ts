@@ -41,7 +41,8 @@ export function validateBase64Image(dataUri: string): {
   const base64Data = match[2];
 
   // Check MIME type is in allowlist
-  if (!ALLOWED_IMAGE_TYPES.includes(mimeType as any)) {
+  type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
+  if (!ALLOWED_IMAGE_TYPES.includes(mimeType as AllowedImageType)) {
     return {
       valid: false,
       error: `Image type "${mimeType}" is not allowed. Use JPEG, PNG, or WebP.`,

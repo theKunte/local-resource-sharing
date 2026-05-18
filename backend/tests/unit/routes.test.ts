@@ -70,6 +70,8 @@ jest.mock("../../src/controllers/resourceController", () => ({
   addResourceToGroup: jest.fn((_req: any, res: any) => res.json({})),
   removeResourceFromGroup: jest.fn((_req: any, res: any) => res.json({})),
   shareResource: jest.fn((_req: any, res: any) => res.json({})),
+  searchResources: jest.fn((_req: any, res: any) => res.json({})),
+  getRecommendations: jest.fn((_req: any, res: any) => res.json({})),
 }));
 
 jest.mock("../../src/middleware/errorHandler", () => ({

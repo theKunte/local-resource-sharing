@@ -1,7 +1,19 @@
-const { PrismaClient } = require("@prisma/client");
+/**
+ * Database Status Check Utility
+ * Displays current database statistics and sample resources
+ */
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
+
 const prisma = new PrismaClient();
 
-async function checkData() {
+interface SampleResource {
+  title: string;
+  description: string;
+  ownerId: string;
+}
+
+async function checkData(): Promise<void> {
   try {
     const resourceCount = await prisma.resource.count();
     const userCount = await prisma.user.count();
@@ -20,19 +32,22 @@ async function checkData() {
         select: { title: true, description: true, ownerId: true },
       });
       console.log("\nSample resources:");
-      resources.forEach((r, i) => {
+      resources.forEach((resource: SampleResource, index: number) => {
         console.log(
-          `  ${i + 1}. ${r.title} - ${r.description.substring(0, 50)}...`
+          `  ${index + 1}. ${resource.title} - ${resource.description.substring(0, 50)}...`,
         );
       });
     } else {
       console.log("\n⚠️  No resources found in database");
     }
   } catch (error) {
-    console.error("Error:", error.message);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("Error:", errorMessage);
+    process.exit(1);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-checkData();
+void checkData();

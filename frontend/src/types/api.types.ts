@@ -36,6 +36,7 @@ export interface Resource {
   title: string;
   description: string;
   image?: string;
+  category: string[]; // Array of categories for the resource
   ownerId: string;
   status: "AVAILABLE" | "BORROWED" | "UNAVAILABLE";
   currentLoanId?: string;
@@ -115,6 +116,7 @@ export interface CreateResourceRequest {
   description: string;
   image: string;
   ownerId: string;
+  category?: string[];
 }
 
 export interface CreateGroupRequest {

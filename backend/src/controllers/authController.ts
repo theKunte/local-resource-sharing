@@ -26,7 +26,7 @@ export async function debugListUsers(req: Request, res: Response) {
 
 // POST /api/auth/register
 export async function registerUser(req: Request, res: Response) {
-  const authenticatedUid = (req as any).user.uid;
+  const authenticatedUid = req.user!.uid;
   const { uid, email, name } = req.body;
 
   if (!uid) {
@@ -96,7 +96,7 @@ export async function registerUser(req: Request, res: Response) {
 
 // PUT /api/auth/fix-user-email
 export async function fixUserEmail(req: Request, res: Response) {
-  const authenticatedUid = (req as any).user.uid;
+  const authenticatedUid = req.user!.uid;
   const { uid, email } = req.body;
 
   if (!uid || !email) {
