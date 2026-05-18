@@ -1116,7 +1116,7 @@ describe("resourceController", () => {
         },
         filters: {
           query: "laptop",
-          category: null,
+          categories: null,
           status: null,
         },
       });
@@ -1128,8 +1128,8 @@ describe("resourceController", () => {
       const mockResources = [
         {
           id: "r1",
-          title: "Laptop",
-          category: "Electronics",
+          title: "Tent",
+          category: "Shelter & Sleep Systems",
           status: "AVAILABLE",
           ownerId: "user-123",
         },
@@ -1138,13 +1138,17 @@ describe("resourceController", () => {
       mockPrisma.resource.findMany.mockResolvedValue(mockResources);
       mockPrisma.resource.count.mockResolvedValue(1);
 
-      const { req, res } = mockReqRes({}, {}, { category: "Electronics" });
+      const { req, res } = mockReqRes({}, {}, { category: "Cycling" });
       await searchResources(req, res);
 
       expect(mockPrisma.resource.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            AND: expect.arrayContaining([{ category: { has: "Electronics" } }]),
+            AND: expect.arrayContaining([
+              {
+                OR: expect.arrayContaining([{ category: { has: "Cycling" } }]),
+              },
+            ]),
           }),
         }),
       );
@@ -1187,8 +1191,8 @@ describe("resourceController", () => {
       const mockResources = [
         {
           id: "r1",
-          title: "Gaming Laptop",
-          category: ["Electronics"],
+          title: "Mountain Bike",
+          category: ["Cycling"],
           status: "AVAILABLE",
           ownerId: "user-123",
         },
@@ -1201,8 +1205,8 @@ describe("resourceController", () => {
         {},
         {},
         {
-          q: "gaming",
-          category: "Electronics",
+          q: "mountain",
+          category: "Cycling",
           status: "AVAILABLE",
         },
       );
@@ -1214,11 +1218,15 @@ describe("resourceController", () => {
             AND: expect.arrayContaining([
               expect.objectContaining({
                 OR: expect.arrayContaining([
-                  { title: { contains: "gaming", mode: "insensitive" } },
-                  { description: { contains: "gaming", mode: "insensitive" } },
+                  { title: { contains: "mountain", mode: "insensitive" } },
+                  {
+                    description: { contains: "mountain", mode: "insensitive" },
+                  },
                 ]),
               }),
-              { category: { has: "Electronics" } },
+              {
+                OR: expect.arrayContaining([{ category: { has: "Cycling" } }]),
+              },
               { status: "AVAILABLE" },
             ]),
           }),
@@ -1228,8 +1236,8 @@ describe("resourceController", () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           filters: {
-            query: "gaming",
-            category: "Electronics",
+            query: "mountain",
+            categories: ["Cycling"],
             status: "AVAILABLE",
           },
         }),
@@ -1254,7 +1262,7 @@ describe("resourceController", () => {
         },
         filters: {
           query: "nonexistent",
-          category: null,
+          categories: null,
           status: null,
         },
       });
