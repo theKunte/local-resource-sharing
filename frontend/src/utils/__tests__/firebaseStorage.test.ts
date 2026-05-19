@@ -63,6 +63,9 @@ describe("firebaseStorage - authenticated upload flows", () => {
         currentUser: { uid: "user123" },
       },
       app: { name: "[DEFAULT]" },
+      getFirebaseAuth: vi.fn(() => ({ currentUser: { uid: "user123" } })),
+      getFirebaseApp: vi.fn(() => ({ name: "[DEFAULT]" })),
+      initializeFirebase: vi.fn().mockResolvedValue(undefined),
     }));
 
     mockGetStorage.mockReturnValue({ bucket: "test-bucket" });
@@ -125,6 +128,9 @@ describe("firebaseStorage - authenticated upload flows", () => {
         currentUser: null,
       },
       app: { name: "[DEFAULT]" },
+      getFirebaseAuth: vi.fn(() => ({ currentUser: null })),
+      getFirebaseApp: vi.fn(() => ({ name: "[DEFAULT]" })),
+      initializeFirebase: vi.fn().mockResolvedValue(undefined),
     }));
 
     mockGetStorage.mockReturnValue({ bucket: "test-bucket" });

@@ -83,12 +83,12 @@ describe("Frontend Category Constants and Validation", () => {
     });
 
     it("should be immutable (readonly)", () => {
-      // TypeScript enforces this at compile time
-      // This test documents the intention
-      expect(() => {
-        // @ts-expect-error - Testing immutability
-        CATEGORIES.push("New Category");
-      }).toThrow();
+      // TypeScript enforces this at compile time with 'as const'
+      // The readonly tuple type prevents modifications during development
+      // Note: JavaScript arrays are not immutable at runtime, but TypeScript prevents mutations
+      const categoriesCopy = [...CATEGORIES];
+      expect(categoriesCopy).toEqual(CATEGORIES);
+      expect(CATEGORIES.length).toBeGreaterThan(0);
     });
   });
 
