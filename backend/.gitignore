@@ -3,3 +3,7 @@ node_modules
 .env
 
 /src/generated/prisma
+
+# Database backups should not be version controlled
+/backups/
+*.sql
