@@ -154,7 +154,7 @@ describe("Frontend Category Constants and Validation", () => {
 
     it("should filter out non-string values", () => {
       const input = ["Sports", 123, null, "Camping", undefined, "Tools"];
-      expect(filterValidCategories(input as any)).toEqual([
+      expect(filterValidCategories(input as unknown[])).toEqual([
         "Sports",
         "Camping",
         "Tools",
