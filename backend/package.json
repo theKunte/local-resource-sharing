@@ -11,7 +11,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:unit": "jest --verbose tests/unit",
-    "test:integration": "jest --verbose tests/integration"
+    "test:integration": "jest --verbose tests/integration",
+    "db:backup": "powershell -ExecutionPolicy Bypass -File ./scripts/backup-db.ps1",
+    "db:restore": "powershell -ExecutionPolicy Bypass -File ./scripts/restore-db.ps1 -Latest",
+    "db:check": "node check-data.js"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",

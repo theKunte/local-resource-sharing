@@ -9,6 +9,7 @@ describe("ResourceCard", () => {
     title: "Test Tent",
     description: "A nice tent",
     image: "data:image/png;base64,abc",
+    category: [] as string[],
   };
 
   it("renders title", () => {

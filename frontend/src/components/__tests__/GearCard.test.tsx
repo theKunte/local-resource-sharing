@@ -8,6 +8,7 @@ describe("GearCard", () => {
     title: "Camping Tent",
     description: "A sturdy 2-person tent for all seasons",
     image: "data:image/png;base64,abc",
+    category: [] as string[],
   };
 
   beforeEach(() => {

@@ -3,7 +3,7 @@ import prisma from "../prisma";
 
 // POST /api/notifications/token
 export async function saveNotificationToken(req: Request, res: Response) {
-  const uid = (req as any).user.uid;
+  const uid = req.user!.uid;
   const { token } = req.body;
 
   if (!token || typeof token !== "string") {

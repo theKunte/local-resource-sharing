@@ -194,7 +194,9 @@ describe("Home", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Wrapped Tent")).toBeInTheDocument();
+      // Title may appear in multiple places (card title, image alt, etc.)
+      const wrappedTentElements = screen.getAllByText("Wrapped Tent");
+      expect(wrappedTentElements.length).toBeGreaterThan(0);
     });
   });
 

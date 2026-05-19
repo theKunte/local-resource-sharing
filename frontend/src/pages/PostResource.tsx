@@ -6,6 +6,7 @@ import { cropImageToSquare } from "../utils/cropImageToSquare";
 import { uploadBlobToStorage } from "../utils/firebaseStorage";
 import type { Group, CreateResourceRequest } from "../types/api.types";
 import { getErrorMessage, logError } from "../utils/errorHandler";
+import { CATEGORIES } from "../constants/categories";
 
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_IMAGE_SIZE_MB = 10;
@@ -13,6 +14,9 @@ const MAX_IMAGE_SIZE_MB = 10;
 export default function PostResource() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<string[]>([]);
+  const [categoryInput, setCategoryInput] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -128,6 +132,7 @@ export default function PostResource() {
         description,
         image: imageUrl,
         ownerId: user.uid,
+        category: category.length > 0 ? category : undefined,
       };
 
       const resourceResponse = await apiClient.post(
@@ -157,6 +162,9 @@ export default function PostResource() {
       // Reset form
       setTitle("");
       setDescription("");
+      setCategory([]);
+      setCategoryInput("");
+      setShowSuggestions(false);
       setImage(null);
       setImagePreview(null);
       setSelectedGroups(new Set(groups.map((g) => g.id))); // Reset to all groups selected
@@ -314,6 +322,112 @@ export default function PostResource() {
                   {description.length}/{MAX_DESCRIPTION_LENGTH}
                 </span>
               </div>
+            </div>
+
+            {/* Category Section */}
+            <div className="group">
+              <label
+                htmlFor="gear-category"
+                className="block mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-gray-800 flex items-center"
+              >
+                Categories (optional)
+              </label>
+              <div className="space-y-3">
+                {/* Autocomplete Input */}
+                <div className="relative">
+                  <input
+                    id="gear-category"
+                    type="text"
+                    value={categoryInput}
+                    onChange={(e) => {
+                      setCategoryInput(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() =>
+                      setTimeout(() => setShowSuggestions(false), 200)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && categoryInput.trim()) {
+                        e.preventDefault();
+                        const value = categoryInput.trim();
+                        if (!category.includes(value)) {
+                          setCategory([...category, value]);
+                        }
+                        setCategoryInput("");
+                        setShowSuggestions(false);
+                      } else if (e.key === "Escape") {
+                        setShowSuggestions(false);
+                      }
+                    }}
+                    placeholder="Type to search or add categories..."
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-800 placeholder-gray-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 focus:outline-none transition-all"
+                  />
+
+                  {/* Suggestions Dropdown */}
+                  {showSuggestions &&
+                    categoryInput &&
+                    (() => {
+                      const filtered = CATEGORIES.filter(
+                        (cat) =>
+                          cat
+                            .toLowerCase()
+                            .includes(categoryInput.toLowerCase()) &&
+                          !category.includes(cat),
+                      );
+                      return filtered.length > 0 ? (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filtered.map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => {
+                                if (!category.includes(cat)) {
+                                  setCategory([...category, cat]);
+                                }
+                                setCategoryInput("");
+                                setShowSuggestions(false);
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-cyan-50 text-gray-700 hover:text-cyan-700 transition-colors flex items-center justify-between"
+                            >
+                              <span>{cat}</span>
+                              <span className="text-xs text-gray-400">
+                                Click to add
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
+                </div>
+
+                {/* Selected Categories */}
+                {category.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {category.map((cat) => (
+                      <span
+                        key={cat}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500 text-white rounded-full text-sm font-medium"
+                      >
+                        {cat}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCategory(category.filter((c) => c !== cat))
+                          }
+                          className="hover:bg-cyan-600 rounded-full w-4 h-4 flex items-center justify-center transition-colors"
+                          aria-label={`Remove ${cat}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm text-gray-600 mt-2">
+                Type to search categories or create your own (press Enter)
+              </p>
             </div>
 
             {/* Photo Section */}

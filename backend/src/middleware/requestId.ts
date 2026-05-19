@@ -8,7 +8,7 @@ export function requestIdMiddleware(
 ) {
   const requestId =
     (req.headers["x-request-id"] as string) || crypto.randomUUID();
-  (req as any).requestId = requestId;
+  req.requestId = requestId;
   res.setHeader("X-Request-Id", requestId);
   next();
 }

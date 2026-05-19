@@ -63,7 +63,7 @@ export function errorHandler(
   // Prevent errors if response already sent
   if (res.headersSent) {
     logger.warn("Headers already sent, cannot send error response", {
-      requestId: (req as any).requestId,
+      requestId: req.requestId,
       error: err.message,
     });
     return _next(err);
@@ -159,11 +159,11 @@ export function errorHandler(
 
   // Log error with context - always log programming errors, log operational errors at appropriate level
   const errorLog = {
-    requestId: (req as any).requestId,
+    requestId: req.requestId,
     method: req.method,
     url: req.originalUrl,
     ip: req.ip,
-    userId: (req as any).user?.uid,
+    userId: req.user?.uid,
     statusCode,
     message: err.message,
     stack: err.stack,
@@ -187,7 +187,7 @@ export function errorHandler(
   const response: any = {
     success: false,
     message: sanitizeErrorMessage(message, statusCode),
-    requestId: (req as any).requestId,
+    requestId: req.requestId,
   };
 
   // Only include stack trace in development mode

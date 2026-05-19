@@ -8,6 +8,7 @@ import {
   sanitizeString,
 } from "../utils/validation";
 import { RESOURCE_LIMITS, LIMIT_ERROR_MESSAGES } from "../config/limits";
+import { sanitizeCategories } from "../constants/categories";
 
 /**
  * Extracts the Firebase Storage object path from a download URL so we can
@@ -28,7 +29,7 @@ function storagePathFromUrl(url: string): string | null {
 // GET /api/resources
 export async function getResources(req: Request, res: Response) {
   try {
-    const authenticatedUserId = (req as any).user.uid;
+    const authenticatedUserId = req.user!.uid;
     const userId = req.query.user as string | undefined;
     const ownerId = req.query.ownerId as string | undefined;
 
@@ -173,11 +174,14 @@ export async function getPendingRequestsCount(req: Request, res: Response) {
 
 // POST /api/resources
 export async function createResource(req: Request, res: Response) {
-  const { title, description, ownerId, image } = req.body;
-  const authenticatedUserId = (req as any).user.uid;
+  const { title, description, ownerId, image, category } = req.body;
+  const authenticatedUserId = req.user!.uid;
 
   const sanitizedTitle = sanitizeString(title, 200);
   const sanitizedDescription = sanitizeString(description, 2000);
+
+  // Validate and sanitize category array using whitelist
+  const sanitizedCategory = sanitizeCategories(category, 5);
 
   const validation = validateResourceInput({
     title: sanitizedTitle,
@@ -250,6 +254,7 @@ export async function createResource(req: Request, res: Response) {
         description: sanitizedDescription,
         ownerId,
         image,
+        category: sanitizedCategory,
       },
     });
     res.status(201).json(resource);
@@ -262,8 +267,8 @@ export async function createResource(req: Request, res: Response) {
 // PUT /api/resources/:id
 export async function updateResource(req: Request, res: Response) {
   const id = req.params.id;
-  const { title, description } = req.body;
-  const authenticatedUserId = (req as any).user.uid;
+  const { title, description, category } = req.body;
+  const authenticatedUserId = req.user!.uid;
 
   const errors: string[] = [];
   if (!title || title.trim().length < 3) {
@@ -277,6 +282,21 @@ export async function updateResource(req: Request, res: Response) {
   }
   if (description && description.length > 2000) {
     errors.push("Description must be less than 2000 characters");
+  }
+
+  // Validate and sanitize category array
+  let sanitizedCategory: string[] | undefined;
+  if (category !== undefined) {
+    if (Array.isArray(category)) {
+      sanitizedCategory = category
+        .filter((cat) => typeof cat === "string" && cat.trim().length > 0)
+        .map((cat) => sanitizeString(cat, 50))
+        .slice(0, 5); // Max 5 categories
+    } else if (typeof category === "string" && category.trim().length > 0) {
+      sanitizedCategory = [sanitizeString(category, 50)];
+    } else {
+      sanitizedCategory = [];
+    }
   }
 
   if (errors.length > 0) {
@@ -294,9 +314,14 @@ export async function updateResource(req: Request, res: Response) {
         .json({ error: "You can only update your own resources" });
     }
 
+    const updateData: any = { title, description };
+    if (sanitizedCategory !== undefined) {
+      updateData.category = sanitizedCategory;
+    }
+
     const updated = await prisma.resource.update({
       where: { id },
-      data: { title, description },
+      data: updateData,
       select: {
         id: true,
         title: true,
@@ -333,7 +358,7 @@ export async function updateResource(req: Request, res: Response) {
 // DELETE /api/resources/:id
 export async function deleteResource(req: Request, res: Response) {
   const id = req.params.id;
-  const authenticatedUserId = (req as any).user.uid;
+  const authenticatedUserId = req.user!.uid;
 
   try {
     const resource = await prisma.resource.findUnique({
@@ -583,7 +608,7 @@ export async function removeResourceFromGroup(req: Request, res: Response) {
 export async function shareResource(req: Request, res: Response) {
   const { resourceId } = req.params;
   const { groupId } = req.body;
-  const authenticatedUserId = (req as any).user.uid;
+  const authenticatedUserId = req.user!.uid;
 
   if (!groupId) return res.status(400).json({ error: "groupId required" });
 
@@ -665,5 +690,260 @@ export async function shareResource(req: Request, res: Response) {
   } catch (error) {
     console.error("Error sharing resource:", error);
     res.status(500).json({ error: "Failed to share resource" });
+  }
+}
+
+// GET /api/resources/search
+export async function searchResources(req: Request, res: Response) {
+  try {
+    const authenticatedUserId = req.user!.uid;
+
+    // Sanitize search query: limit length and remove potentially problematic characters
+    const rawQuery = (req.query.q as string)?.trim() || "";
+    const searchQuery = rawQuery
+      .slice(0, 100) // Max 100 characters
+      .replace(/[^\w\s-]/g, ""); // Only allow alphanumeric, spaces, hyphens
+
+    // Handle category as string or array, validate against whitelist
+    const categoryParams = req.query.category;
+    const categories = sanitizeCategories(categoryParams);
+
+    const status = req.query.status as string;
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const skip = (page - 1) * limit;
+
+    // Get user's group memberships for shared resources
+    const userGroups = await prisma.groupMember.findMany({
+      where: { userId: authenticatedUserId },
+      select: { groupId: true },
+    });
+    const groupIds = userGroups.map((g) => g.groupId);
+
+    // Build dynamic where clause
+    const whereConditions: any[] = [];
+
+    // Text search on title and description (case-insensitive)
+    if (searchQuery) {
+      whereConditions.push({
+        OR: [
+          { title: { contains: searchQuery, mode: "insensitive" } },
+          { description: { contains: searchQuery, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    // Category filter (OR condition for multiple categories)
+    if (categories.length > 0) {
+      whereConditions.push({
+        OR: categories.map((cat) => ({
+          category: { has: cat },
+        })),
+      });
+    }
+
+    // Status filter
+    if (status) {
+      whereConditions.push({ status });
+    }
+
+    // Search in: own resources OR resources shared to user's groups
+    const combinedWhere = {
+      AND: [
+        ...whereConditions,
+        {
+          OR: [
+            { ownerId: authenticatedUserId },
+            {
+              AND: [
+                { ownerId: { not: authenticatedUserId } },
+                { sharedWith: { some: { groupId: { in: groupIds } } } },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const [resources, total] = await Promise.all([
+      prisma.resource.findMany({
+        where: combinedWhere,
+        skip,
+        take: limit,
+        include: {
+          owner: {
+            select: { id: true, email: true, name: true },
+          },
+          currentLoan: {
+            select: {
+              id: true,
+              status: true,
+              startDate: true,
+              endDate: true,
+              borrower: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+          sharedWith: {
+            include: {
+              group: {
+                select: { id: true, name: true, avatar: true },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.resource.count({ where: combinedWhere }),
+    ]);
+
+    res.json({
+      data: resources,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      filters: {
+        query: searchQuery,
+        categories: categories.length > 0 ? categories : null,
+        status: status || null,
+      },
+    });
+  } catch (error) {
+    console.error("Error searching resources:", error);
+    res.status(500).json({ error: "Failed to search resources" });
+  }
+}
+
+// GET /api/resources/recommendations
+export async function getRecommendations(req: Request, res: Response) {
+  try {
+    const authenticatedUserId = req.user!.uid;
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+
+    // Get user's group memberships
+    const userGroups = await prisma.groupMember.findMany({
+      where: { userId: authenticatedUserId },
+      select: { groupId: true },
+    });
+    const groupIds = userGroups.map((g) => g.groupId);
+
+    // Analyze user's borrow history to find preferred categories
+    const borrowHistory = await prisma.loan.findMany({
+      where: { borrowerId: authenticatedUserId },
+      include: {
+        resource: {
+          select: { category: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50, // Look at last 50 borrows
+    });
+
+    // Count category preferences from array
+    const categoryScores: Record<string, number> = {};
+    borrowHistory.forEach((loan, index) => {
+      const categories = loan.resource.category;
+      if (categories && categories.length > 0) {
+        // Weight recent borrows higher (decaying score)
+        const weight = 1 / (index + 1);
+        categories.forEach((cat) => {
+          categoryScores[cat] = (categoryScores[cat] || 0) + weight;
+        });
+      }
+    });
+
+    // Sort categories by score
+    const preferredCategories = Object.entries(categoryScores)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5) // Top 5 categories
+      .map(([cat]) => cat);
+
+    let recommendations;
+
+    if (preferredCategories.length > 0) {
+      // Recommend AVAILABLE resources from preferred categories
+      // Exclude resources already borrowed by user
+      const borrowedResourceIds = borrowHistory.map((l) => l.resourceId);
+
+      recommendations = await prisma.resource.findMany({
+        where: {
+          AND: [
+            { status: "AVAILABLE" },
+            { category: { hasSome: preferredCategories } }, // Check if array has any of the preferred categories
+            { id: { notIn: borrowedResourceIds } },
+            { ownerId: { not: authenticatedUserId } }, // Don't recommend own resources
+            { sharedWith: { some: { groupId: { in: groupIds } } } }, // Only from joined groups
+          ],
+        },
+        take: limit,
+        include: {
+          owner: {
+            select: { id: true, email: true, name: true },
+          },
+          sharedWith: {
+            include: {
+              group: {
+                select: { id: true, name: true, avatar: true },
+              },
+            },
+          },
+        },
+        orderBy: [
+          // Prioritize by category preference (manual ordering via multiple queries would be complex)
+          { createdAt: "desc" },
+        ],
+      });
+    } else {
+      // Fallback: recommend popular AVAILABLE resources (most borrowed overall)
+      // Get most borrowed resources from user's groups
+      const popularBorrows = await prisma.loan.groupBy({
+        by: ["resourceId"],
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: limit * 2, // Get more to filter by availability
+      });
+
+      const popularResourceIds = popularBorrows.map((b) => b.resourceId);
+
+      recommendations = await prisma.resource.findMany({
+        where: {
+          AND: [
+            { id: { in: popularResourceIds } },
+            { status: "AVAILABLE" },
+            { ownerId: { not: authenticatedUserId } },
+            { sharedWith: { some: { groupId: { in: groupIds } } } },
+          ],
+        },
+        take: limit,
+        include: {
+          owner: {
+            select: { id: true, email: true, name: true },
+          },
+          sharedWith: {
+            include: {
+              group: {
+                select: { id: true, name: true, avatar: true },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    res.json({
+      data: recommendations,
+      recommendationType:
+        preferredCategories.length > 0 ? "personalized" : "popular",
+      basedOnCategories:
+        preferredCategories.length > 0 ? preferredCategories : null,
+    });
+  } catch (error) {
+    console.error("Error generating recommendations:", error);
+    res.status(500).json({ error: "Failed to generate recommendations" });
   }
 }
