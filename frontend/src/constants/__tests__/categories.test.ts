@@ -9,31 +9,23 @@ import {
 
 describe("Frontend Category Constants and Validation", () => {
   describe("CATEGORIES constant", () => {
-    it("should contain exactly 20 categories", () => {
-      expect(CATEGORIES).toHaveLength(20);
+    it("should contain exactly 11 categories", () => {
+      expect(CATEGORIES).toHaveLength(11);
     });
 
     it("should include all expected categories", () => {
       const expectedCategories = [
-        "Sports",
-        "Camping",
-        "Outdoor",
-        "Tools",
-        "Power Tools",
-        "Home Improvement",
-        "Furniture",
-        "Electronics",
-        "Entertainment",
-        "Party Supplies",
+        "Sleep Systems",
+        "Packs & Bags",
+        "Camp Kitchen",
+        "Apparel",
+        "Backpacking & Hiking",
+        "Snow Sports",
         "Water Sports",
-        "Bikes",
-        "Kitchen",
-        "Garden",
-        "Photography",
-        "Music",
-        "Gaming",
-        "Fitness",
-        "Books",
+        "Climbing & Mountaineering",
+        "Safety",
+        "Light",
+        "Cycling",
         "Other",
       ];
 
@@ -57,25 +49,16 @@ describe("Frontend Category Constants and Validation", () => {
     it("should match backend categories exactly", () => {
       // This ensures frontend and backend stay in sync
       const expectedOrder = [
-        "Sports",
-        "Camping",
-        "Outdoor",
-        "Tools",
-        "Power Tools",
-        "Home Improvement",
-        "Furniture",
-        "Electronics",
-        "Entertainment",
-        "Party Supplies",
+        "Sleep Systems",
+        "Packs & Bags",
+        "Camp Kitchen",
+        "Apparel",
+        "Backpacking & Hiking",
+        "Snow Sports",
         "Water Sports",
-        "Bikes",
-        "Kitchen",
-        "Garden",
-        "Photography",
-        "Music",
-        "Gaming",
-        "Fitness",
-        "Books",
+        "Climbing & Mountaineering",
+        "Safety",
+        "Light",
         "Other",
       ];
 
@@ -106,9 +89,9 @@ describe("Frontend Category Constants and Validation", () => {
     });
 
     it("should be case-sensitive", () => {
-      expect(isValidCategory("sports")).toBe(false); // lowercase
-      expect(isValidCategory("SPORTS")).toBe(false); // uppercase
-      expect(isValidCategory("Sports")).toBe(true); // correct case
+      expect(isValidCategory("water sports")).toBe(false); // lowercase
+      expect(isValidCategory("WATER SPORTS")).toBe(false); // uppercase
+      expect(isValidCategory("Water Sports")).toBe(true); // correct case
     });
 
     it("should reject non-string values", () => {
@@ -121,19 +104,19 @@ describe("Frontend Category Constants and Validation", () => {
     });
 
     it("should reject categories with extra whitespace", () => {
-      expect(isValidCategory(" Sports")).toBe(false);
-      expect(isValidCategory("Sports ")).toBe(false);
-      expect(isValidCategory(" Sports ")).toBe(false);
+      expect(isValidCategory(" Water Sports")).toBe(false);
+      expect(isValidCategory("Water Sports ")).toBe(false);
+      expect(isValidCategory(" Water Sports ")).toBe(false);
     });
 
     it("should reject XSS attempts", () => {
       expect(isValidCategory("<script>alert('xss')</script>")).toBe(false);
-      expect(isValidCategory("Sports<script>")).toBe(false);
+      expect(isValidCategory("Water Sports<script>")).toBe(false);
     });
 
     it("should reject SQL injection attempts", () => {
-      expect(isValidCategory("Sports' OR '1'='1")).toBe(false);
-      expect(isValidCategory("Sports; DROP TABLE;")).toBe(false);
+      expect(isValidCategory("Water Sports' OR '1'='1")).toBe(false);
+      expect(isValidCategory("Water Sports; DROP TABLE;")).toBe(false);
     });
   });
 
@@ -272,7 +255,7 @@ describe("Frontend Category Constants and Validation", () => {
 
     it("should work with Category union type", () => {
       type Category = (typeof CATEGORIES)[number];
-      const validCategory: Category = "Sports";
+      const validCategory: Category = "Water Sports";
       expect(isValidCategory(validCategory)).toBe(true);
     });
   });

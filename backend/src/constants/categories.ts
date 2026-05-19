@@ -6,16 +6,18 @@
  */
 
 export const CATEGORIES = [
-  "Shelter & Sleep Systems",
-  "Packs & Storage",
-  "Clothing & Footwear",
-  "Hydration & Kitchen",
-  "Water Sports",
-  "Navigation & Safety",
+  "Sleep Systems",
+  "Packs & Bags",
+  "Camp Kitchen",
+  "Apparel",
+  "Backpacking & Hiking",
   "Snow Sports",
-  "Climbing",
+  "Water Sports",
+  "Climbing & Mountaineering",
+  "Navigation & Safety",
+  "Light",
   "Cycling",
-  "Specialty Gear",
+  "Cycling",
   "Other",
 ] as const;
 

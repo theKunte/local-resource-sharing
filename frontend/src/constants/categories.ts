@@ -6,26 +6,18 @@
  */
 
 export const CATEGORIES = [
-  "Sports",
-  "Camping",
-  "Outdoor",
-  "Tools",
-  "Power Tools",
-  "Home Improvement",
-  "Furniture",
-  "Electronics",
-  "Entertainment",
-  "Party Supplies",
+  "Sleep Systems",
+  "Packs & Bags",
+  "Camp Kitchen",
+  "Apparel",
+  "Backpacking & Hiking",
+  "Snow Sports",
   "Water Sports",
-  "Bikes",
-  "Kitchen",
-  "Garden",
-  "Photography",
-  "Music",
-  "Gaming",
-  "Fitness",
-  "Books",
+  "Climbing & Mountaineering",
+  "Safety",
+  "Light",
   "Other",
+  "Cycling",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];

@@ -458,18 +458,20 @@ describe("Home", () => {
       const categoryButton = screen.getByText("All Categories");
       await user.click(categoryButton);
 
-      // Select "Sports" category
-      const sportsCheckbox = screen.getByLabelText("Sports");
-      expect(sportsCheckbox).toBeInTheDocument();
+      // Select "Water Sports" category
+      const waterSportsCheckbox = screen.getByLabelText("Water Sports");
+      expect(waterSportsCheckbox).toBeInTheDocument();
 
       mockGet.mockClear();
       mockGet.mockResolvedValue({ data: { data: [] } });
 
-      await user.click(sportsCheckbox);
+      await user.click(waterSportsCheckbox);
 
       await waitFor(() => {
         expect(mockGet).toHaveBeenCalledWith(
-          expect.stringContaining("/api/resources/search?category=Sports"),
+          expect.stringContaining(
+            "/api/resources/search?category=Water+Sports",
+          ),
         );
       });
 
@@ -499,13 +501,13 @@ describe("Home", () => {
       mockGet.mockResolvedValue({ data: { data: [] } });
 
       // Select multiple categories
-      await user.click(screen.getByLabelText("Sports"));
-      await user.click(screen.getByLabelText("Camping"));
+      await user.click(screen.getByLabelText("Water Sports"));
+      await user.click(screen.getByLabelText("Camp Kitchen"));
 
       await waitFor(() => {
         expect(mockGet).toHaveBeenCalledWith(
           expect.stringMatching(
-            /\/api\/resources\/search\?category=Sports&category=Camping/,
+            /\/api\/resources\/search\?category=Water\+Sports&category=Camp\+Kitchen/,
           ),
         );
       });
@@ -529,7 +531,7 @@ describe("Home", () => {
 
       // Open dropdown and select a category
       await user.click(screen.getByText("All Categories"));
-      await user.click(screen.getByLabelText("Sports"));
+      await user.click(screen.getByLabelText("Water Sports"));
 
       expect(screen.getByText("1 selected")).toBeInTheDocument();
 
@@ -602,7 +604,7 @@ describe("Home", () => {
 
       // Add category filter
       await user.click(screen.getByText("All Categories"));
-      await user.click(screen.getByLabelText("Camping"));
+      await user.click(screen.getByLabelText("Camp Kitchen"));
 
       // Add status filter
       const statusSelect = screen.getByDisplayValue("All Status");
@@ -611,7 +613,7 @@ describe("Home", () => {
       await waitFor(() => {
         expect(mockGet).toHaveBeenCalledWith(
           expect.stringMatching(
-            /\/api\/resources\/search\?q=tent&category=Camping&status=AVAILABLE/,
+            /\/api\/resources\/search\?q=tent&category=Camp\+Kitchen&status=AVAILABLE/,
           ),
         );
       });
@@ -667,7 +669,7 @@ describe("Home", () => {
       await user.type(searchInput, "tent");
 
       await user.click(screen.getByText("All Categories"));
-      await user.click(screen.getByLabelText("Camping"));
+      await user.click(screen.getByLabelText("Camp Kitchen"));
 
       const statusSelect = screen.getByDisplayValue("All Status");
       await user.selectOptions(statusSelect, "AVAILABLE");
@@ -806,7 +808,7 @@ describe("Home", () => {
 
       // Open dropdown and select a category
       await user.click(screen.getByText("All Categories"));
-      await user.click(screen.getByLabelText("Sports"));
+      await user.click(screen.getByLabelText("Water Sports"));
 
       expect(screen.getByText("1 selected")).toBeInTheDocument();
 
@@ -814,7 +816,7 @@ describe("Home", () => {
       mockGet.mockResolvedValue({ data: [] });
 
       // Toggle it off
-      await user.click(screen.getByLabelText("Sports"));
+      await user.click(screen.getByLabelText("Water Sports"));
 
       await waitFor(() => {
         expect(mockGet).toHaveBeenCalledWith(
@@ -1021,7 +1023,7 @@ describe("Home", () => {
         }
       });
 
-      const { rerender } = render(
+      render(
         <MemoryRouter>
           <Home />
         </MemoryRouter>,
@@ -1042,15 +1044,12 @@ describe("Home", () => {
   });
 
   describe("Borrow Request Modal", () => {
-    beforeEach(() => {
+    it("opens modal when borrow button clicked", async () => {
+      const user = userEvent.setup();
       mockAuth.mockReturnValue({
         user: { uid: "u1", displayName: "Test" },
         loading: false,
       });
-    });
-
-    it("opens borrow modal when requesting to borrow", async () => {
-      const user = userEvent.setup();
       mockGet.mockResolvedValue({
         data: [
           {
@@ -1079,9 +1078,7 @@ describe("Home", () => {
       });
       if (borrowButtons.length > 0) {
         await user.click(borrowButtons[0]);
-
         // Modal should be rendered (checking via BorrowRequestModal component)
-        // Note: The actual modal rendering depends on the BorrowRequestModal component
       }
     });
 
@@ -1237,8 +1234,7 @@ describe("Home", () => {
     });
 
     it("dismisses status message when clicking X", async () => {
-      const user = userEvent.setup();
-      const { rerender } = render(
+      render(
         <MemoryRouter>
           <Home />
         </MemoryRouter>,
