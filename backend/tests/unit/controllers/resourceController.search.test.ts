@@ -204,26 +204,26 @@ describe("Resource Controller - Search Security", () => {
 
   describe("Multi-Category OR Logic", () => {
     it("should search single category correctly", async () => {
-      mockRequest.query = { category: "Climbing" };
+      mockRequest.query = { category: "Climbing & Mountaineering" };
 
       await searchResources(mockRequest as Request, mockResponse as Response);
 
       const prismaCall = (prisma.resource.findMany as jest.Mock).mock
         .calls[0][0];
       expect(prismaCall.where.AND[0].OR).toEqual([
-        { category: { has: "Climbing" } },
+        { category: { has: "Climbing & Mountaineering" } },
       ]);
     });
 
     it("should search multiple categories with OR logic", async () => {
-      mockRequest.query = { category: ["Climbing", "Water Sports", "Cycling"] };
+      mockRequest.query = { category: ["Climbing & Mountaineering", "Water Sports", "Cycling"] };
 
       await searchResources(mockRequest as Request, mockResponse as Response);
 
       const prismaCall = (prisma.resource.findMany as jest.Mock).mock
         .calls[0][0];
       expect(prismaCall.where.AND[0].OR).toEqual([
-        { category: { has: "Climbing" } },
+        { category: { has: "Climbing & Mountaineering" } },
         { category: { has: "Water Sports" } },
         { category: { has: "Cycling" } },
       ]);
@@ -232,7 +232,7 @@ describe("Resource Controller - Search Security", () => {
     it("should filter out invalid categories in multi-category search", async () => {
       mockRequest.query = {
         category: [
-          "Climbing",
+          "Climbing & Mountaineering",
           "InvalidCategory",
           "Water Sports",
           "FakeCategory",
@@ -244,14 +244,14 @@ describe("Resource Controller - Search Security", () => {
       const prismaCall = (prisma.resource.findMany as jest.Mock).mock
         .calls[0][0];
       expect(prismaCall.where.AND[0].OR).toEqual([
-        { category: { has: "Climbing" } },
+        { category: { has: "Climbing & Mountaineering" } },
         { category: { has: "Water Sports" } },
       ]);
     });
 
     it("should handle category array with duplicates", async () => {
       mockRequest.query = {
-        category: ["Climbing", "Water Sports", "Climbing", "Water Sports"],
+        category: ["Climbing & Mountaineering", "Water Sports", "Climbing & Mountaineering", "Water Sports"],
       };
 
       await searchResources(mockRequest as Request, mockResponse as Response);
@@ -259,7 +259,7 @@ describe("Resource Controller - Search Security", () => {
       const prismaCall = (prisma.resource.findMany as jest.Mock).mock
         .calls[0][0];
       expect(prismaCall.where.AND[0].OR).toEqual([
-        { category: { has: "Climbing" } },
+        { category: { has: "Climbing & Mountaineering" } },
         { category: { has: "Water Sports" } },
       ]);
     });
@@ -267,7 +267,7 @@ describe("Resource Controller - Search Security", () => {
     it("should handle more than 5 categories (respects sanitizeCategories limit)", async () => {
       mockRequest.query = {
         category: [
-          "Climbing",
+          "Climbing & Mountaineering",
           "Water Sports",
           "Snow Sports",
           "Cycling",
@@ -311,7 +311,7 @@ describe("Resource Controller - Search Security", () => {
     it("should apply both query sanitization and category filtering", async () => {
       mockRequest.query = {
         q: "camping!@#gear",
-        category: ["Climbing", "Water Sports"],
+        category: ["Climbing & Mountaineering", "Water Sports"],
       };
 
       await searchResources(mockRequest as Request, mockResponse as Response);
@@ -324,7 +324,7 @@ describe("Resource Controller - Search Security", () => {
 
       // Check multi-category OR
       expect(prismaCall.where.AND[1].OR).toEqual([
-        { category: { has: "Climbing" } },
+        { category: { has: "Climbing & Mountaineering" } },
         { category: { has: "Water Sports" } },
       ]);
     });
@@ -333,7 +333,7 @@ describe("Resource Controller - Search Security", () => {
       const longQuery = "camping ".repeat(20); // > 100 chars
       mockRequest.query = {
         q: longQuery,
-        category: ["Climbing", "Water Sports", "Cycling"],
+        category: ["Climbing & Mountaineering", "Water Sports", "Cycling"],
       };
 
       await searchResources(mockRequest as Request, mockResponse as Response);
@@ -388,7 +388,7 @@ describe("Resource Controller - Search Security", () => {
     it("should prevent NoSQL injection attempts", async () => {
       mockRequest.query = {
         q: "$ne",
-        category: ["$where", "Climbing"],
+        category: ["$where", "Climbing & Mountaineering"],
       };
 
       await searchResources(mockRequest as Request, mockResponse as Response);
@@ -397,13 +397,13 @@ describe("Resource Controller - Search Security", () => {
         .calls[0][0];
       expect(prismaCall.where.AND[0].OR[0].title.contains).toBe("ne");
       expect(prismaCall.where.AND[1].OR).toEqual([
-        { category: { has: "Climbing" } },
+        { category: { has: "Climbing & Mountaineering" } },
       ]);
     });
 
     it("should handle path traversal attempts in category", async () => {
       mockRequest.query = {
-        category: ["../../../etc/passwd", "Climbing"],
+        category: ["../../../etc/passwd", "Climbing & Mountaineering"],
       };
 
       await searchResources(mockRequest as Request, mockResponse as Response);
@@ -411,7 +411,7 @@ describe("Resource Controller - Search Security", () => {
       const prismaCall = (prisma.resource.findMany as jest.Mock).mock
         .calls[0][0];
       expect(prismaCall.where.AND[0].OR).toEqual([
-        { category: { has: "Climbing" } },
+        { category: { has: "Climbing & Mountaineering" } },
       ]);
     });
   });

@@ -6,7 +6,7 @@
  */
 
 export const CATEGORIES = [
-  "Sleep Systems",
+  "Shelter & Sleep Systems",
   "Packs & Bags",
   "Camp Kitchen",
   "Apparel",
@@ -16,9 +16,8 @@ export const CATEGORIES = [
   "Climbing & Mountaineering",
   "Navigation & Safety",
   "Light",
-  "Cycling",
-  "Cycling",
   "Other",
+  "Cycling",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];

@@ -9,13 +9,13 @@ import {
 
 describe("Frontend Category Constants and Validation", () => {
   describe("CATEGORIES constant", () => {
-    it("should contain exactly 11 categories", () => {
-      expect(CATEGORIES).toHaveLength(11);
+    it("should contain exactly 12 categories", () => {
+      expect(CATEGORIES).toHaveLength(12);
     });
 
     it("should include all expected categories", () => {
       const expectedCategories = [
-        "Sleep Systems",
+        "Shelter & Sleep Systems",
         "Packs & Bags",
         "Camp Kitchen",
         "Apparel",
@@ -23,7 +23,7 @@ describe("Frontend Category Constants and Validation", () => {
         "Snow Sports",
         "Water Sports",
         "Climbing & Mountaineering",
-        "Safety",
+        "Navigation & Safety",
         "Light",
         "Cycling",
         "Other",
@@ -49,7 +49,7 @@ describe("Frontend Category Constants and Validation", () => {
     it("should match backend categories exactly", () => {
       // This ensures frontend and backend stay in sync
       const expectedOrder = [
-        "Sleep Systems",
+        "Shelter & Sleep Systems",
         "Packs & Bags",
         "Camp Kitchen",
         "Apparel",
@@ -57,9 +57,10 @@ describe("Frontend Category Constants and Validation", () => {
         "Snow Sports",
         "Water Sports",
         "Climbing & Mountaineering",
-        "Safety",
+        "Navigation & Safety",
         "Light",
         "Other",
+        "Cycling",
       ];
 
       expect([...CATEGORIES]).toEqual(expectedOrder);
@@ -126,36 +127,51 @@ describe("Frontend Category Constants and Validation", () => {
     });
 
     it("should return all valid categories unchanged", () => {
-      const input = ["Sports", "Camping", "Tools"];
+      const input = ["Water Sports", "Camp Kitchen", "Packs & Bags"];
       expect(filterValidCategories(input)).toEqual(input);
     });
 
     it("should filter out invalid categories", () => {
-      const input = ["Sports", "InvalidCategory", "Camping", "FakeCategory"];
-      expect(filterValidCategories(input)).toEqual(["Sports", "Camping"]);
+      const input = [
+        "Water Sports",
+        "InvalidCategory",
+        "Camp Kitchen",
+        "FakeCategory",
+      ];
+      expect(filterValidCategories(input)).toEqual([
+        "Water Sports",
+        "Camp Kitchen",
+      ]);
     });
 
     it("should filter out non-string values", () => {
-      const input = ["Sports", 123, null, "Camping", undefined, "Tools"];
+      const input = [
+        "Water Sports",
+        123,
+        null,
+        "Camp Kitchen",
+        undefined,
+        "Packs & Bags",
+      ];
       expect(filterValidCategories(input as unknown[])).toEqual([
-        "Sports",
-        "Camping",
-        "Tools",
+        "Water Sports",
+        "Camp Kitchen",
+        "Packs & Bags",
       ]);
     });
 
     it("should preserve order of valid categories", () => {
       const input = [
-        "Garden",
+        "Other",
         "InvalidCategory",
-        "Sports",
+        "Water Sports",
         "FakeCategory",
-        "Camping",
+        "Camp Kitchen",
       ];
       expect(filterValidCategories(input)).toEqual([
-        "Garden",
-        "Sports",
-        "Camping",
+        "Other",
+        "Water Sports",
+        "Camp Kitchen",
       ]);
     });
 
@@ -165,12 +181,20 @@ describe("Frontend Category Constants and Validation", () => {
     });
 
     it("should handle mixed case rejection", () => {
-      const input = ["Sports", "sports", "SPORTS", "Camping"];
-      expect(filterValidCategories(input)).toEqual(["Sports", "Camping"]);
+      const input = [
+        "Water Sports",
+        "water sports",
+        "WATER SPORTS",
+        "Camp Kitchen",
+      ];
+      expect(filterValidCategories(input)).toEqual([
+        "Water Sports",
+        "Camp Kitchen",
+      ]);
     });
 
     it("should not mutate original array", () => {
-      const input = ["Sports", "InvalidCategory", "Camping"];
+      const input = ["Water Sports", "InvalidCategory", "Camp Kitchen"];
       const inputCopy = [...input];
       filterValidCategories(input);
       expect(input).toEqual(inputCopy);
@@ -179,42 +203,57 @@ describe("Frontend Category Constants and Validation", () => {
     it("should handle XSS attempts in array", () => {
       const input = [
         "<script>alert('xss')</script>",
-        "Sports",
-        "Camping<script>",
+        "Water Sports",
+        "Camp Kitchen<script>",
       ];
-      expect(filterValidCategories(input)).toEqual(["Sports"]);
+      expect(filterValidCategories(input)).toEqual(["Water Sports"]);
     });
 
     it("should handle SQL injection attempts in array", () => {
-      const input = ["Sports' OR '1'='1", "Sports", "; DROP TABLE resources;"];
-      expect(filterValidCategories(input)).toEqual(["Sports"]);
+      const input = [
+        "Water Sports' OR '1'='1",
+        "Water Sports",
+        "; DROP TABLE resources;",
+      ];
+      expect(filterValidCategories(input)).toEqual(["Water Sports"]);
     });
 
     it("should handle large arrays efficiently", () => {
       const largeInput = [
         ...Array(1000).fill("InvalidCategory"),
-        "Sports",
-        "Camping",
+        "Water Sports",
+        "Camp Kitchen",
       ];
       const result = filterValidCategories(largeInput);
-      expect(result).toEqual(["Sports", "Camping"]);
+      expect(result).toEqual(["Water Sports", "Camp Kitchen"]);
     });
 
     it("should handle duplicates in input", () => {
-      const input = ["Sports", "Camping", "Sports", "Tools", "Camping"];
+      const input = [
+        "Water Sports",
+        "Camp Kitchen",
+        "Water Sports",
+        "Packs & Bags",
+        "Camp Kitchen",
+      ];
       // Note: filterValidCategories does NOT deduplicate
       expect(filterValidCategories(input)).toEqual([
-        "Sports",
-        "Camping",
-        "Sports",
-        "Tools",
-        "Camping",
+        "Water Sports",
+        "Camp Kitchen",
+        "Water Sports",
+        "Packs & Bags",
+        "Camp Kitchen",
       ]);
     });
 
     it("should handle whitespace in categories", () => {
-      const input = [" Sports", "Camping ", " Tools ", "Garden"];
-      expect(filterValidCategories(input)).toEqual(["Garden"]);
+      const input = [
+        " Water Sports",
+        "Camp Kitchen ",
+        " Packs & Bags ",
+        "Other",
+      ];
+      expect(filterValidCategories(input)).toEqual(["Other"]);
     });
   });
 
@@ -224,32 +263,32 @@ describe("Frontend Category Constants and Validation", () => {
       const filtered = CATEGORIES.filter((cat) =>
         cat.toLowerCase().includes(userInput.toLowerCase()),
       );
-      expect(filtered).toContain("Sports");
+      expect(filtered).toContain("Snow Sports");
       expect(filtered).toContain("Water Sports");
     });
 
     it("should support multi-select validation", () => {
-      const userSelection = ["Sports", "InvalidCategory", "Camping"];
+      const userSelection = ["Water Sports", "InvalidCategory", "Camp Kitchen"];
       const validSelection = filterValidCategories(userSelection);
-      expect(validSelection).toEqual(["Sports", "Camping"]);
+      expect(validSelection).toEqual(["Water Sports", "Camp Kitchen"]);
       expect(validSelection.every(isValidCategory)).toBe(true);
     });
 
     it("should prevent injection through autocomplete", () => {
-      const maliciousInput = ["Sports", "<script>", "'; DROP TABLE;"];
+      const maliciousInput = ["Water Sports", "<script>", "'; DROP TABLE;"];
       const sanitized = filterValidCategories(maliciousInput);
-      expect(sanitized).toEqual(["Sports"]);
+      expect(sanitized).toEqual(["Water Sports"]);
     });
   });
 
   describe("TypeScript Type Safety", () => {
     it("should narrow type with type guard", () => {
-      const value: unknown = "Sports";
+      const value: unknown = "Water Sports";
 
       if (isValidCategory(value)) {
         // TypeScript should now know value is Category type
         const categories: (typeof CATEGORIES)[number][] = [value];
-        expect(categories).toContain("Sports");
+        expect(categories).toContain("Water Sports");
       }
     });
 
@@ -267,7 +306,7 @@ describe("Frontend Category Constants and Validation", () => {
       const start = performance.now();
 
       for (let i = 0; i < iterations; i++) {
-        isValidCategory("Sports");
+        isValidCategory("Water Sports");
         isValidCategory("InvalidCategory");
       }
 

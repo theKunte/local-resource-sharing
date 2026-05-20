@@ -6,7 +6,7 @@
  */
 
 export const CATEGORIES = [
-  "Sleep Systems",
+  "Shelter & Sleep Systems",
   "Packs & Bags",
   "Camp Kitchen",
   "Apparel",
@@ -14,7 +14,7 @@ export const CATEGORIES = [
   "Snow Sports",
   "Water Sports",
   "Climbing & Mountaineering",
-  "Safety",
+  "Navigation & Safety",
   "Light",
   "Other",
   "Cycling",

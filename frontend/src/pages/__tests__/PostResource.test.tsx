@@ -362,11 +362,11 @@ describe("PostResource", () => {
     const categoryInput = screen.getByPlaceholderText(
       /type to search or add categories/i,
     );
-    fireEvent.change(categoryInput, { target: { value: "Camping" } });
+    fireEvent.change(categoryInput, { target: { value: "Camp Kitchen" } });
     fireEvent.keyDown(categoryInput, { key: "Enter" });
 
     await waitFor(() => {
-      expect(screen.getByText("Camping")).toBeInTheDocument();
+      expect(screen.getByText("Camp Kitchen")).toBeInTheDocument();
     });
   });
 
@@ -392,12 +392,12 @@ describe("PostResource", () => {
     });
 
     await waitFor(() => {
-      // Should show suggestions like "Camping" from CATEGORIES
+      // Should show suggestions like "Camp Kitchen" from CATEGORIES
       const suggestions = document.querySelectorAll('button[type="button"]');
-      const hasCampingSuggestion = Array.from(suggestions).some((btn) =>
-        btn.textContent?.includes("Camping"),
+      const hasCampKitchenSuggestion = Array.from(suggestions).some((btn) =>
+        btn.textContent?.includes("Camp Kitchen"),
       );
-      expect(hasCampingSuggestion).toBe(true);
+      expect(hasCampKitchenSuggestion).toBe(true);
     });
   });
 
@@ -426,11 +426,11 @@ describe("PostResource", () => {
       const suggestions = Array.from(
         document.querySelectorAll('button[type="button"]'),
       );
-      const campingSuggestion = suggestions.find((btn) =>
-        btn.textContent?.includes("Camping"),
+      const campKitchenSuggestion = suggestions.find((btn) =>
+        btn.textContent?.includes("Camp Kitchen"),
       );
-      if (campingSuggestion) {
-        fireEvent.click(campingSuggestion);
+      if (campKitchenSuggestion) {
+        fireEvent.click(campKitchenSuggestion);
       }
     });
 
@@ -438,10 +438,10 @@ describe("PostResource", () => {
       const selectedCategories = document.querySelectorAll(
         ".bg-cyan-500.text-white",
       );
-      const hasCamping = Array.from(selectedCategories).some((el) =>
-        el.textContent?.includes("Camping"),
+      const hasCampKitchen = Array.from(selectedCategories).some((el) =>
+        el.textContent?.includes("Camp Kitchen"),
       );
-      expect(hasCamping).toBe(true);
+      expect(hasCampKitchen).toBe(true);
     });
   });
 
@@ -462,19 +462,19 @@ describe("PostResource", () => {
       const categoryInput = screen.getByPlaceholderText(
         /type to search or add categories/i,
       );
-      fireEvent.change(categoryInput, { target: { value: "Camping" } });
+      fireEvent.change(categoryInput, { target: { value: "Camp Kitchen" } });
       fireEvent.keyDown(categoryInput, { key: "Enter" });
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Camping")).toBeInTheDocument();
+      expect(screen.getByText("Camp Kitchen")).toBeInTheDocument();
     });
 
-    const removeButton = screen.getByLabelText("Remove Camping");
+    const removeButton = screen.getByLabelText("Remove Camp Kitchen");
     fireEvent.click(removeButton);
 
     await waitFor(() => {
-      expect(screen.queryByText("Camping")).not.toBeInTheDocument();
+      expect(screen.queryByText("Camp Kitchen")).not.toBeInTheDocument();
     });
   });
 
@@ -739,25 +739,25 @@ describe("PostResource", () => {
       const categoryInput = screen.getByPlaceholderText(
         /type to search or add categories/i,
       );
-      // Add "Camping" first time
-      fireEvent.change(categoryInput, { target: { value: "Camping" } });
+      // Add "Camp Kitchen" first time
+      fireEvent.change(categoryInput, { target: { value: "Camp Kitchen" } });
       fireEvent.keyDown(categoryInput, { key: "Enter" });
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Camping")).toBeInTheDocument();
+      expect(screen.getByText("Camp Kitchen")).toBeInTheDocument();
     });
 
-    // Try to add "Camping" again
+    // Try to add "Camp Kitchen" again
     const categoryInput = screen.getByPlaceholderText(
       /type to search or add categories/i,
     );
-    fireEvent.change(categoryInput, { target: { value: "Camping" } });
+    fireEvent.change(categoryInput, { target: { value: "Camp Kitchen" } });
     fireEvent.keyDown(categoryInput, { key: "Enter" });
 
-    // Should still only have one "Camping" badge
-    const campingBadges = screen.getAllByText("Camping");
-    expect(campingBadges.length).toBe(1);
+    // Should still only have one "Camp Kitchen" badge
+    const campKitchenBadges = screen.getAllByText("Camp Kitchen");
+    expect(campKitchenBadges.length).toBe(1);
   });
 
   it("shares resource with multiple selected groups", async () => {
