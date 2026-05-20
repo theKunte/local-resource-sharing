@@ -11,7 +11,7 @@ import {
 export async function createBorrowRequest(req: Request, res: Response) {
   const { resourceId, borrowerId, groupId, message, startDate, endDate } =
     req.body;
-  const authenticatedUserId = (req as any).user.uid;
+  const authenticatedUserId = req.user!.uid;
 
   if (!resourceId || !borrowerId || !startDate || !endDate) {
     return res.status(400).json({

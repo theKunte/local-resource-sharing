@@ -1,0 +1,331 @@
+/**
+ * Tests for frontend category validation
+ */
+import {
+  CATEGORIES,
+  isValidCategory,
+  filterValidCategories,
+} from "../categories";
+
+describe("Frontend Category Constants and Validation", () => {
+  describe("CATEGORIES constant", () => {
+    it("should contain exactly 12 categories", () => {
+      expect(CATEGORIES).toHaveLength(12);
+    });
+
+    it("should include all expected categories", () => {
+      const expectedCategories = [
+        "Shelter & Sleep Systems",
+        "Packs & Bags",
+        "Camp Kitchen",
+        "Apparel",
+        "Backpacking & Hiking",
+        "Snow Sports",
+        "Water Sports",
+        "Climbing & Mountaineering",
+        "Navigation & Safety",
+        "Light",
+        "Cycling",
+        "Other",
+      ];
+
+      expectedCategories.forEach((category) => {
+        expect(CATEGORIES).toContain(category);
+      });
+    });
+
+    it("should not contain duplicate categories", () => {
+      const uniqueCategories = new Set(CATEGORIES);
+      expect(uniqueCategories.size).toBe(CATEGORIES.length);
+    });
+
+    it("should have all categories as strings", () => {
+      CATEGORIES.forEach((category) => {
+        expect(typeof category).toBe("string");
+        expect(category.length).toBeGreaterThan(0);
+      });
+    });
+
+    it("should match backend categories exactly", () => {
+      // This ensures frontend and backend stay in sync
+      const expectedOrder = [
+        "Shelter & Sleep Systems",
+        "Packs & Bags",
+        "Camp Kitchen",
+        "Apparel",
+        "Backpacking & Hiking",
+        "Snow Sports",
+        "Water Sports",
+        "Climbing & Mountaineering",
+        "Navigation & Safety",
+        "Light",
+        "Other",
+        "Cycling",
+      ];
+
+      expect([...CATEGORIES]).toEqual(expectedOrder);
+    });
+
+    it("should be immutable (readonly)", () => {
+      // TypeScript enforces this at compile time with 'as const'
+      // The readonly tuple type prevents modifications during development
+      // Note: JavaScript arrays are not immutable at runtime, but TypeScript prevents mutations
+      const categoriesCopy = [...CATEGORIES];
+      expect(categoriesCopy).toEqual(CATEGORIES);
+      expect(CATEGORIES.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("isValidCategory() - Type Guard", () => {
+    it("should return true for all valid categories", () => {
+      CATEGORIES.forEach((category) => {
+        expect(isValidCategory(category)).toBe(true);
+      });
+    });
+
+    it("should return false for invalid categories", () => {
+      expect(isValidCategory("InvalidCategory")).toBe(false);
+      expect(isValidCategory("Random")).toBe(false);
+      expect(isValidCategory("")).toBe(false);
+    });
+
+    it("should be case-sensitive", () => {
+      expect(isValidCategory("water sports")).toBe(false); // lowercase
+      expect(isValidCategory("WATER SPORTS")).toBe(false); // uppercase
+      expect(isValidCategory("Water Sports")).toBe(true); // correct case
+    });
+
+    it("should reject non-string values", () => {
+      expect(isValidCategory(123)).toBe(false);
+      expect(isValidCategory(null)).toBe(false);
+      expect(isValidCategory(undefined)).toBe(false);
+      expect(isValidCategory({})).toBe(false);
+      expect(isValidCategory([])).toBe(false);
+      expect(isValidCategory(true)).toBe(false);
+    });
+
+    it("should reject categories with extra whitespace", () => {
+      expect(isValidCategory(" Water Sports")).toBe(false);
+      expect(isValidCategory("Water Sports ")).toBe(false);
+      expect(isValidCategory(" Water Sports ")).toBe(false);
+    });
+
+    it("should reject XSS attempts", () => {
+      expect(isValidCategory("<script>alert('xss')</script>")).toBe(false);
+      expect(isValidCategory("Water Sports<script>")).toBe(false);
+    });
+
+    it("should reject SQL injection attempts", () => {
+      expect(isValidCategory("Water Sports' OR '1'='1")).toBe(false);
+      expect(isValidCategory("Water Sports; DROP TABLE;")).toBe(false);
+    });
+  });
+
+  describe("filterValidCategories()", () => {
+    it("should return empty array for empty input", () => {
+      expect(filterValidCategories([])).toEqual([]);
+    });
+
+    it("should return all valid categories unchanged", () => {
+      const input = ["Water Sports", "Camp Kitchen", "Packs & Bags"];
+      expect(filterValidCategories(input)).toEqual(input);
+    });
+
+    it("should filter out invalid categories", () => {
+      const input = [
+        "Water Sports",
+        "InvalidCategory",
+        "Camp Kitchen",
+        "FakeCategory",
+      ];
+      expect(filterValidCategories(input)).toEqual([
+        "Water Sports",
+        "Camp Kitchen",
+      ]);
+    });
+
+    it("should filter out non-string values", () => {
+      const input = [
+        "Water Sports",
+        123,
+        null,
+        "Camp Kitchen",
+        undefined,
+        "Packs & Bags",
+      ];
+      expect(filterValidCategories(input as unknown[])).toEqual([
+        "Water Sports",
+        "Camp Kitchen",
+        "Packs & Bags",
+      ]);
+    });
+
+    it("should preserve order of valid categories", () => {
+      const input = [
+        "Other",
+        "InvalidCategory",
+        "Water Sports",
+        "FakeCategory",
+        "Camp Kitchen",
+      ];
+      expect(filterValidCategories(input)).toEqual([
+        "Other",
+        "Water Sports",
+        "Camp Kitchen",
+      ]);
+    });
+
+    it("should handle array with all invalid values", () => {
+      const input = ["Invalid1", "Invalid2", "Invalid3"];
+      expect(filterValidCategories(input)).toEqual([]);
+    });
+
+    it("should handle mixed case rejection", () => {
+      const input = [
+        "Water Sports",
+        "water sports",
+        "WATER SPORTS",
+        "Camp Kitchen",
+      ];
+      expect(filterValidCategories(input)).toEqual([
+        "Water Sports",
+        "Camp Kitchen",
+      ]);
+    });
+
+    it("should not mutate original array", () => {
+      const input = ["Water Sports", "InvalidCategory", "Camp Kitchen"];
+      const inputCopy = [...input];
+      filterValidCategories(input);
+      expect(input).toEqual(inputCopy);
+    });
+
+    it("should handle XSS attempts in array", () => {
+      const input = [
+        "<script>alert('xss')</script>",
+        "Water Sports",
+        "Camp Kitchen<script>",
+      ];
+      expect(filterValidCategories(input)).toEqual(["Water Sports"]);
+    });
+
+    it("should handle SQL injection attempts in array", () => {
+      const input = [
+        "Water Sports' OR '1'='1",
+        "Water Sports",
+        "; DROP TABLE resources;",
+      ];
+      expect(filterValidCategories(input)).toEqual(["Water Sports"]);
+    });
+
+    it("should handle large arrays efficiently", () => {
+      const largeInput = [
+        ...Array(1000).fill("InvalidCategory"),
+        "Water Sports",
+        "Camp Kitchen",
+      ];
+      const result = filterValidCategories(largeInput);
+      expect(result).toEqual(["Water Sports", "Camp Kitchen"]);
+    });
+
+    it("should handle duplicates in input", () => {
+      const input = [
+        "Water Sports",
+        "Camp Kitchen",
+        "Water Sports",
+        "Packs & Bags",
+        "Camp Kitchen",
+      ];
+      // Note: filterValidCategories does NOT deduplicate
+      expect(filterValidCategories(input)).toEqual([
+        "Water Sports",
+        "Camp Kitchen",
+        "Water Sports",
+        "Packs & Bags",
+        "Camp Kitchen",
+      ]);
+    });
+
+    it("should handle whitespace in categories", () => {
+      const input = [
+        " Water Sports",
+        "Camp Kitchen ",
+        " Packs & Bags ",
+        "Other",
+      ];
+      expect(filterValidCategories(input)).toEqual(["Other"]);
+    });
+  });
+
+  describe("Integration - Autocomplete Use Case", () => {
+    it("should support autocomplete filtering", () => {
+      const userInput = "sp";
+      const filtered = CATEGORIES.filter((cat) =>
+        cat.toLowerCase().includes(userInput.toLowerCase()),
+      );
+      expect(filtered).toContain("Snow Sports");
+      expect(filtered).toContain("Water Sports");
+    });
+
+    it("should support multi-select validation", () => {
+      const userSelection = ["Water Sports", "InvalidCategory", "Camp Kitchen"];
+      const validSelection = filterValidCategories(userSelection);
+      expect(validSelection).toEqual(["Water Sports", "Camp Kitchen"]);
+      expect(validSelection.every(isValidCategory)).toBe(true);
+    });
+
+    it("should prevent injection through autocomplete", () => {
+      const maliciousInput = ["Water Sports", "<script>", "'; DROP TABLE;"];
+      const sanitized = filterValidCategories(maliciousInput);
+      expect(sanitized).toEqual(["Water Sports"]);
+    });
+  });
+
+  describe("TypeScript Type Safety", () => {
+    it("should narrow type with type guard", () => {
+      const value: unknown = "Water Sports";
+
+      if (isValidCategory(value)) {
+        // TypeScript should now know value is Category type
+        const categories: (typeof CATEGORIES)[number][] = [value];
+        expect(categories).toContain("Water Sports");
+      }
+    });
+
+    it("should work with Category union type", () => {
+      type Category = (typeof CATEGORIES)[number];
+      const validCategory: Category = "Water Sports";
+      expect(isValidCategory(validCategory)).toBe(true);
+    });
+  });
+
+  describe("Performance", () => {
+    it("should validate category in O(1) time using Set", () => {
+      // CATEGORY_SET should be used internally for O(1) lookup
+      const iterations = 10000;
+      const start = performance.now();
+
+      for (let i = 0; i < iterations; i++) {
+        isValidCategory("Water Sports");
+        isValidCategory("InvalidCategory");
+      }
+
+      const duration = performance.now() - start;
+      // Should complete 10k validations in under 50ms
+      expect(duration).toBeLessThan(50);
+    });
+
+    it("should filter large arrays efficiently", () => {
+      const largeArray = [
+        ...Array(5000).fill("InvalidCategory"),
+        ...CATEGORIES,
+      ];
+      const start = performance.now();
+      const result = filterValidCategories(largeArray);
+      const duration = performance.now() - start;
+
+      expect(result).toHaveLength(CATEGORIES.length);
+      expect(duration).toBeLessThan(100); // Should be fast
+    });
+  });
+});

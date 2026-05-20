@@ -12,7 +12,7 @@ import { RESOURCE_LIMITS, LIMIT_ERROR_MESSAGES } from "../config/limits";
 // POST /api/groups
 export async function createGroup(req: Request, res: Response) {
   const { name, createdById } = req.body;
-  const authenticatedUserId = (req as any).user.uid;
+  const authenticatedUserId = req.user!.uid;
 
   const sanitizedName = sanitizeString(name, 100);
 
@@ -74,7 +74,7 @@ export async function createGroup(req: Request, res: Response) {
 export async function addMember(req: Request, res: Response) {
   const { groupId } = req.params;
   const { userId } = req.body;
-  const requestingUserId = (req as any).user.uid;
+  const requestingUserId = req.user!.uid;
 
   if (!userId) return res.status(400).json({ error: "User ID required" });
 
@@ -184,7 +184,7 @@ export async function getGroups(req: Request, res: Response) {
 // GET /api/groups/:groupId/resources
 export async function getGroupResources(req: Request, res: Response) {
   const { groupId } = req.params;
-  const requestingUserId = (req as any).user.uid;
+  const requestingUserId = req.user!.uid;
 
   try {
     // Check if the requesting user is a member of the group
@@ -212,7 +212,7 @@ export async function getGroupResources(req: Request, res: Response) {
 // GET /api/groups/:groupId/members
 export async function getGroupMembers(req: Request, res: Response) {
   const { groupId } = req.params;
-  const requestingUserId = (req as any).user.uid;
+  const requestingUserId = req.user!.uid;
 
   try {
     const requesterMembership = await prisma.groupMember.findFirst({
@@ -336,7 +336,7 @@ export async function inviteToGroup(req: Request, res: Response) {
 // DELETE /api/groups/:groupId/members/:userId
 export async function removeMember(req: Request, res: Response) {
   const { groupId, userId } = req.params;
-  const requestingUserId = (req as any).user.uid;
+  const requestingUserId = req.user!.uid;
 
   try {
     if (userId !== requestingUserId) {
@@ -764,7 +764,7 @@ export async function removeGroupMember(req: Request, res: Response) {
 // PUT /api/groups/:groupId/members/:userId/role
 export async function updateMemberRole(req: Request, res: Response) {
   const { groupId, userId: targetUserId } = req.params;
-  const requesterId = (req as any).user.uid;
+  const requesterId = req.user!.uid;
   const { role } = req.body;
 
   if (!role) {
