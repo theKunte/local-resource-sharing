@@ -484,9 +484,13 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
           ]);
 
           const incomingData =
-            incomingResponse.data.requests || incomingResponse.data;
+            incomingResponse.data.data ||
+            incomingResponse.data.requests ||
+            incomingResponse.data;
           const outgoingData =
-            outgoingResponse.data.requests || outgoingResponse.data;
+            outgoingResponse.data.data ||
+            outgoingResponse.data.requests ||
+            outgoingResponse.data;
 
           const incoming = Array.isArray(incomingData) ? incomingData : [];
           const outgoing = Array.isArray(outgoingData) ? outgoingData : [];

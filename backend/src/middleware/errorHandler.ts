@@ -21,8 +21,8 @@ function sanitizeErrorMessage(message: string, statusCode: number): string {
   return message
     .replace(/[\w/.-]+\.(ts|js|json)/g, "[file]") // Remove file paths
     .replace(/at .+:\d+:\d+/g, "") // Remove stack trace lines
-    .replace(/\b[A-Z]:\\[\w\\.-]+/g, "[path]") // Remove Windows paths
-    .replace(/\b[\w/.-]+/g, "[path]") // Remove Unix paths
+    .replace(/\b[A-Z]:\\[\w\\.-]+\.(ts|js|json)/g, "[path]") // Remove Windows file paths only
+    .replace(/\/[\w/.-]+\.(ts|js|json)/g, "[path]") // Remove Unix file paths only
     .substring(0, 200); // Limit length
 }
 
