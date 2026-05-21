@@ -245,9 +245,14 @@ describe("borrowRequestController", () => {
     });
 
     it("returns 400 when start date is in the past", async () => {
+      // Use the same date calculation method as the controller
       const yesterday = new Date();
+      yesterday.setHours(0, 0, 0, 0);
       yesterday.setDate(yesterday.getDate() - 1);
-      const pastDate = yesterday.toISOString().split("T")[0];
+      const year = yesterday.getFullYear();
+      const month = String(yesterday.getMonth() + 1).padStart(2, "0");
+      const day = String(yesterday.getDate()).padStart(2, "0");
+      const pastDate = `${year}-${month}-${day}`;
 
       const { req, res } = mockReqRes({
         resourceId: "r1",
@@ -717,9 +722,7 @@ describe("borrowRequestController", () => {
       mockPrisma.$transaction.mockImplementation(async (fn: any) => {
         const tx = {
           borrowRequest: {
-            findUnique: jest
-              .fn()
-              .mockResolvedValue({ status: "APPROVED" }), // status changed
+            findUnique: jest.fn().mockResolvedValue({ status: "APPROVED" }), // status changed
             update: jest.fn(),
             updateMany: jest.fn(),
           },

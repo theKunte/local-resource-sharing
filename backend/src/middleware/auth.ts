@@ -4,6 +4,7 @@
  */
 import { Request, Response, NextFunction } from "express";
 import admin from "firebase-admin";
+import type { AuthenticatedUser } from "../types/express";
 
 /**
  * Middleware to verify Firebase ID token with revocation check and timeout
@@ -23,7 +24,7 @@ export async function authenticateToken(
     const token = authHeader.split("Bearer ")[1];
 
     // Verify the token with Firebase Admin with timeout protection
-    const timeoutPromise = new Promise((_, reject) => {
+    const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error("Token verification timeout")), 10000);
     });
 
@@ -33,11 +34,11 @@ export async function authenticateToken(
     ]);
 
     // Attach user info to request
-    (req as any).user = {
-      uid: (decodedToken as any).uid,
-      email: (decodedToken as any).email,
-      emailVerified: (decodedToken as any).email_verified,
-    };
+    req.user = {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      emailVerified: decodedToken.email_verified ?? false,
+    } satisfies AuthenticatedUser;
 
     next();
   } catch (error) {
@@ -68,7 +69,7 @@ export function requireVerifiedEmail(
   res: Response,
   next: NextFunction,
 ) {
-  const user = (req as any).user;
+  const user = req.user;
 
   if (!user || !user.emailVerified) {
     return res.status(403).json({

@@ -11,6 +11,8 @@ import {
   addResourceToGroup,
   removeResourceFromGroup,
   shareResource,
+  searchResources,
+  getRecommendations,
 } from "../controllers/resourceController";
 
 const writeLimiter = rateLimit({
@@ -22,6 +24,10 @@ const writeLimiter = rateLimit({
 });
 
 const router = Router();
+
+// Search and recommendations (must come before / to avoid route conflicts)
+router.get("/search", authenticateToken, searchResources);
+router.get("/recommendations", authenticateToken, getRecommendations);
 
 router.get("/", authenticateToken, getResources);
 router.get(
