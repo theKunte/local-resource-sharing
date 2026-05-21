@@ -2,13 +2,55 @@
 
 ## Base URL
 
+**Recommended (v1):**
+
+```
+http://localhost:3001/api/v1
+```
+
+**Legacy (deprecated):**
+
 ```
 http://localhost:3001/api
 ```
 
+> ⚠️ **Note:** Unversioned API endpoints (`/api/*`) are deprecated and will be removed in a future release. All new integrations should use the versioned API (`/api/v1/*`). Legacy endpoints return `Deprecation: true` and `X-API-Warn` headers.
+
 ## Authentication
 
 Currently uses Firebase Authentication. Include the Firebase user ID in request bodies where indicated.
+
+## Pagination
+
+List endpoints support pagination through query parameters:
+
+- `page` (optional): Page number, starting from 1. Default: `1`
+- `limit` (optional): Number of items per page. Default: `50`, Maximum: `100`
+
+**Paginated Response Format:**
+
+```json
+{
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 150,
+    "totalPages": 3
+  }
+}
+```
+
+**Endpoints with Pagination:**
+
+- `GET /resources`
+- `GET /groups`
+- `GET /groups/:id/members`
+- `GET /groups/:id/resources`
+- `GET /users/:userId/groups`
+- `GET /resources/:id/groups`
+- `GET /borrow-requests`
+- `GET /resources/search`
 
 ---
 
@@ -48,27 +90,41 @@ POST /resources
 ### Get Resources by Owner
 
 ```http
-GET /resources?ownerId={userId}
+GET /resources?ownerId={userId}&page={page}&limit={limit}
 ```
+
+**Query Parameters:**
+
+- `ownerId` (required): User ID to filter resources by owner
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 50, max: 100)
 
 **Response:** `200 OK`
 
 ```json
-[
-  {
-    "id": "resource-uuid",
-    "title": "Camping Tent",
-    "description": "4-person tent",
-    "status": "AVAILABLE",
-    "currentLoanId": null,
-    "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media",
-    "owner": {
-      "id": "user-id",
-      "email": "user@example.com",
-      "name": "John Doe"
+{
+  "data": [
+    {
+      "id": "resource-uuid",
+      "title": "Camping Tent",
+      "description": "4-person tent",
+      "status": "AVAILABLE",
+      "currentLoanId": null,
+      "image": "https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{filename}?alt=media",
+      "owner": {
+        "id": "user-id",
+        "email": "user@example.com",
+        "name": "John Doe"
+      }
     }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 150,
+    "totalPages": 3
   }
-]
+}
 ```
 
 ### Update Resource

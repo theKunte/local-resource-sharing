@@ -428,7 +428,7 @@ export async function getBorrowRequests(req: Request, res: Response) {
 
     res.json({
       success: true,
-      requests: requestsWithGroups,
+      data: requestsWithGroups,
       pagination: {
         page,
         limit,

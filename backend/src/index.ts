@@ -19,6 +19,9 @@ import notificationRoutes from "./routes/notifications";
 import userRoutes from "./routes/users";
 import testErrorRoutes from "./routes/testErrors";
 
+// v1 API routes
+import * as v1Routes from "./routes/v1";
+
 dotenv.config();
 
 // Validate required environment variables on startup
@@ -173,6 +176,30 @@ app.get("/health", async (req, res, _next) => {
 });
 
 // Mount routes
+
+// v1 API routes (current/recommended)
+app.use("/api/v1/resources", v1Routes.resourceRoutes);
+app.use("/api/v1/groups", v1Routes.groupRoutes);
+app.use("/api/v1", v1Routes.authRoutes);
+app.use("/api/v1/borrow-requests", v1Routes.borrowRequestRoutes);
+app.use("/api/v1/loans", v1Routes.loanRoutes);
+app.use("/api/v1/notifications", v1Routes.notificationRoutes);
+app.use("/api/v1/users", v1Routes.userRoutes);
+
+// Legacy unversioned routes (deprecated - maintained for backward compatibility)
+// Add deprecation warning header
+app.use("/api", (req, res, next) => {
+  // Only add warning to non-v1 routes
+  if (!req.path.startsWith("/v1/")) {
+    res.setHeader("Deprecation", "true");
+    res.setHeader(
+      "X-API-Warn",
+      "Unversioned API endpoints are deprecated. Please use /api/v1/ instead.",
+    );
+  }
+  next();
+});
+
 app.use("/api/resources", resourceRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api", authRoutes);

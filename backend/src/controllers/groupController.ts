@@ -185,6 +185,9 @@ export async function getGroups(req: Request, res: Response) {
 export async function getGroupResources(req: Request, res: Response) {
   const { groupId } = req.params;
   const requestingUserId = req.user!.uid;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const skip = (page - 1) * limit;
 
   try {
     // Check if the requesting user is a member of the group
@@ -198,11 +201,25 @@ export async function getGroupResources(req: Request, res: Response) {
         .json({ error: "You are not a member of this group" });
     }
 
-    const shared = await prisma.resourceSharing.findMany({
-      where: { groupId },
-      include: { resource: true },
+    const [shared, total] = await Promise.all([
+      prisma.resourceSharing.findMany({
+        where: { groupId },
+        skip,
+        take: limit,
+        include: { resource: true },
+      }),
+      prisma.resourceSharing.count({ where: { groupId } }),
+    ]);
+
+    res.json({
+      data: shared.map((s) => s.resource),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
-    res.json(shared.map((s) => s.resource));
   } catch (error) {
     console.error("Error fetching group resources:", error);
     res.status(500).json({ error: "Failed to fetch group resources" });
@@ -213,6 +230,9 @@ export async function getGroupResources(req: Request, res: Response) {
 export async function getGroupMembers(req: Request, res: Response) {
   const { groupId } = req.params;
   const requestingUserId = req.user!.uid;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const skip = (page - 1) * limit;
 
   try {
     const requesterMembership = await prisma.groupMember.findFirst({
@@ -225,15 +245,29 @@ export async function getGroupMembers(req: Request, res: Response) {
         .json({ error: "You are not a member of this group" });
     }
 
-    const members = await prisma.groupMember.findMany({
-      where: { groupId },
-      include: {
-        user: {
-          select: { id: true, email: true, name: true },
+    const [members, total] = await Promise.all([
+      prisma.groupMember.findMany({
+        where: { groupId },
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: { id: true, email: true, name: true },
+          },
         },
+      }),
+      prisma.groupMember.count({ where: { groupId } }),
+    ]);
+
+    res.json({
+      data: members,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
-    res.json(members);
   } catch (error) {
     console.error("Error fetching group members:", error);
     res.status(500).json({ error: "Failed to fetch group members" });
@@ -856,20 +890,28 @@ export async function updateMemberRole(req: Request, res: Response) {
 // GET /api/users/:userId/groups
 export async function getUserGroups(req: Request, res: Response) {
   const { userId } = req.params;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const skip = (page - 1) * limit;
 
   try {
-    const memberships = await prisma.groupMember.findMany({
-      where: { userId },
-      include: {
-        group: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
+    const [memberships, total] = await Promise.all([
+      prisma.groupMember.findMany({
+        where: { userId },
+        skip,
+        take: limit,
+        include: {
+          group: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.groupMember.count({ where: { userId } }),
+    ]);
 
     const groupsWithCounts = await Promise.all(
       memberships.map(async (membership) => {
@@ -884,7 +926,15 @@ export async function getUserGroups(req: Request, res: Response) {
       }),
     );
 
-    res.json(groupsWithCounts);
+    res.json({
+      data: groupsWithCounts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error("Error fetching user groups:", error);
     res.status(500).json({ error: "Failed to fetch user groups" });

@@ -57,6 +57,8 @@ export function useFirebaseAuth() {
       return false;
     }
     const provider = new GoogleAuthProvider();
+    // Force account selection every time - allows switching between accounts
+    provider.setCustomParameters({ prompt: "select_account" });
     try {
       console.debug("[useFirebaseAuth] starting Google sign-in (popup)");
       await signInWithPopup(auth, provider);

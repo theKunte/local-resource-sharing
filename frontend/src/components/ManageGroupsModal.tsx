@@ -49,8 +49,9 @@ export default function ManageGroupsModal({
             },
           ),
         ]);
-        const allGroups: Group[] = allRes.data;
-        const sharedGroups: Group[] = sharedRes.data;
+        // Handle paginated response format
+        const allGroups: Group[] = allRes.data.data ?? allRes.data;
+        const sharedGroups: Group[] = sharedRes.data.data ?? sharedRes.data;
         setGroups(allGroups);
         const sel = new Set<string>(sharedGroups.map((g) => g.id));
         setSelected(sel);
@@ -79,7 +80,9 @@ export default function ManageGroupsModal({
         `/api/resources/${encodeURIComponent(resourceId)}/groups`,
         { params: { userId } },
       );
-      const sharedData = sharedResp.data as SimpleGroupId[];
+      // Handle paginated response format
+      const sharedData = (sharedResp.data.data ??
+        sharedResp.data) as SimpleGroupId[];
       const currentlyShared: string[] = sharedData.map((g) => g.id);
       const toAdd = Array.from(current).filter(
         (id) => !currentlyShared.includes(id),
