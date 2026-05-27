@@ -41,6 +41,12 @@ The application exposes two endpoints for monitoring and orchestration:
       "status": "healthy",
       "usage": 13, // MB used
       "limit": 31 // MB total heap
+    },
+    "backup": {
+      "status": "healthy", // healthy | degraded | unhealthy
+      "lastBackup": "backup_20260527_020000.sql",
+      "age": "5h", // time since last backup
+      "totalBackups": 10 // number of backups retained
     }
   }
 }
@@ -66,6 +72,11 @@ The application exposes two endpoints for monitoring and orchestration:
   - `healthy` - Heap usage < 90%
   - `degraded` - Heap usage 90-95%
   - `unhealthy` - Heap usage > 95%
+
+- **Backup:**
+  - `healthy` - Last backup < 36 hours old
+  - `degraded` - Last backup 36-72 hours old OR no backups exist
+  - `unhealthy` - Last backup > 72 hours old
 
 ### `/readiness` - Readiness Probe
 
@@ -144,6 +155,171 @@ logger.database("Slow query detected", { query: "SELECT...", duration: 1234 });
 const requestLogger = logger.child({ requestId: req.id });
 requestLogger.info("Processing request");
 ```
+
+---
+
+## Automated Database Backups
+
+The application includes a comprehensive backup system with both manual and automated options.
+
+### Docker-Based Automated Backups
+
+A dedicated backup container runs automatically in the Docker Compose stack:
+
+**Features:**
+
+- 🔄 **Automatic daily backups** - Creates pg_dump backups at 2 AM
+- 🗄️ **Automatic cleanup** - Keeps last 10 backups (configurable)
+- 📊 **Backup monitoring** - `/health` endpoint tracks backup freshness
+- 🔒 **Read-only access** - Backup container has read-only access to database volume
+- 🐳 **Cross-platform** - Works on Windows, Linux, macOS
+
+**Configuration:**
+
+```yaml
+# docker-compose.yml
+backup:
+  image: postgres:16-alpine
+  volumes:
+    - db_data:/var/lib/postgresql/data:ro # Read-only
+    - ./backend/backups:/backups
+  environment:
+    - POSTGRES_USER=${POSTGRES_USER:-appuser}
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    - POSTGRES_DB=${POSTGRES_DB:-localresourcesharing}
+  depends_on:
+    postgres:
+      condition: service_healthy
+```
+
+**Backup Location:** `backend/backups/backup_YYYYMMDD_HHMMSS.sql`
+
+**Retention Policy:** Last 10 backups retained automatically
+
+### Manual Backup Commands
+
+**Create backup anytime:**
+
+```bash
+cd backend
+npm run db:backup
+```
+
+**Restore from latest backup:**
+
+```bash
+cd backend
+npm run db:restore
+```
+
+**Restore from specific backup:**
+
+```powershell
+cd backend
+.\scripts\restore-db.ps1 -BackupFile ".\backups\backup_20260527_020000.sql"
+```
+
+**List available backups:**
+
+```powershell
+cd backend
+.\scripts\restore-db.ps1  # Shows list of available backups
+```
+
+**Check database contents:**
+
+```bash
+cd backend
+npm run db:check
+```
+
+### Windows Task Scheduler (Alternative)
+
+For Windows-only environments, you can use Task Scheduler instead of the Docker backup container:
+
+```powershell
+cd backend
+.\scripts\auto-backup-cron.ps1
+```
+
+This creates a scheduled task that runs daily at 2 AM.
+
+### Backup Monitoring
+
+The `/health` endpoint includes backup status:
+
+```json
+{
+  "status": "healthy",
+  "checks": {
+    "backup": {
+      "status": "healthy",
+      "lastBackup": "backup_20260527_020000.sql",
+      "age": "5h",
+      "totalBackups": 10
+    }
+  }
+}
+```
+
+**Health Criteria:**
+
+- `healthy` - Last backup < 36 hours old
+- `degraded` - Last backup 36-72 hours old OR no backups exist
+- `unhealthy` - Last backup > 72 hours old
+
+This allows monitoring systems to alert if backups are failing.
+
+### Best Practices
+
+**Before Risky Operations:**
+
+Always create a manual backup before:
+
+- Database migrations
+- Schema changes
+- Upgrading Docker containers
+- Testing cleanup scripts
+- Removing Docker volumes (`docker compose down -v`)
+
+```bash
+npm run db:backup  # Quick safety backup
+```
+
+**Production Recommendations:**
+
+1. **Off-site backups** - Upload to cloud storage (S3, Azure Blob, Google Cloud Storage)
+2. **Backup verification** - Periodically restore backups to test integrity
+3. **Multi-region replication** - For critical production systems
+4. **Backup encryption** - Encrypt backups at rest and in transit
+5. **Backup alerts** - Monitor backup failures via `/health` endpoint
+
+**Example: Upload to Azure Blob Storage**
+
+```typescript
+import { BlobServiceClient } from "@azure/storage-blob";
+import fs from "fs";
+import path from "path";
+
+async function uploadBackupToCloud(backupFile: string) {
+  const blobServiceClient = BlobServiceClient.fromConnectionString(
+    process.env.AZURE_STORAGE_CONNECTION_STRING!,
+  );
+
+  const containerClient = blobServiceClient.getContainerClient("backups");
+  const blockBlobClient = containerClient.getBlockBlobClient(
+    path.basename(backupFile),
+  );
+
+  const uploadBlobResponse = await blockBlobClient.uploadFile(backupFile);
+  console.log(`Backup uploaded to Azure: ${uploadBlobResponse.requestId}`);
+}
+```
+
+### Documentation
+
+- [QUICK_RECOVERY.md](../QUICK_RECOVERY.md) - Quick reference for daily operations
+- [DATA_PROTECTION.md](../DATA_PROTECTION.md) - Comprehensive backup guide
 
 ---
 
@@ -393,12 +569,12 @@ location /health {
 
 1. ✅ **Health Checks** - Implemented
 2. ✅ **Structured Logging (Pino)** - Implemented
-3. ⏳ **Error Tracking (Sentry)** - TODO
-4. ⏳ **Metrics Endpoint (Prometheus)** - TODO
-5. ⏳ **Log Aggregation (BetterStack)** - TODO
-6. ⏳ **Uptime Monitoring (UptimeRobot)** - TODO
-7. ⏳ **Database Backup Automation** - TODO
-8. ⏳ **Grafana Dashboards** - TODO
+3. ✅ **Database Backup Automation** - Implemented
+4. ⏳ **Error Tracking (Sentry)** - TODO (defer until ~50+ users)
+5. ⏳ **Metrics Endpoint (Prometheus)** - TODO (defer until traffic patterns emerge)
+6. ⏳ **Log Aggregation (BetterStack)** - TODO (defer until scale increases)
+7. ⏳ **Uptime Monitoring (UptimeRobot)** - TODO (defer until production deployment)
+8. ⏳ **Grafana Dashboards** - TODO (defer until metrics collection is active)
 
 ---
 

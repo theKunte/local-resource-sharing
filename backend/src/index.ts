@@ -6,6 +6,8 @@ import rateLimit from "express-rate-limit";
 import admin from "firebase-admin";
 import helmet from "helmet";
 import pinoHttp from "pino-http";
+import fs from "fs";
+import path from "path";
 import prisma from "./prisma";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
@@ -87,10 +89,21 @@ app.use(compression());
 
 // Health check endpoint for load balancers and orchestrators
 app.get("/health", async (req, res, _next) => {
-  const checks = {
+  const checks: {
+    database: { status: string; responseTime: number };
+    firebase: { status: string };
+    memory: { status: string; usage: number; limit: number };
+    backup: {
+      status: string;
+      lastBackup: string | null;
+      age: string | null;
+      totalBackups: number;
+    };
+  } = {
     database: { status: "unknown", responseTime: 0 },
     firebase: { status: "unknown" },
     memory: { status: "unknown", usage: 0, limit: 0 },
+    backup: { status: "unknown", lastBackup: null, age: null, totalBackups: 0 },
   };
 
   let overallStatus = "healthy";
@@ -135,6 +148,57 @@ app.get("/health", async (req, res, _next) => {
   if (memPercentage > 95) {
     checks.memory.status = "unhealthy";
     overallStatus = "unhealthy";
+  }
+
+  // Check backup freshness
+  try {
+    const backupDir = path.join(__dirname, "../backups");
+    if (fs.existsSync(backupDir)) {
+      const backups = fs
+        .readdirSync(backupDir)
+        .filter((f) => f.startsWith("backup_") && f.endsWith(".sql"))
+        .sort()
+        .reverse();
+
+      checks.backup.totalBackups = backups.length;
+
+      if (backups.length > 0) {
+        const lastBackupFile = backups[0];
+        const lastBackupPath = path.join(backupDir, lastBackupFile);
+        const lastBackupTime = fs.statSync(lastBackupPath).mtime;
+        const ageMs = Date.now() - lastBackupTime.getTime();
+        const ageHours = Math.floor(ageMs / 3600000);
+
+        checks.backup.lastBackup = lastBackupFile;
+        checks.backup.age =
+          ageHours < 24 ? `${ageHours}h` : `${Math.floor(ageHours / 24)}d`;
+
+        // Backup is healthy if < 36 hours old (allows for daily backup + buffer)
+        // Degraded if 36-72 hours old, unhealthy if > 72 hours
+        if (ageMs < 36 * 3600000) {
+          checks.backup.status = "healthy";
+        } else if (ageMs < 72 * 3600000) {
+          checks.backup.status = "degraded";
+          if (overallStatus === "healthy") overallStatus = "degraded";
+        } else {
+          checks.backup.status = "unhealthy";
+          overallStatus = "unhealthy";
+        }
+      } else {
+        // No backups exist - degraded (not critical, but concerning)
+        checks.backup.status = "degraded";
+        checks.backup.age = "never";
+        if (overallStatus === "healthy") overallStatus = "degraded";
+      }
+    } else {
+      // Backup directory doesn't exist - degraded
+      checks.backup.status = "degraded";
+      checks.backup.age = "no backup directory";
+      if (overallStatus === "healthy") overallStatus = "degraded";
+    }
+  } catch (error) {
+    checks.backup.status = "unknown";
+    logger.error("Health check: Backup check failed", error);
   }
 
   const responseTime = Date.now() - startTime;
