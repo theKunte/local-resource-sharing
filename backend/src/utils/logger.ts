@@ -6,6 +6,7 @@
 
 import pino from "pino";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type LogLevel = "info" | "warn" | "error" | "security" | "audit" | "debug";
 
 interface LogContext {

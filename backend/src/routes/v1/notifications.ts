@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateToken } from "../../middleware/auth";
+// import { authenticateToken } from "../../middleware/auth";
 // TODO: Implement getNotifications and markNotificationRead in notificationController
 // import {
 //   getNotifications,

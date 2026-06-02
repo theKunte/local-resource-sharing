@@ -122,13 +122,13 @@ describe("apiClient", () => {
       expect(apiClient.defaults.baseURL).toBe(newBaseUrl);
     });
 
-    it("falls back to default URL when called with empty string", async () => {
+    it("uses empty baseURL for relative paths when called with empty string", async () => {
       const { default: apiClient, configureApiClient } =
         await import("../apiClient");
 
       configureApiClient("");
 
-      expect(apiClient.defaults.baseURL).toBe("http://localhost:3001");
+      expect(apiClient.defaults.baseURL).toBe("");
     });
 
     it("logs the configured base URL", async () => {
