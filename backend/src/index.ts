@@ -290,18 +290,29 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
   "http://localhost:5174",
 ];
 
+// Helper to check if origin is from local network (for demos/development)
+const isLocalNetworkOrigin = (origin: string): boolean => {
+  const localPatterns = [
+    /^http:\/\/localhost(:\d+)?$/,
+    /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+    /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/, // 192.168.x.x
+    /^http:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/, // 10.x.x.x
+    /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$/, // 172.16-31.x.x
+  ];
+  return localPatterns.some((pattern) => pattern.test(origin));
+};
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin && process.env.NODE_ENV === "production") {
-        return callback(new Error("Not allowed by CORS - no origin header"));
-      }
-
-      if (!origin && process.env.NODE_ENV !== "production") {
+      // No origin header = same-origin request (e.g., from nginx proxy)
+      // This is normal and should be allowed in production
+      if (!origin) {
         return callback(null, true);
       }
 
-      if (origin && allowedOrigins.includes(origin)) {
+      // Check if origin is in allowed list or local network
+      if (allowedOrigins.includes(origin) || isLocalNetworkOrigin(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));

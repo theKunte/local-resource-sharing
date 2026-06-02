@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GearShare - Quick Links</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        border-radius: 30px;
+        padding: 40px 30px;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        text-align: center;
+      }
+
+      .logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+      }
+
+      h1 {
+        color: #667eea;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      .tagline {
+        color: #666;
+        font-size: 1.1em;
+        margin-bottom: 40px;
+      }
+
+      .qr-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+      }
+
+      .qr-item {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 20px;
+        transition: all 0.3s;
+      }
+
+      .qr-item:active {
+        transform: scale(0.98);
+      }
+
+      .qr-icon {
+        font-size: 2em;
+        margin-bottom: 10px;
+      }
+
+      .qr-title {
+        font-size: 1.2em;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 15px;
+      }
+
+      .qr-code-img {
+        width: 220px;
+        height: 220px;
+        margin: 15px auto;
+        background: white;
+        padding: 15px;
+        border-radius: 15px;
+        border: 3px solid #667eea;
+      }
+
+      .qr-link {
+        color: #667eea;
+        text-decoration: none;
+        font-size: 0.9em;
+        word-break: break-all;
+        display: inline-block;
+        margin-top: 10px;
+      }
+
+      .edit-mode {
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 2px dashed #ddd;
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+        text-align: left;
+      }
+
+      .input-group label {
+        display: block;
+        color: #666;
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 0.9em;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 0.95em;
+        transition: border-color 0.3s;
+      }
+
+      .input-group input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .toggle-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-size: 1em;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 20px;
+        transition: all 0.3s;
+      }
+
+      .toggle-btn:hover {
+        background: #764ba2;
+        transform: scale(1.05);
+      }
+
+      .toggle-btn:active {
+        transform: scale(0.98);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .instructions {
+        background: #fff3cd;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 20px;
+        font-size: 0.9em;
+        color: #856404;
+      }
+
+      @media (max-width: 500px) {
+        .container {
+          padding: 30px 20px;
+        }
+
+        h1 {
+          font-size: 2em;
+        }
+
+        .qr-code-img {
+          width: 180px;
+          height: 180px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">🎯</div>
+      <h1>GearShare</h1>
+      <p class="tagline">Scan to Connect</p>
+
+      <div id="qr-display" class="qr-grid">
+        <div class="qr-item">
+          <div class="qr-icon">📂</div>
+          <div class="qr-title">GitHub Repository</div>
+          <img
+            class="qr-code-img"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/theKunte/local-resource-sharing"
+            alt="GitHub QR"
+          />
+          <a
+            href="https://github.com/theKunte/local-resource-sharing"
+            class="qr-link"
+            target="_blank"
+          >
+            github.com/theKunte/local-resource-sharing
+          </a>
+        </div>
+
+        <div class="qr-item">
+          <div class="qr-icon">🚀</div>
+          <div class="qr-title">Live Demo</div>
+          <img
+            id="demo-qr-img"
+            class="qr-code-img"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://github.com/theKunte/local-resource-sharing"
+            alt="Demo QR"
+          />
+          <a href="#" id="demo-link-display" class="qr-link" target="_blank">
+            Add your demo URL
+          </a>
+        </div>
+
+        <div class="qr-item">
+          <div class="qr-icon">💼</div>
+          <div class="qr-title">LinkedIn Profile</div>
+          <img
+            id="linkedin-qr-img"
+            class="qr-code-img"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://linkedin.com"
+            alt="LinkedIn QR"
+          />
+          <a
+            href="#"
+            id="linkedin-link-display"
+            class="qr-link"
+            target="_blank"
+          >
+            Add your LinkedIn URL
+          </a>
+        </div>
+      </div>
+
+      <button class="toggle-btn" onclick="toggleEditMode()">
+        ✏️ Update Links
+      </button>
+
+      <div id="edit-mode" class="edit-mode hidden">
+        <div class="input-group">
+          <label for="demo-url-input">🚀 Live Demo URL</label>
+          <input
+            type="url"
+            id="demo-url-input"
+            placeholder="https://your-app.com"
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="linkedin-url-input">💼 LinkedIn Profile URL</label>
+          <input
+            type="url"
+            id="linkedin-url-input"
+            placeholder="https://linkedin.com/in/yourprofile"
+          />
+        </div>
+
+        <button class="toggle-btn" onclick="updateQRCodes()">
+          💾 Save & Update QR Codes
+        </button>
+
+        <div class="instructions">
+          <strong>📱 Tip:</strong> Save this page to your home screen for quick
+          access at the event!
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Load saved URLs from localStorage
+      window.addEventListener("load", function () {
+        const savedDemo = localStorage.getItem("gearshare-demo-url");
+        const savedLinkedIn = localStorage.getItem("gearshare-linkedin-url");
+
+        if (savedDemo) {
+          updateDemoQR(savedDemo);
+          document.getElementById("demo-url-input").value = savedDemo;
+        }
+
+        if (savedLinkedIn) {
+          updateLinkedInQR(savedLinkedIn);
+          document.getElementById("linkedin-url-input").value = savedLinkedIn;
+        }
+      });
+
+      function toggleEditMode() {
+        const editMode = document.getElementById("edit-mode");
+        editMode.classList.toggle("hidden");
+      }
+
+      function updateQRCodes() {
+        const demoUrl = document.getElementById("demo-url-input").value;
+        const linkedInUrl = document.getElementById("linkedin-url-input").value;
+
+        if (demoUrl) {
+          updateDemoQR(demoUrl);
+          localStorage.setItem("gearshare-demo-url", demoUrl);
+        }
+
+        if (linkedInUrl) {
+          updateLinkedInQR(linkedInUrl);
+          localStorage.setItem("gearshare-linkedin-url", linkedInUrl);
+        }
+
+        toggleEditMode();
+
+        // Show success feedback
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = "✅ Saved!";
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      }
+
+      function updateDemoQR(url) {
+        const img = document.getElementById("demo-qr-img");
+        const link = document.getElementById("demo-link-display");
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url)}`;
+        link.href = url;
+        link.textContent = url;
+      }
+
+      function updateLinkedInQR(url) {
+        const img = document.getElementById("linkedin-qr-img");
+        const link = document.getElementById("linkedin-link-display");
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url)}`;
+        link.href = url;
+        link.textContent = url;
+      }
+    </script>
+  </body>
+</html>
