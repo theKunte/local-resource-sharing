@@ -86,9 +86,15 @@ app.use(compression());
 // ===== Health and Readiness Endpoints (Must be before CORS) =====
 // These endpoints should be accessible by load balancers and orchestrators
 // without CORS restrictions or authentication
+const healthCheckLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // allow normal probe traffic, limit abusive bursts
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Health check endpoint for load balancers and orchestrators
-app.get("/health", async (req, res, _next) => {
+app.get("/health", healthCheckLimiter, async (req, res, _next) => {
   const checks: {
     database: { status: string; responseTime: number };
     firebase: { status: string };
@@ -218,7 +224,7 @@ app.get("/health", async (req, res, _next) => {
 
 // Readiness check endpoint for Kubernetes and load balancers
 // Returns 200 only when the app is ready to accept traffic
-app.get("/readiness", async (req, res, _next) => {
+app.get("/readiness", healthCheckLimiter, async (req, res, _next) => {
   try {
     // Quick database check (must respond fast)
     await prisma.$queryRaw`SELECT 1`;
