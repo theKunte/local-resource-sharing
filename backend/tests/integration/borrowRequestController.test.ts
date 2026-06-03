@@ -545,7 +545,7 @@ describe("borrowRequestController", () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
-          requests: expect.any(Array),
+          data: expect.any(Array),
           pagination: expect.objectContaining({ total: 1 }),
         }),
       );
