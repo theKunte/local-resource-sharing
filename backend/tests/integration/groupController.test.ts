@@ -16,7 +16,11 @@ const mockPrisma = {
     deleteMany: jest.fn(),
     count: jest.fn(),
   },
-  resourceSharing: { findMany: jest.fn(), deleteMany: jest.fn() },
+  resourceSharing: {
+    findMany: jest.fn(),
+    deleteMany: jest.fn(),
+    count: jest.fn(),
+  },
   user: { findFirst: jest.fn() },
 };
 jest.mock("../../src/prisma", () => ({
@@ -275,14 +279,23 @@ describe("groupController", () => {
         { resource: { id: "r2", title: "Saw" } },
       ];
       mockPrisma.resourceSharing.findMany.mockResolvedValue(shared);
+      mockPrisma.resourceSharing.count.mockResolvedValue(2);
 
       const { req, res } = mockReqRes({}, { groupId: "g1" });
       await getGroupResources(req, res);
 
-      expect(res.json).toHaveBeenCalledWith([
-        { id: "r1", title: "Drill" },
-        { id: "r2", title: "Saw" },
-      ]);
+      expect(res.json).toHaveBeenCalledWith({
+        data: [
+          { id: "r1", title: "Drill" },
+          { id: "r2", title: "Saw" },
+        ],
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: 2,
+          totalPages: 1,
+        },
+      });
     });
 
     it("returns 500 on database error", async () => {
@@ -316,10 +329,19 @@ describe("groupController", () => {
         },
       ];
       mockPrisma.groupMember.findMany.mockResolvedValue(members);
+      mockPrisma.groupMember.count.mockResolvedValue(1);
 
       const { req, res } = mockReqRes({}, { groupId: "g1" });
       await getGroupMembers(req, res);
-      expect(res.json).toHaveBeenCalledWith(members);
+      expect(res.json).toHaveBeenCalledWith({
+        data: members,
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: 1,
+          totalPages: 1,
+        },
+      });
     });
 
     it("returns 500 on database error", async () => {
@@ -1116,14 +1138,21 @@ describe("groupController", () => {
       mockPrisma.groupMember.findMany.mockResolvedValue([
         { groupId: "g1", group: { id: "g1", name: "Friends", avatar: null } },
       ]);
-      mockPrisma.groupMember.count.mockResolvedValue(3);
+      mockPrisma.groupMember.count
+        .mockResolvedValueOnce(1) // total memberships for userId
+        .mockResolvedValueOnce(3); // member count for group g1
 
       const { req, res } = mockReqRes({}, { userId: "user-123" });
       await getUserGroups(req, res);
 
-      expect(res.json).toHaveBeenCalledWith([
-        expect.objectContaining({ id: "g1", memberCount: 3 }),
-      ]);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({ id: "g1", memberCount: 3 }),
+          ]),
+          pagination: expect.any(Object),
+        }),
+      );
     });
 
     it("returns 500 on database error", async () => {

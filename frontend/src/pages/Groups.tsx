@@ -39,48 +39,6 @@ export default function Groups() {
       navigate("/");
     }
   }, [user, authLoading, navigate]);
-  useEffect(() => {
-    const loadGroups = async () => {
-      try {
-        setLoading(true);
-        const response = await apiClient.get(`/api/groups?userId=${user!.uid}`);
-        const groupsList = response.data.data ?? response.data;
-
-        // Get detailed info for each group including members
-        const groupsWithDetails = await Promise.all(
-          groupsList.map(async (group: Group) => {
-            try {
-              const membersResponse = await apiClient.get(
-                `/api/groups/${group.id}/members`,
-              );
-              return {
-                ...group,
-                members: membersResponse.data,
-                memberCount: membersResponse.data.length,
-              };
-            } catch (error) {
-              console.error(
-                `Error loading members for group ${group.id}:`,
-                error,
-              );
-              return { ...group, members: [], memberCount: 0 };
-            }
-          }),
-        );
-
-        setGroups(groupsWithDetails);
-      } catch (error) {
-        console.error("Error loading groups:", error);
-        alert("Failed to load groups. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user) {
-      loadGroups();
-    }
-  }, [user]);
 
   const loadGroups = async () => {
     try {
@@ -95,10 +53,13 @@ export default function Groups() {
             const membersResponse = await apiClient.get(
               `/api/groups/${group.id}/members`,
             );
+            // Handle paginated response format
+            const membersList =
+              membersResponse.data.data ?? membersResponse.data;
             return {
               ...group,
-              members: membersResponse.data,
-              memberCount: membersResponse.data.length,
+              members: membersList,
+              memberCount: membersList.length,
             };
           } catch (error) {
             console.error(
@@ -118,6 +79,12 @@ export default function Groups() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      loadGroups();
+    }
+  }, [user]);
 
   const createGroup = async (e: React.FormEvent) => {
     e.preventDefault();

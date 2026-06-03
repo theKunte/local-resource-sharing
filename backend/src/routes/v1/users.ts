@@ -1,7 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { authenticateToken } from "../middleware/auth";
-import { getUserGroups } from "../controllers/groupController";
+import { authenticateToken } from "../../middleware/auth";
+import { getUserGroups } from "../../controllers/groupController";
 
 const readLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

@@ -33,15 +33,19 @@ const ManageGroupSharing: React.FC<ManageGroupSharingProps> = ({
     try {
       // Load all user's groups
       const userGroupsResponse = await apiClient.get(
-        `/api/users/${userId}/groups`
+        `/api/users/${userId}/groups`,
       );
-      setAllGroups(userGroupsResponse.data);
+      // Handle paginated response format
+      setAllGroups(userGroupsResponse.data.data ?? userGroupsResponse.data);
 
       // Load groups this gear is already shared with
       const sharedGroupsResponse = await apiClient.get(
-        `/api/resources/${gearId}/groups?userId=${userId}`
+        `/api/resources/${gearId}/groups?userId=${userId}`,
       );
-      setSharedGroups(sharedGroupsResponse.data);
+      // Handle paginated response format
+      setSharedGroups(
+        sharedGroupsResponse.data.data ?? sharedGroupsResponse.data,
+      );
     } catch (error) {
       console.error("Error loading group data:", error);
     } finally {
@@ -58,12 +62,9 @@ const ManageGroupSharing: React.FC<ManageGroupSharingProps> = ({
   const addToGroup = async (groupId: string) => {
     setSubmitting(true);
     try {
-      await apiClient.post(
-        `/api/resources/${gearId}/groups/${groupId}`,
-        {
-          userId,
-        }
-      );
+      await apiClient.post(`/api/resources/${gearId}/groups/${groupId}`, {
+        userId,
+      });
 
       // Refresh data after successful addition
       await loadData();
@@ -78,12 +79,9 @@ const ManageGroupSharing: React.FC<ManageGroupSharingProps> = ({
   const removeFromGroup = async (groupId: string) => {
     setSubmitting(true);
     try {
-      await apiClient.delete(
-        `/api/resources/${gearId}/groups/${groupId}`,
-        {
-          data: { userId },
-        }
-      );
+      await apiClient.delete(`/api/resources/${gearId}/groups/${groupId}`, {
+        data: { userId },
+      });
 
       // Refresh data after successful removal
       await loadData();

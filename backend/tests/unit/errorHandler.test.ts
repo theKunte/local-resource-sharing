@@ -7,12 +7,27 @@ import {
   AppError,
 } from "../../src/middleware/errorHandler";
 
+// Mock the logger module before importing
+jest.mock("../../src/utils/logger", () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    security: jest.fn(),
+    audit: jest.fn(),
+    http: jest.fn(),
+    database: jest.fn(),
+  },
+}));
+
+// Import the mocked logger to get a reference to the mock
+import { logger as mockLogger } from "../../src/utils/logger";
+
 describe("Error Handler Middleware", () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
-  let consoleWarnSpy: jest.SpyInstance;
-  let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     mockRequest = {
@@ -29,14 +44,12 @@ describe("Error Handler Middleware", () => {
 
     mockNext = jest.fn();
 
-    // Spy on console methods
-    consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
-    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+    // Reset logger mocks
+    (mockLogger.warn as jest.Mock).mockClear();
+    (mockLogger.error as jest.Mock).mockClear();
   });
 
   afterEach(() => {
-    consoleWarnSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
     jest.clearAllMocks();
   });
 
@@ -75,7 +88,7 @@ describe("Error Handler Middleware", () => {
           message: expect.any(String),
         }),
       );
-      expect(consoleWarnSpy).toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
 
     it("should not send response if headers already sent", () => {
@@ -178,7 +191,7 @@ describe("Error Handler Middleware", () => {
       );
 
       expect(mockResponse.status).toHaveBeenCalledWith(500);
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
 
     it("should handle ValidationError (name === 'ValidationError')", () => {
@@ -305,7 +318,7 @@ describe("Error Handler Middleware", () => {
       );
 
       expect(mockResponse.status).toHaveBeenCalledWith(500);
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
 
     it("should include stack trace in development mode", () => {
@@ -400,9 +413,9 @@ describe("Error Handler Middleware", () => {
         mockNext,
       );
 
-      expect(consoleWarnSpy).toHaveBeenCalled();
-      const logMessage = consoleWarnSpy.mock.calls[0][0];
-      expect(logMessage).toContain("user-123");
+      expect(mockLogger.warn).toHaveBeenCalled();
+      const logCall = (mockLogger.warn as jest.Mock).mock.calls[0][1];
+      expect(logCall.userId).toBe("user-123");
     });
   });
 

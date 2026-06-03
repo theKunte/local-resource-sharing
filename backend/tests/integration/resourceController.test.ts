@@ -625,9 +625,14 @@ describe("resourceController", () => {
       );
       await getResourceGroups(req, res);
 
-      expect(res.json).toHaveBeenCalledWith([
-        expect.objectContaining({ id: "g1", memberCount: 5 }),
-      ]);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({ id: "g1", memberCount: 5 }),
+          ]),
+          pagination: expect.any(Object),
+        }),
+      );
     });
 
     it("returns 500 on database error", async () => {

@@ -420,3 +420,268 @@ describe("routes/testErrors", () => {
     expect(app).toBeDefined();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// V1 API Routes Tests
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── V1 Auth routes ──────────────────────────────────────────────────────────
+
+describe("routes/v1/auth", () => {
+  let app: express.Application;
+
+  beforeAll(async () => {
+    const { default: authRouter } = await import("../../src/routes/v1/auth");
+    app = makeApp(authRouter);
+  });
+
+  it("GET /debug/users returns 200", async () => {
+    const res = await request(app).get("/debug/users");
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /auth/register returns 200", async () => {
+    const res = await request(app).post("/auth/register").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("PUT /auth/fix-user-email returns 200", async () => {
+    const res = await request(app).put("/auth/fix-user-email").send({});
+    expect(res.status).toBe(200);
+  });
+});
+
+// ─── V1 BorrowRequests routes ────────────────────────────────────────────────
+
+describe("routes/v1/borrowRequests", () => {
+  let app: express.Application;
+
+  beforeAll(async () => {
+    const { default: borrowRouter } =
+      await import("../../src/routes/v1/borrowRequests");
+    app = makeApp(borrowRouter);
+  });
+
+  it("POST / returns 200", async () => {
+    const res = await request(app).post("/").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("GET / returns 200", async () => {
+    const res = await request(app).get("/");
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /:id/accept returns 200", async () => {
+    const res = await request(app).post("/br1/accept").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /:id/decline returns 200", async () => {
+    const res = await request(app).post("/br1/decline").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /:id/cancel returns 200", async () => {
+    const res = await request(app).post("/br1/cancel").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("PUT /:id returns 200", async () => {
+    const res = await request(app).put("/br1").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("DELETE /:id returns 200", async () => {
+    const res = await request(app).delete("/br1").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /:id/mark-returned returns 200", async () => {
+    const res = await request(app).post("/br1/mark-returned").send({});
+    expect(res.status).toBe(200);
+  });
+});
+
+// ─── V1 Groups routes ────────────────────────────────────────────────────────
+
+describe("routes/v1/groups", () => {
+  let app: express.Application;
+
+  beforeAll(async () => {
+    const { default: groupsRouter } =
+      await import("../../src/routes/v1/groups");
+    app = makeApp(groupsRouter);
+  });
+
+  it("POST / returns 200", async () => {
+    const res = await request(app).post("/").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("GET / returns 200", async () => {
+    const res = await request(app).get("/");
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /:groupId/add-member returns 200", async () => {
+    const res = await request(app).post("/g1/add-member").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("GET /:groupId/resources returns 200", async () => {
+    const res = await request(app).get("/g1/resources");
+    expect(res.status).toBe(200);
+  });
+
+  it("GET /:groupId/members returns 200", async () => {
+    const res = await request(app).get("/g1/members");
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /:groupId/invite returns 200", async () => {
+    const res = await request(app).post("/g1/invite").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("DELETE /:groupId/members/:userId returns 200", async () => {
+    const res = await request(app).delete("/g1/members/u1").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("PUT /:groupId returns 200", async () => {
+    const res = await request(app).put("/g1").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("DELETE /:groupId returns 200", async () => {
+    const res = await request(app).delete("/g1").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("PUT /:groupId/members/:userId/role returns 200", async () => {
+    const res = await request(app).put("/g1/members/u1/role").send({});
+    expect(res.status).toBe(200);
+  });
+});
+
+// ─── V1 Loans routes ─────────────────────────────────────────────────────────
+
+describe("routes/v1/loans", () => {
+  let app: express.Application;
+
+  beforeAll(async () => {
+    const { default: loansRouter } = await import("../../src/routes/v1/loans");
+    app = makeApp(loansRouter);
+  });
+
+  it("POST /:id/request-return returns 200", async () => {
+    const res = await request(app).post("/loan1/request-return").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /:id/confirm-return returns 200", async () => {
+    const res = await request(app).post("/loan1/confirm-return").send({});
+    expect(res.status).toBe(200);
+  });
+});
+
+// ─── V1 Resources routes ─────────────────────────────────────────────────────
+
+describe("routes/v1/resources", () => {
+  let app: express.Application;
+
+  beforeAll(async () => {
+    const { default: resourcesRouter } =
+      await import("../../src/routes/v1/resources");
+    app = makeApp(resourcesRouter);
+  });
+
+  it("GET /search returns 200", async () => {
+    const res = await request(app).get("/search");
+    expect(res.status).toBe(200);
+  });
+
+  it("GET /recommendations returns 200", async () => {
+    const res = await request(app).get("/recommendations");
+    expect(res.status).toBe(200);
+  });
+
+  it("GET / returns 200", async () => {
+    const res = await request(app).get("/");
+    expect(res.status).toBe(200);
+  });
+
+  it("GET /:id/pending-requests-count returns 200", async () => {
+    const res = await request(app).get("/r1/pending-requests-count");
+    expect(res.status).toBe(200);
+  });
+
+  it("POST / returns 200", async () => {
+    const res = await request(app).post("/").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("PUT /:id returns 200", async () => {
+    const res = await request(app).put("/r1").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("DELETE /:id returns 200", async () => {
+    const res = await request(app).delete("/r1").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("GET /:resourceId/groups returns 200", async () => {
+    const res = await request(app).get("/r1/groups");
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /:resourceId/groups/:groupId returns 200", async () => {
+    const res = await request(app).post("/r1/groups/g1").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("DELETE /:resourceId/groups/:groupId returns 200", async () => {
+    const res = await request(app).delete("/r1/groups/g1").send({});
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /:resourceId/share returns 200", async () => {
+    const res = await request(app).post("/r1/share").send({});
+    expect(res.status).toBe(200);
+  });
+});
+
+// ─── V1 Users routes ─────────────────────────────────────────────────────────
+
+describe("routes/v1/users", () => {
+  let app: express.Application;
+
+  beforeAll(async () => {
+    const { default: usersRouter } = await import("../../src/routes/v1/users");
+    app = makeApp(usersRouter);
+  });
+
+  it("GET /:userId/groups returns 200", async () => {
+    const res = await request(app).get("/user1/groups");
+    expect(res.status).toBe(200);
+  });
+});
+
+// ─── V1 Index (route aggregation) ────────────────────────────────────────────
+
+describe("routes/v1/index", () => {
+  it("exports all v1 route modules", async () => {
+    const v1Routes = await import("../../src/routes/v1/index");
+
+    // Verify all expected exports are present
+    expect(v1Routes.resourceRoutes).toBeDefined();
+    expect(v1Routes.groupRoutes).toBeDefined();
+    expect(v1Routes.borrowRequestRoutes).toBeDefined();
+    expect(v1Routes.loanRoutes).toBeDefined();
+    expect(v1Routes.notificationRoutes).toBeDefined();
+    expect(v1Routes.userRoutes).toBeDefined();
+    expect(v1Routes.authRoutes).toBeDefined();
+  });
+});

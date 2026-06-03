@@ -43,13 +43,15 @@ export default function AddGearToGroupModal({
         ]);
         // Debug logs to help ensure the right data is returned
         const myGearList = resMy.data.data ?? resMy.data;
+        // Handle paginated response format
+        const sharedResourcesList = resShared.data.data ?? resShared.data;
         console.debug("[AddGearToGroupModal] myGear count:", myGearList.length);
         console.debug(
           "[AddGearToGroupModal] shared resources count:",
-          resShared.data.length,
+          sharedResourcesList.length,
         );
         setMyGear(myGearList || []);
-        const sharedData = (resShared.data || []) as SharedResourceRow[];
+        const sharedData = (sharedResourcesList || []) as SharedResourceRow[];
         const sharedList: string[] = sharedData.map((r) => r.id);
         setSharedIds(new Set(sharedList));
       } catch (err) {
