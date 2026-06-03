@@ -19,6 +19,11 @@ const router = Router();
 
 router.get("/debug/users", authenticateToken, authLimiter, debugListUsers);
 router.post("/auth/register", authenticateToken, authLimiter, registerUser);
-router.put("/auth/fix-user-email", authenticateToken, authLimiter, fixUserEmail);
+router.put(
+  "/auth/fix-user-email",
+  authenticateToken,
+  authLimiter,
+  fixUserEmail,
+);
 
 export default router;

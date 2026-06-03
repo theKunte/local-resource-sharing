@@ -27,7 +27,13 @@ const writeLimiter = rateLimit({
 
 const router = Router();
 
-router.post("/", authenticateToken, requireVerifiedEmail, writeLimiter, createGroup);
+router.post(
+  "/",
+  authenticateToken,
+  requireVerifiedEmail,
+  writeLimiter,
+  createGroup,
+);
 router.post(
   "/:groupId/add-member",
   authenticateToken,
@@ -52,7 +58,13 @@ router.delete(
   writeLimiter,
   removeMember,
 );
-router.put("/:groupId", authenticateToken, requireVerifiedEmail, writeLimiter, updateGroup);
+router.put(
+  "/:groupId",
+  authenticateToken,
+  requireVerifiedEmail,
+  writeLimiter,
+  updateGroup,
+);
 router.delete(
   "/:groupId",
   authenticateToken,
