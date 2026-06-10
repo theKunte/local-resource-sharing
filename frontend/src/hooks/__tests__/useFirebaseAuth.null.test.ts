@@ -12,7 +12,11 @@ vi.mock("../../firebase", () => ({
 
 // Mock firebase/auth functions (won't be called but need to exist)
 vi.mock("firebase/auth", () => ({
-  GoogleAuthProvider: vi.fn(),
+  GoogleAuthProvider: vi.fn(function GoogleAuthProvider() {
+    return {
+      setCustomParameters: vi.fn(),
+    };
+  }),
   signInWithPopup: vi.fn(),
   signOut: vi.fn(),
   onAuthStateChanged: vi.fn(),

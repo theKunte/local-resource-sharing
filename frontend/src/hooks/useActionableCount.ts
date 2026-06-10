@@ -20,7 +20,7 @@ async function fetchCount(userId: string) {
     const res = await apiClient.get(
       `/api/borrow-requests?userId=${userId}&role=owner`,
     );
-    const requests = res.data.requests || res.data;
+    const requests = res.data.data || res.data.requests || res.data;
     if (!Array.isArray(requests)) return;
 
     const actionable = requests.filter(

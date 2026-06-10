@@ -28,9 +28,14 @@ export const apiClient = axios.create({
  * Called during application initialization after config.js is loaded
  */
 export function configureApiClient(apiUrl: string): void {
-  const baseURL = apiUrl || DEFAULT_API_URL;
+  // Empty string means use relative paths (same origin through nginx proxy)
+  const baseURL =
+    apiUrl === "" || apiUrl === undefined ? "" : apiUrl || DEFAULT_API_URL;
   apiClient.defaults.baseURL = baseURL;
-  console.log("API client configured with base URL:", baseURL);
+  console.log(
+    "API client configured with base URL:",
+    baseURL || "(relative paths)",
+  );
 }
 
 // ---------------------------------------------------------------------------

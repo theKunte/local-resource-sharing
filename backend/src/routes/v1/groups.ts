@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { authenticateToken, requireVerifiedEmail } from "../middleware/auth";
+import { authenticateToken, requireVerifiedEmail } from "../../middleware/auth";
 import {
   createGroup,
   addMember,
@@ -11,15 +11,12 @@ import {
   removeMember,
   updateGroup,
   deleteGroup,
-  transferOwnership,
-  getGroupDetails,
-  removeGroupMember,
   updateMemberRole,
-} from "../controllers/groupController";
+} from "../../controllers/groupController";
 
 const writeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // 30 requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 30,
   message: "Too many requests, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
@@ -71,21 +68,6 @@ router.delete(
   requireVerifiedEmail,
   writeLimiter,
   deleteGroup,
-);
-router.put(
-  "/:groupId/transfer-ownership",
-  authenticateToken,
-  requireVerifiedEmail,
-  writeLimiter,
-  transferOwnership,
-);
-router.get("/:groupId/details", authenticateToken, getGroupDetails);
-router.delete(
-  "/:groupId/remove-member",
-  authenticateToken,
-  requireVerifiedEmail,
-  writeLimiter,
-  removeGroupMember,
 );
 router.put(
   "/:groupId/members/:userId/role",

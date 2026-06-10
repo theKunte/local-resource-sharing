@@ -420,6 +420,9 @@ export async function deleteResource(req: Request, res: Response) {
 export async function getResourceGroups(req: Request, res: Response) {
   const { resourceId } = req.params;
   const userId = req.query.userId as string;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const skip = (page - 1) * limit;
 
   if (!userId) {
     return res.status(400).json({ error: "User ID is required" });
@@ -439,18 +442,23 @@ export async function getResourceGroups(req: Request, res: Response) {
       return res.status(403).json({ error: "You don't own this resource" });
     }
 
-    const sharedGroups = await prisma.resourceSharing.findMany({
-      where: { resourceId },
-      include: {
-        group: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
+    const [sharedGroups, total] = await Promise.all([
+      prisma.resourceSharing.findMany({
+        where: { resourceId },
+        skip,
+        take: limit,
+        include: {
+          group: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.resourceSharing.count({ where: { resourceId } }),
+    ]);
 
     const groupsWithCounts = await Promise.all(
       sharedGroups.map(async (sharing) => {
@@ -465,7 +473,15 @@ export async function getResourceGroups(req: Request, res: Response) {
       }),
     );
 
-    res.json(groupsWithCounts);
+    res.json({
+      data: groupsWithCounts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error("Error fetching resource groups:", error);
     res.status(500).json({ error: "Failed to fetch resource groups" });

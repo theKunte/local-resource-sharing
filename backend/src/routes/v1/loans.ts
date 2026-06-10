@@ -1,7 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { authenticateToken, requireVerifiedEmail } from "../middleware/auth";
-import { requestReturn, confirmReturn } from "../controllers/loanController";
+import { authenticateToken, requireVerifiedEmail } from "../../middleware/auth";
+import { requestReturn, confirmReturn } from "../../controllers/loanController";
 
 const writeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
