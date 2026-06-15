@@ -1,6 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
 import { useActionableCount } from "../hooks/useActionableCount";
+import { useNotifications } from "../hooks/useNotifications";
+import NotificationBell from "./NotificationBell";
 
 interface HeaderProps {
   actionableCount?: number | null;
@@ -11,12 +13,17 @@ function Header({ actionableCount: actionableCountProp }: HeaderProps) {
   const navigate = useNavigate();
   const internalCount = useActionableCount(user?.uid);
   const actionableCount = actionableCountProp ?? internalCount;
+  const { unreadCount } = useNotifications(user?.uid);
 
   const handleLogout = async () => {
     if (window.confirm("Are you sure you want to log out?")) {
       await signOutUser();
       navigate("/");
     }
+  };
+
+  const handleNotificationsClick = () => {
+    navigate("/notifications");
   };
 
   return (
@@ -94,6 +101,10 @@ function Header({ actionableCount: actionableCountProp }: HeaderProps) {
             {/* User Avatar and Logout */}
             {user && (
               <div className="flex items-center gap-3">
+                <NotificationBell
+                  unreadCount={unreadCount}
+                  onNotificationsClick={handleNotificationsClick}
+                />
                 {user.photoURL && (
                   <Link to="/profile">
                     <img

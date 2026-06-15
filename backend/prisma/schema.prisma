@@ -38,19 +38,22 @@ enum GroupRole {
 }
 
 model User {
-  id               String          @id @default(uuid())
-  email            String          @unique
-  name             String?
-  fcmToken         String?         // Firebase Cloud Messaging token for push notifications
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  resources        Resource[]      @relation("UserResources")
-  groupMembers     GroupMember[]
-  createdGroups    Group[]         @relation("CreatedGroups")
-  borrowRequests   BorrowRequest[] @relation("BorrowerRequests")
-  receivedRequests BorrowRequest[] @relation("OwnerRequests")
-  loansAsBorrower  Loan[]          @relation("BorrowerLoans")
-  loansAsLender    Loan[]          @relation("LenderLoans")
+  id                     String                   @id @default(uuid())
+  email                  String                   @unique
+  name                   String?
+  fcmToken               String?                  // @deprecated - Use DeviceToken model instead. Kept for backward compatibility during migration.
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  resources              Resource[]               @relation("UserResources")
+  groupMembers           GroupMember[]
+  createdGroups          Group[]                  @relation("CreatedGroups")
+  borrowRequests         BorrowRequest[]          @relation("BorrowerRequests")
+  receivedRequests       BorrowRequest[]          @relation("OwnerRequests")
+  loansAsBorrower        Loan[]                   @relation("BorrowerLoans")
+  loansAsLender          Loan[]                   @relation("LenderLoans")
+  deviceTokens           DeviceToken[]
+  notifications          Notification[]
+  notificationPreference NotificationPreference?
 }
 
 model Group {
@@ -170,4 +173,68 @@ model Loan {
   @@index([endDate])
   @@index([borrowerId, status])
   @@index([lenderId, status])
+}
+
+// Device Token for multi-device push notification support
+model DeviceToken {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   @unique
+  deviceType String   // 'web', 'ios', 'android'
+  deviceName String?  // Browser name or device model
+  userAgent  String?
+  lastUsed   DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([userId, lastUsed])
+}
+
+// Persistent notification storage
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String    // 'borrow_request', 'request_accepted', 'request_declined', etc.
+  title     String
+  body      String
+  data      Json?     // { requestId, loanId, itemTitle, etc. }
+  read      Boolean   @default(false)
+  actionUrl String?   // e.g., '/requests/123'
+  imageUrl  String?   // Optional notification image
+  priority  String    @default("normal") // 'low', 'normal', 'high', 'urgent'
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+  expiresAt DateTime? // Auto-delete after 30 days
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@index([userId, read, createdAt])
+  @@index([expiresAt])
+}
+
+// User notification preferences
+model NotificationPreference {
+  userId                 String   @id
+  emailEnabled           Boolean  @default(true)
+  pushEnabled            Boolean  @default(true)
+  inAppEnabled           Boolean  @default(true)
+  digestEnabled          Boolean  @default(false)
+  digestFrequency        String   @default("daily") // 'daily', 'weekly', 'never'
+  mutedUntil             DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  borrowRequestEmail     Boolean  @default(true)
+  borrowRequestPush      Boolean  @default(true)
+  requestApprovedEmail   Boolean  @default(true)
+  requestApprovedPush    Boolean  @default(true)
+  requestDeclinedEmail   Boolean  @default(true)
+  requestDeclinedPush    Boolean  @default(true)
+  returnRequestedEmail   Boolean  @default(true)
+  returnRequestedPush    Boolean  @default(true)
+  returnConfirmedEmail   Boolean  @default(true)
+  returnConfirmedPush    Boolean  @default(true)
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

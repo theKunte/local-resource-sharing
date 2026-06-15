@@ -9,6 +9,7 @@ import Groups from "./pages/Groups";
 import Requests from "./pages/Requests";
 import GroupDetail from "./pages/GroupDetail";
 import MyGear from "./pages/MyGear";
+import NotificationCenter from "./pages/NotificationCenter";
 import SessionWarning from "./components/SessionWarning";
 import BottomNavigation from "./components/BottomNavigation";
 import { useFirebaseAuth } from "./hooks/useFirebaseAuth";
@@ -95,6 +96,7 @@ function App() {
             <Route path="/groups" element={<Groups />} />
             <Route path="/groups/:groupId" element={<GroupDetail />} />
             <Route path="/requests" element={<Requests />} />
+            <Route path="/notifications" element={<NotificationCenter />} />
           </Routes>
         </main>
         <BottomNavigation />
