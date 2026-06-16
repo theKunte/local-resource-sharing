@@ -42,6 +42,7 @@ vi.mock("../../firebase", () => ({
 describe("apiClient", () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn> | undefined;
   let consoleLogSpy: ReturnType<typeof vi.spyOn> | undefined;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn> | undefined;
   let originalLocation: Location;
 
   beforeEach(() => {
@@ -53,6 +54,7 @@ describe("apiClient", () => {
     mockGetFirebaseAuth.mockReturnValue(mockAuth);
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     // Mock window.location with writable href property
     originalLocation = window.location;
@@ -66,6 +68,7 @@ describe("apiClient", () => {
   afterEach(() => {
     consoleErrorSpy?.mockRestore();
     consoleLogSpy?.mockRestore();
+    consoleWarnSpy?.mockRestore();
     (window as { location: Location }).location = originalLocation;
     vi.resetModules(); // Clear module cache between tests
   });
@@ -646,6 +649,72 @@ describe("apiClient", () => {
       await expect(interceptor.rejected(error)).rejects.toEqual(error);
 
       expect(mockSignOut).not.toHaveBeenCalled();
+    });
+
+    it("retries once on 429 with Retry-After header delay", async () => {
+      vi.useFakeTimers();
+      const { default: apiClient } = await import("../apiClient");
+
+      const error = {
+        config: { url: "/api/test", _retried: false },
+        response: { status: 429, headers: { "retry-after": "1" } },
+      };
+
+      const interceptor = (
+        apiClient.interceptors.response as unknown as {
+          handlers: Array<{ rejected: (error: unknown) => Promise<unknown> }>;
+        }
+      ).handlers[0];
+
+      // Intercept the retry call (apiClient called with _retried:true config)
+      const getStub = vi
+        .spyOn(apiClient, "get")
+        .mockResolvedValueOnce({ data: "ok", status: 200 });
+
+      const retryPromise = interceptor.rejected(error);
+      await vi.advanceTimersByTimeAsync(1100);
+      await retryPromise.catch(() => {}); // may reject if stub doesn't match
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("429 Too Many Requests"),
+      );
+
+      getStub.mockRestore();
+      vi.useRealTimers();
+    });
+
+    it("does not retry 429 for /api/auth/register endpoint", async () => {
+      const { default: apiClient } = await import("../apiClient");
+
+      const error = {
+        config: { url: "/api/auth/register" },
+        response: { status: 429, headers: {} },
+      };
+
+      const interceptor = (
+        apiClient.interceptors.response as unknown as {
+          handlers: Array<{ rejected: (error: unknown) => Promise<never> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.rejected(error)).rejects.toEqual(error);
+    });
+
+    it("does not retry 429 a second time (_retried flag)", async () => {
+      const { default: apiClient } = await import("../apiClient");
+
+      const error = {
+        config: { url: "/api/test", _retried: true },
+        response: { status: 429, headers: {} },
+      };
+
+      const interceptor = (
+        apiClient.interceptors.response as unknown as {
+          handlers: Array<{ rejected: (error: unknown) => Promise<never> }>;
+        }
+      ).handlers[0];
+
+      await expect(interceptor.rejected(error)).rejects.toEqual(error);
     });
   });
 

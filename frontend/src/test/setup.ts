@@ -102,5 +102,7 @@ vi.mock("lucide-react", () => {
     ArrowLeft: icon("ArrowLeft"),
     Bell: icon("Bell"),
     EyeOff: icon("EyeOff"),
+    CheckCircle: icon("CheckCircle"),
+    XCircle: icon("XCircle"),
   };
 });

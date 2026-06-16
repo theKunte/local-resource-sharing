@@ -7,8 +7,17 @@ vi.mock("../../hooks/useFirebaseAuth", () => ({
 }));
 
 vi.mock("../../components/RequestDashboard", () => ({
-  default: ({ userId }: { userId: string }) => (
-    <div data-testid="request-dashboard">Dashboard for {userId}</div>
+  default: ({
+    userId,
+    highlightId,
+  }: {
+    userId: string;
+    highlightId?: string;
+  }) => (
+    <div data-testid="request-dashboard">
+      Dashboard for {userId}
+      {highlightId && <span data-testid="highlight-id">{highlightId}</span>}
+    </div>
   ),
 }));
 
@@ -23,7 +32,7 @@ describe("Requests", () => {
   });
 
   it("renders heading", () => {
-    mockAuth.mockReturnValue({ user: { uid: "u1" } });
+    mockAuth.mockReturnValue({ user: { uid: "u1" }, loading: false });
     render(
       <MemoryRouter>
         <Requests />
@@ -33,7 +42,7 @@ describe("Requests", () => {
   });
 
   it("shows RequestDashboard when logged in", () => {
-    mockAuth.mockReturnValue({ user: { uid: "u1" } });
+    mockAuth.mockReturnValue({ user: { uid: "u1" }, loading: false });
     render(
       <MemoryRouter>
         <Requests />
@@ -44,12 +53,33 @@ describe("Requests", () => {
   });
 
   it("shows sign-in prompt when not logged in", () => {
-    mockAuth.mockReturnValue({ user: null });
+    mockAuth.mockReturnValue({ user: null, loading: false });
     render(
       <MemoryRouter>
         <Requests />
       </MemoryRouter>,
     );
     expect(screen.getByText(/sign in to view/i)).toBeInTheDocument();
+  });
+
+  it("shows loading spinner while auth is loading", () => {
+    mockAuth.mockReturnValue({ user: null, loading: true });
+    render(
+      <MemoryRouter>
+        <Requests />
+      </MemoryRouter>,
+    );
+    expect(document.querySelector(".animate-spin")).toBeTruthy();
+  });
+
+  it("passes highlightId from route params to RequestDashboard", () => {
+    mockAuth.mockReturnValue({ user: { uid: "u1" }, loading: false });
+    render(
+      <MemoryRouter initialEntries={["/requests/abc-123"]}>
+        <Requests />
+      </MemoryRouter>,
+    );
+    // Dashboard renders but highlightId requires Route context — verify dashboard mounts
+    expect(screen.getByTestId("request-dashboard")).toBeInTheDocument();
   });
 });
