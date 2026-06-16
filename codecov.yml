@@ -16,6 +16,8 @@ flags:
     paths:
       - backend/src/
     carryforward: true
+    ignore:
+      - backend/src/scripts/
   frontend:
     paths:
       - frontend/src/
