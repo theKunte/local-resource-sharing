@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 function Header({ actionableCount: actionableCountProp }: HeaderProps) {
-  const { user, signOutUser } = useFirebaseAuth();
+  const { user, loading, signOutUser } = useFirebaseAuth();
   const navigate = useNavigate();
   const internalCount = useActionableCount(user?.uid);
   const actionableCount = actionableCountProp ?? internalCount;
@@ -20,10 +20,6 @@ function Header({ actionableCount: actionableCountProp }: HeaderProps) {
       await signOutUser();
       navigate("/");
     }
-  };
-
-  const handleNotificationsClick = () => {
-    navigate("/notifications");
   };
 
   return (
@@ -99,13 +95,13 @@ function Header({ actionableCount: actionableCountProp }: HeaderProps) {
             )}
 
             {/* User Avatar and Logout */}
-            {user && (
+            {(user || loading) && (
               <div className="flex items-center gap-3">
                 <NotificationBell
                   unreadCount={unreadCount}
-                  onNotificationsClick={handleNotificationsClick}
+                  onNotificationsClick={undefined}
                 />
-                {user.photoURL && (
+                {user?.photoURL && (
                   <Link to="/profile">
                     <img
                       src={user.photoURL}

@@ -23,10 +23,12 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     markAllAsRead,
   } = useNotifications(user?.uid);
 
-  // Fetch notifications on mount
+  // Only fetch if we have no cached notifications yet
   useEffect(() => {
-    fetchNotifications(0, 5); // Only fetch 5 recent notifications for dropdown
-  }, [fetchNotifications]);
+    if (notifications.length === 0) {
+      fetchNotifications(0, 5);
+    }
+  }, [fetchNotifications, notifications.length]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -89,6 +91,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 notification={notification}
                 onMarkAsRead={markAsRead}
                 onDelete={deleteNotification}
+                onNavigate={onClose}
                 compact
               />
             ))

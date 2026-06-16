@@ -84,6 +84,7 @@ interface CacheableConfig {
   url?: string;
   params?: unknown;
   __cacheKey?: string;
+  _retried?: boolean;
 }
 
 // Generate cache key for GET requests
@@ -135,7 +136,7 @@ apiClient.interceptors.request.use(
   },
 );
 
-// Response interceptor: Handle auth errors and manage deduplication cache
+// Response interceptor: Handle auth errors, 429 retry-after, and deduplication cache
 apiClient.interceptors.response.use(
   (response) => {
     // Clean up pending request cache for GET requests
@@ -150,6 +151,29 @@ apiClient.interceptors.response.use(
     const cacheKey = (error.config as CacheableConfig)?.__cacheKey;
     if (cacheKey) {
       pendingRequests.delete(cacheKey);
+    }
+
+    // 429 Too Many Requests — honour Retry-After header (or default to 10s)
+    // Guard with _retried flag to prevent infinite retry loops.
+    // Skip retry for fire-and-forget endpoints (auth/register) that should
+    // fail silently rather than block or retry.
+    const isRegisterEndpoint =
+      error.config?.url?.includes("/api/auth/register");
+    if (
+      error.response?.status === 429 &&
+      !error.config?._retried &&
+      !isRegisterEndpoint
+    ) {
+      const retryAfterHeader = error.response.headers?.["retry-after"];
+      const retryAfterMs = retryAfterHeader
+        ? Number(retryAfterHeader) * 1000
+        : 10_000;
+      console.warn(
+        `[API] 429 Too Many Requests — retrying after ${retryAfterMs / 1000}s`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+      // Retry the original request exactly once
+      return apiClient({ ...error.config, _retried: true });
     }
 
     if (error.response?.status === 401) {

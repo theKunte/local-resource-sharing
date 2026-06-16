@@ -1,13 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
-const { mockGetToken, mockOnMessage, mockPost, mockGetFirebaseMessaging } =
-  vi.hoisted(() => ({
-    mockGetToken: vi.fn(),
-    mockOnMessage: vi.fn(),
-    mockPost: vi.fn(),
-    mockGetFirebaseMessaging: vi.fn(),
-  }));
+const {
+  mockGetToken,
+  mockOnMessage,
+  mockPost,
+  mockGet,
+  mockGetFirebaseMessaging,
+} = vi.hoisted(() => ({
+  mockGetToken: vi.fn(),
+  mockOnMessage: vi.fn(),
+  mockPost: vi.fn(),
+  mockGet: vi.fn().mockResolvedValue({ data: { count: 0 } }),
+  mockGetFirebaseMessaging: vi.fn(),
+}));
 
 vi.mock("../../firebase", () => ({
   getFirebaseMessaging: mockGetFirebaseMessaging,
@@ -23,6 +29,7 @@ vi.mock("firebase/messaging", () => ({
 
 vi.mock("../../utils/apiClient", () => ({
   default: {
+    get: mockGet,
     post: mockPost,
   },
 }));
@@ -34,9 +41,12 @@ describe("useNotifications", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock Notification API
+    // Restore default mock return values after clearAllMocks
+    mockGet.mockResolvedValue({ data: { count: 0 } });
+    // Mock Notification API with permission = 'default' so requestPermission is called
     Object.defineProperty(globalThis, "Notification", {
       value: {
+        permission: "default",
         requestPermission: vi.fn().mockResolvedValue("granted"),
       },
       writable: true,
@@ -70,9 +80,14 @@ describe("useNotifications", () => {
     renderHook(() => useNotifications("user-1"));
 
     await waitFor(() => {
-      expect(mockPost).toHaveBeenCalledWith("/api/notifications/token", {
-        token: "fcm-token-123",
-      });
+      expect(mockPost).toHaveBeenCalledWith(
+        "/api/v1/notifications/device-tokens",
+        {
+          token: "fcm-token-123",
+          deviceType: expect.any(String),
+          deviceName: expect.any(String),
+        },
+      );
     });
   });
 
@@ -98,11 +113,14 @@ describe("useNotifications", () => {
   });
 
   it("skips setup when permission is denied", async () => {
-    (
-      globalThis.Notification as unknown as {
-        requestPermission: ReturnType<typeof vi.fn>;
-      }
-    ).requestPermission = vi.fn().mockResolvedValue("denied");
+    Object.defineProperty(globalThis, "Notification", {
+      value: {
+        permission: "denied",
+        requestPermission: vi.fn().mockResolvedValue("denied"),
+      },
+      writable: true,
+      configurable: true,
+    });
 
     renderHook(() => useNotifications("user-1"));
 

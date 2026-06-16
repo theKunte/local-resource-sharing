@@ -18,7 +18,7 @@ import { useNotifications } from "./hooks/useNotifications";
 import { firebaseInitError } from "./firebase";
 
 function App() {
-  const { user, loading } = useFirebaseAuth();
+  const { user } = useFirebaseAuth();
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
 
   // Enable session timeout (5 min of inactivity)
@@ -34,15 +34,7 @@ function App() {
     }
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  // Show Firebase initialization error
+  // Firebase init error — no routing needed
   if (firebaseError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -80,6 +72,8 @@ function App() {
     );
   }
 
+  // Single BrowserRouter wraps everything so the URL is never reset when
+  // the loading state transitions to the authenticated state.
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
@@ -96,6 +90,7 @@ function App() {
             <Route path="/groups" element={<Groups />} />
             <Route path="/groups/:groupId" element={<GroupDetail />} />
             <Route path="/requests" element={<Requests />} />
+            <Route path="/requests/:requestId" element={<Requests />} />
             <Route path="/notifications" element={<NotificationCenter />} />
           </Routes>
         </main>

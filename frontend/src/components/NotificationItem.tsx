@@ -7,6 +7,7 @@ interface NotificationItemProps {
   notification: Notification;
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
+  onNavigate?: () => void;
   compact?: boolean;
 }
 
@@ -14,6 +15,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   notification,
   onMarkAsRead,
   onDelete,
+  onNavigate,
   compact = false,
 }) => {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     }
     if (notification.actionUrl) {
       navigate(notification.actionUrl);
+      onNavigate?.();
     }
   };
 
