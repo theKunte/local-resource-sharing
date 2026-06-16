@@ -6,7 +6,13 @@ const config: Config = {
   roots: ["<rootDir>/src", "<rootDir>/tests"],
   testMatch: ["**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json"],
-  collectCoverageFrom: ["src/**/*.ts", "!src/index.ts", "!src/prisma.ts"],
+  collectCoverageFrom: [
+    "src/**/*.ts",
+    "!src/index.ts",
+    "!src/prisma.ts",
+    "!src/scripts/**",
+    "!src/types/**",
+  ],
   coverageDirectory: "coverage",
   coverageReporters: ["text", "text-summary", "lcov", "html"],
   coverageThreshold: {

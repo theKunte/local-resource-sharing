@@ -13,8 +13,21 @@ vi.mock("../hooks/useSessionTimeout", () => ({
   })),
 }));
 
+vi.mock("../hooks/useActionableCount", () => ({
+  useActionableCount: vi.fn(() => 0),
+}));
+
 vi.mock("../hooks/useNotifications", () => ({
-  useNotifications: vi.fn(),
+  useNotifications: vi.fn(() => ({
+    unreadCount: 0,
+    notifications: [],
+    isLoading: false,
+    fetchNotifications: vi.fn(),
+    fetchUnreadCount: vi.fn(),
+    markAsRead: vi.fn(),
+    markAllAsRead: vi.fn(),
+    deleteNotification: vi.fn(),
+  })),
 }));
 
 let mockFirebaseInitError: string | null = null;
@@ -60,10 +73,11 @@ describe("App", () => {
     mockFirebaseInitError = null;
   });
 
-  it("shows loading spinner while auth is loading", () => {
+  it("renders Landing page while auth is loading (routes always mounted)", () => {
     mockAuth.mockReturnValue({ user: null, loading: true });
     render(<App />);
-    expect(document.querySelector(".animate-spin")).toBeTruthy();
+    // Routes are always mounted — Landing shows when user is null (even while loading)
+    expect(screen.getByText(/share outdoor gear/i)).toBeInTheDocument();
   });
 
   it("shows Landing page when not authenticated", () => {

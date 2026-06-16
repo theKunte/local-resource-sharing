@@ -15,10 +15,20 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// register is called once per session per user (on every app load);
+// give it a much higher limit so normal usage never hits 429.
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  message: "Too many registration requests, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const router = Router();
 
 router.get("/debug/users", authenticateToken, authLimiter, debugListUsers);
-router.post("/auth/register", authenticateToken, authLimiter, registerUser);
+router.post("/auth/register", authenticateToken, registerLimiter, registerUser);
 router.put(
   "/auth/fix-user-email",
   authenticateToken,

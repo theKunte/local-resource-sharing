@@ -9,23 +9,32 @@ import {
 import { auth } from "../firebase";
 import apiClient from "../utils/apiClient";
 
+// Track which UIDs have already been registered this session so that
+// multiple components calling useFirebaseAuth() don't each fire a
+// separate /api/auth/register request on the same auth state change.
+const _registeredUids = new Set<string>();
+
+async function registerUserInBackend(firebaseUser: User) {
+  if (_registeredUids.has(firebaseUser.uid)) return;
+  _registeredUids.add(firebaseUser.uid);
+  try {
+    await apiClient.post("/api/auth/register", {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      name: firebaseUser.displayName,
+      photoURL: firebaseUser.photoURL,
+    });
+  } catch (error) {
+    // Remove from set on failure so a future auth change can retry
+    _registeredUids.delete(firebaseUser.uid);
+    console.error("Failed to register user in backend:", error);
+    // Don't fail the auth process if backend registration fails
+  }
+}
+
 export function useFirebaseAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const registerUserInBackend = async (firebaseUser: User) => {
-    try {
-      await apiClient.post("/api/auth/register", {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        name: firebaseUser.displayName,
-        photoURL: firebaseUser.photoURL,
-      });
-    } catch (error) {
-      console.error("Failed to register user in backend:", error);
-      // Don't fail the auth process if backend registration fails
-    }
-  };
 
   useEffect(() => {
     if (!auth) {
@@ -35,10 +44,12 @@ export function useFirebaseAuth() {
     }
     const unsubscribe = onAuthStateChanged(
       auth,
-      async (firebaseUser) => {
+      (firebaseUser) => {
         if (firebaseUser) {
-          // Register/update user in backend when they authenticate
-          await registerUserInBackend(firebaseUser);
+          // Register/update user in backend — fire and forget.
+          // Do NOT await: a slow or rate-limited backend response must never
+          // block the auth loading state and delay the entire app render.
+          registerUserInBackend(firebaseUser);
         }
         setUser(firebaseUser);
         setLoading(false);
