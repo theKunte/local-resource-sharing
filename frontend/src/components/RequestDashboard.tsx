@@ -59,6 +59,7 @@ interface BorrowRequest {
 
 interface RequestDashboardProps {
   userId: string;
+  highlightId?: string;
 }
 
 type StatusFilter = "all" | "pending" | "lending" | "borrowed" | "returned";
@@ -121,6 +122,7 @@ const StatusBadge = ({
 const RequestCard: React.FC<{
   request: BorrowRequest;
   isOwner: boolean;
+  highlighted?: boolean;
   onAccept: (id: string) => void;
   onDecline: (id: string) => void;
   onCancel: (id: string) => void;
@@ -134,6 +136,7 @@ const RequestCard: React.FC<{
 }> = ({
   request,
   isOwner,
+  highlighted,
   onAccept,
   onDecline,
   onCancel,
@@ -186,10 +189,15 @@ const RequestCard: React.FC<{
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={highlighted ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="bg-white/80 backdrop-blur-sm rounded-[2rem] shadow-sm mb-4 border border-white/20 overflow-visible relative"
+      id={`request-${request.id}`}
+      className={`bg-white/80 backdrop-blur-sm rounded-[2rem] shadow-sm mb-4 border overflow-visible relative transition-shadow ${
+        highlighted
+          ? "border-blue-400 ring-2 ring-blue-300 ring-offset-1 shadow-md"
+          : "border-white/20"
+      }`}
     >
       <div className="p-6">
         <div className="flex gap-4">
@@ -408,7 +416,10 @@ const RequestCard: React.FC<{
   );
 };
 
-const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
+const RequestDashboard: React.FC<RequestDashboardProps> = ({
+  userId,
+  highlightId,
+}) => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [allRequests, setAllRequests] = useState<BorrowRequest[]>([]);
   const [loading, setLoading] = useState(false);
@@ -537,6 +548,26 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
       }
     };
   }, [userId, loadRequests]);
+
+  // Scroll to and highlight the request from the notification link
+  useEffect(() => {
+    if (!highlightId || loading || allRequests.length === 0) return;
+    setStatusFilter("all");
+    // Retry until the element is mounted (animations may still be running)
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const tryScroll = () => {
+      const el = document.getElementById(`request-${highlightId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else if (attempts < 20) {
+        attempts++;
+        timer = setTimeout(tryScroll, 100);
+      }
+    };
+    tryScroll();
+    return () => clearTimeout(timer);
+  }, [highlightId, loading, allRequests]);
 
   const handleAccept = async (requestId: string) => {
     setActionLoading(requestId);
@@ -875,7 +906,26 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
     return requests;
   };
 
-  const filteredRequests = filterRequests(allRequests);
+  const filteredRequests = (() => {
+    const results = filterRequests(allRequests);
+    if (!highlightId) return results;
+
+    // Find in filtered results first
+    const idx = results.findIndex((r) => r.id === highlightId);
+    if (idx === 0) return results; // already at top
+    if (idx > 0) {
+      // Pin to top within current filtered view
+      const pinned = results[idx];
+      return [pinned, ...results.slice(0, idx), ...results.slice(idx + 1)];
+    }
+
+    // Not in filtered results (could be filtered out by statusFilter) —
+    // find directly in allRequests and force it to the top
+    const pinned = allRequests.find((r) => r.id === highlightId);
+    if (pinned) return [pinned, ...results];
+
+    return results;
+  })();
 
   // Calculate counts for each status (includes return confirmations needing action)
   const pendingCount = allRequests.filter(
@@ -958,6 +1008,7 @@ const RequestDashboard: React.FC<RequestDashboardProps> = ({ userId }) => {
               key={request.id}
               request={request}
               isOwner={request.ownerId === userId}
+              highlighted={request.id === highlightId}
               onAccept={handleAccept}
               onDecline={handleDecline}
               onCancel={handleCancel}

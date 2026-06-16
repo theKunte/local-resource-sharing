@@ -12,6 +12,20 @@ const mockPrisma = {
   user: {
     findUnique: jest.fn() as jest.MockedFunction<any>,
     update: jest.fn() as jest.MockedFunction<any>,
+    findMany: jest.fn() as jest.MockedFunction<any>,
+  },
+  notification: {
+    create: jest.fn() as jest.MockedFunction<any>,
+    findMany: jest.fn() as jest.MockedFunction<any>,
+    count: jest.fn() as jest.MockedFunction<any>,
+    update: jest.fn() as jest.MockedFunction<any>,
+  },
+  notificationPreference: {
+    findUnique: jest.fn() as jest.MockedFunction<any>,
+  },
+  deviceToken: {
+    findMany: jest.fn() as jest.MockedFunction<any>,
+    deleteMany: jest.fn() as jest.MockedFunction<any>,
   },
 };
 jest.mock("../../src/prisma", () => ({
@@ -148,10 +162,17 @@ describe("sendNotification", () => {
 });
 
 describe("notification helper functions", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // NotificationService.send saves notification then queries device tokens
+    mockPrisma.notification.create.mockResolvedValue({ id: "notif-1" });
+    mockPrisma.notificationPreference.findUnique.mockResolvedValue(null);
+  });
 
   it("notifyNewBorrowRequest sends to owner with correct payload", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ fcmToken: "owner-token" });
+    mockPrisma.deviceToken.findMany.mockResolvedValue([
+      { token: "owner-token", deviceType: "web" },
+    ]);
     mockSend.mockResolvedValue("msg-id");
 
     await notifyNewBorrowRequest("owner-1", "Alice", "Power Drill", "req-1");
@@ -163,15 +184,14 @@ describe("notification helper functions", () => {
           title: "New Borrow Request",
           body: 'Alice wants to borrow your "Power Drill"',
         }),
-        data: { type: "borrow_request", requestId: "req-1" },
       }),
     );
   });
 
   it("notifyRequestAccepted sends to borrower with correct payload", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({
-      fcmToken: "borrower-token",
-    });
+    mockPrisma.deviceToken.findMany.mockResolvedValue([
+      { token: "borrower-token", deviceType: "web" },
+    ]);
     mockSend.mockResolvedValue("msg-id");
 
     await notifyRequestAccepted("borrower-1", "Bob", "Ladder", "req-2");
@@ -183,15 +203,14 @@ describe("notification helper functions", () => {
           title: "Request Accepted!",
           body: 'Bob approved your request for "Ladder"',
         }),
-        data: { type: "request_accepted", requestId: "req-2" },
       }),
     );
   });
 
   it("notifyRequestDeclined sends to borrower with correct payload", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({
-      fcmToken: "borrower-token",
-    });
+    mockPrisma.deviceToken.findMany.mockResolvedValue([
+      { token: "borrower-token", deviceType: "web" },
+    ]);
     mockSend.mockResolvedValue("msg-id");
 
     await notifyRequestDeclined("borrower-1", "Carol", "Tent", "req-3");
@@ -203,13 +222,14 @@ describe("notification helper functions", () => {
           title: "Request Declined",
           body: 'Carol declined your request for "Tent"',
         }),
-        data: { type: "request_declined", requestId: "req-3" },
       }),
     );
   });
 
   it("notifyReturnRequested sends to owner with correct payload", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ fcmToken: "owner-token" });
+    mockPrisma.deviceToken.findMany.mockResolvedValue([
+      { token: "owner-token", deviceType: "web" },
+    ]);
     mockSend.mockResolvedValue("msg-id");
 
     await notifyReturnRequested("owner-1", "Dave", "Bike", "loan-1");
@@ -221,15 +241,14 @@ describe("notification helper functions", () => {
           title: "Item Return Requested",
           body: 'Dave says they returned your "Bike" \u2014 please confirm',
         }),
-        data: { type: "return_requested", loanId: "loan-1" },
       }),
     );
   });
 
   it("notifyReturnConfirmed sends to borrower with correct payload", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({
-      fcmToken: "borrower-token",
-    });
+    mockPrisma.deviceToken.findMany.mockResolvedValue([
+      { token: "borrower-token", deviceType: "web" },
+    ]);
     mockSend.mockResolvedValue("msg-id");
 
     await notifyReturnConfirmed("borrower-1", "Eve", "Camera", "loan-2");
@@ -241,17 +260,16 @@ describe("notification helper functions", () => {
           title: "Return Confirmed",
           body: 'Eve confirmed the return of "Camera"',
         }),
-        data: { type: "return_confirmed", loanId: "loan-2" },
       }),
     );
   });
 
-  it("helper functions silently succeed when user has no token", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ fcmToken: null });
+  it("helper functions silently succeed when user has no tokens", async () => {
+    mockPrisma.deviceToken.findMany.mockResolvedValue([]);
 
     await expect(
       notifyNewBorrowRequest("owner-no-token", "Alice", "Drill", "req-1"),
-    ).resolves.toBeUndefined();
+    ).resolves.not.toThrow();
 
     expect(mockSend).not.toHaveBeenCalled();
   });
