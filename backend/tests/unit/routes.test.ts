@@ -58,6 +58,16 @@ jest.mock("../../src/controllers/loanController", () => ({
 
 jest.mock("../../src/controllers/notificationController", () => ({
   saveNotificationToken: jest.fn((_req: any, res: any) => res.json({})),
+  registerDeviceToken: jest.fn((_req: any, res: any) => res.json({})),
+  getUserDevices: jest.fn((_req: any, res: any) => res.json({})),
+  unregisterDeviceToken: jest.fn((_req: any, res: any) => res.json({})),
+  getNotifications: jest.fn((_req: any, res: any) => res.json({})),
+  getUnreadCount: jest.fn((_req: any, res: any) => res.json({})),
+  markNotificationAsRead: jest.fn((_req: any, res: any) => res.json({})),
+  markAllNotificationsAsRead: jest.fn((_req: any, res: any) => res.json({})),
+  deleteNotification: jest.fn((_req: any, res: any) => res.json({})),
+  getNotificationPreferences: jest.fn((_req: any, res: any) => res.json({})),
+  updateNotificationPreferences: jest.fn((_req: any, res: any) => res.json({})),
 }));
 
 jest.mock("../../src/controllers/resourceController", () => ({
