@@ -104,17 +104,19 @@ export default function AddGearToGroupModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-xl shadow-xl w-full max-w-2xl p-6">
-        <h3 className="text-lg font-semibold mb-3">Add Gear to Group</h3>
-        <p className="text-sm text-gray-600 mb-4">
+      <div className="absolute inset-0 bg-forest-900/50" onClick={onClose} />
+      <div className="relative z-10 bg-cream-50 rounded-xl shadow-xl w-full max-w-2xl p-6">
+        <h3 className="text-lg font-semibold mb-3 text-forest-900">
+          Add Gear to Group
+        </h3>
+        <p className="text-sm text-stone-600 mb-4">
           Choose from your existing gear to add it to this group.
         </p>
 
         {loading ? (
           <div className="text-center py-8">Loading...</div>
         ) : candidates.length === 0 ? (
-          <div className="text-center py-8 text-gray-600">
+          <div className="text-center py-8 text-stone-600">
             No available gear to add.
           </div>
         ) : (
@@ -128,10 +130,10 @@ export default function AddGearToGroupModal({
                   if (e.key === "Enter" || e.key === " ") handleAdd(g.id);
                 }}
                 onClick={() => handleAdd(g.id)}
-                className="p-3 bg-slate-50 rounded-lg flex items-start gap-3 cursor-pointer hover:shadow-md transition-shadow"
+                className="p-3 bg-cream-100 rounded-lg flex items-start gap-3 cursor-pointer hover:shadow-md transition-shadow"
                 aria-label={`Add ${g.title} to group`}
               >
-                <div className="w-16 h-16 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                <div className="w-16 h-16 flex-shrink-0 rounded overflow-hidden bg-topo-50">
                   {g.image ? (
                     <img
                       src={g.image}
@@ -139,14 +141,14 @@ export default function AddGearToGroupModal({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-sm text-gray-500">
+                    <div className="w-full h-full flex items-center justify-center text-sm text-stone-500">
                       No Image
                     </div>
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-slate-900">{g.title}</div>
-                  <div className="text-sm text-slate-600 line-clamp-2">
+                  <div className="font-medium text-forest-900">{g.title}</div>
+                  <div className="text-sm text-stone-600 line-clamp-2">
                     {g.description}
                   </div>
                 </div>
@@ -157,7 +159,7 @@ export default function AddGearToGroupModal({
                       handleAdd(g.id);
                     }}
                     disabled={savingId === g.id}
-                    className="bg-cyan-400 text-white px-3 py-1 rounded-lg hover:bg-cyan-500 disabled:opacity-60"
+                    className="bg-pine-500 text-white px-3 py-1 rounded-lg hover:bg-pine-600 disabled:opacity-60"
                   >
                     {savingId === g.id ? "Adding..." : "Add"}
                   </button>
@@ -170,7 +172,7 @@ export default function AddGearToGroupModal({
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+            className="px-4 py-2 rounded-lg bg-stone-100 hover:bg-stone-200"
           >
             Close
           </button>

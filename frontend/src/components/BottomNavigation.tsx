@@ -94,7 +94,7 @@ function BottomNavigation() {
         }
       `}</style>
       <nav
-        className="mobile-bottom-nav fixed bottom-0 left-0 right-0 w-full bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg"
+        className="mobile-bottom-nav fixed bottom-0 left-0 right-0 w-full bg-cream-50/95 backdrop-blur-sm border-t border-stone-200 shadow-lg"
         style={{
           zIndex: 99999,
           position: "fixed",
@@ -110,15 +110,15 @@ function BottomNavigation() {
               <Link
                 key={item.path}
                 to={item.path}
-                className="relative flex flex-col items-center justify-center min-w-[60px] h-full hover:bg-gray-50 transition-colors"
+                className="relative flex flex-col items-center justify-center min-w-[60px] h-full hover:bg-topo-50 transition-colors"
               >
                 {item.icon(active)}
                 {item.path === "/requests" && actionableCount > 0 && (
-                  <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                  <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-ember-500 rounded-full border-2 border-cream-50" />
                 )}
                 <span
                   className={`text-[10px] mt-0.5 ${
-                    active ? "text-primary-600 font-semibold" : "text-gray-600"
+                    active ? "text-pine-600 font-semibold" : "text-stone-600"
                   }`}
                 >
                   {item.label}

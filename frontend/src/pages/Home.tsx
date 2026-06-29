@@ -141,8 +141,10 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-primary-200 border-t-primary-600 mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading your dashboard...</p>
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-topo-200 border-t-pine-600 mb-4"></div>
+          <p className="text-stone-600 font-medium">
+            Loading your dashboard...
+          </p>
         </div>
       </div>
     );
@@ -152,10 +154,10 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl font-bold text-forest-900 mb-4">
             Please log in to view your gear
           </h2>
-          <p className="text-gray-600">
+          <p className="text-stone-600">
             Sign in to access your dashboard and community gear
           </p>
         </div>
@@ -169,7 +171,7 @@ export default function Home() {
       {/* Inline status/toast banner */}
       {statusMessage && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="flex items-center gap-3 bg-cyan-400 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="flex items-center gap-3 bg-pine-500 text-white px-4 py-2 rounded-lg shadow-lg">
             <span className="text-sm font-medium">{statusMessage}</span>
             <button
               onClick={() => setStatusMessage(null)}
@@ -183,12 +185,12 @@ export default function Home() {
       )}
 
       {/* Fixed Header Section */}
-      <section className="px-4 pt-6 pb-4 bg-white border-b border-gray-200">
+      <section className="px-4 pt-6 pb-4 bg-cream-50 border-b border-stone-200">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
+          <h1 className="text-2xl font-bold text-forest-900 mb-1">
             Explore Community Gear
           </h1>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-stone-600 mb-4">
             Discover and borrow gear from your trusted network
           </p>
 
@@ -201,10 +203,10 @@ export default function Home() {
                 placeholder="Search by title or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-4 py-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-pine-500 focus:border-transparent text-sm bg-white"
               />
               <svg
-                className="absolute left-3 top-3 w-5 h-5 text-gray-400"
+                className="absolute left-3 top-3 w-5 h-5 text-stone-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -229,13 +231,13 @@ export default function Home() {
                       "hidden",
                     );
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white text-left flex justify-between items-center"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-pine-500 focus:border-transparent text-sm bg-white text-left flex justify-between items-center"
                 >
                   <span
                     className={
                       categoryFilters.length === 0
-                        ? "text-gray-500"
-                        : "text-gray-900"
+                        ? "text-stone-500"
+                        : "text-forest-900"
                     }
                   >
                     {categoryFilters.length === 0
@@ -243,7 +245,7 @@ export default function Home() {
                       : `${categoryFilters.length} selected`}
                   </span>
                   <svg
-                    className="w-4 h-4 text-gray-400"
+                    className="w-4 h-4 text-stone-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -256,29 +258,29 @@ export default function Home() {
                     />
                   </svg>
                 </button>
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white border border-stone-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
                   <div className="p-2 space-y-1">
                     {CATEGORIES.map((cat) => (
                       <label
                         key={cat}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"
+                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-topo-50 rounded cursor-pointer"
                       >
                         <input
                           type="checkbox"
                           checked={categoryFilters.includes(cat)}
                           onChange={() => toggleCategory(cat)}
-                          className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                          className="w-4 h-4 text-pine-600 border-stone-300 rounded focus:ring-pine-500"
                         />
-                        <span className="text-sm text-gray-700">{cat}</span>
+                        <span className="text-sm text-stone-700">{cat}</span>
                       </label>
                     ))}
                   </div>
                   {categoryFilters.length > 0 && (
-                    <div className="border-t border-gray-200 p-2">
+                    <div className="border-t border-stone-200 p-2">
                       <button
                         type="button"
                         onClick={() => setCategoryFilters([])}
-                        className="w-full text-xs text-primary-600 hover:text-primary-700 font-medium py-1"
+                        className="w-full text-xs text-pine-600 hover:text-pine-700 font-medium py-1"
                       >
                         Clear all
                       </button>
@@ -290,7 +292,7 @@ export default function Home() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white"
+                className="flex-1 px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-pine-500 focus:border-transparent text-sm bg-white"
               >
                 <option value="">All Status</option>
                 <option value="AVAILABLE">Available</option>
@@ -302,19 +304,19 @@ export default function Home() {
             {/* Active Filters Indicator */}
             {activeFilters && (
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-gray-600">Filters active:</span>
+                <span className="text-stone-600">Filters active:</span>
                 {searchQuery && (
-                  <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-full">
+                  <span className="px-2 py-1 bg-topo-100 text-pine-700 rounded-full">
                     "{searchQuery}"
                   </span>
                 )}
                 {categoryFilters.length > 0 && (
-                  <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-full">
+                  <span className="px-2 py-1 bg-topo-100 text-pine-700 rounded-full">
                     {categoryFilters.join(", ")}
                   </span>
                 )}
                 {statusFilter && (
-                  <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-full">
+                  <span className="px-2 py-1 bg-topo-100 text-pine-700 rounded-full">
                     {statusFilter}
                   </span>
                 )}
@@ -324,7 +326,7 @@ export default function Home() {
                     setCategoryFilters([]);
                     setStatusFilter("");
                   }}
-                  className="ml-auto text-primary-600 hover:text-primary-700 font-medium"
+                  className="ml-auto text-pine-600 hover:text-pine-700 font-medium"
                 >
                   Clear all
                 </button>
@@ -341,10 +343,10 @@ export default function Home() {
           {!activeFilters && recommendations.length > 0 && (
             <section className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                <h2 className="text-lg font-semibold text-forest-900 flex items-center">
                   <span className="mr-2">✨</span>
                   For You
-                  <span className="ml-2 text-xs font-normal text-gray-500 bg-primary-50 px-2 py-1 rounded-full">
+                  <span className="ml-2 text-xs font-normal text-stone-500 bg-topo-50 px-2 py-1 rounded-full">
                     Based on your activity
                   </span>
                 </h2>

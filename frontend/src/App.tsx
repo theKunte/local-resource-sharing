@@ -37,11 +37,11 @@ function App() {
   // Firebase init error — no routing needed
   if (firebaseError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
-          <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+      <div className="min-h-screen flex items-center justify-center bg-cream-100 px-4">
+        <div className="max-w-md w-full bg-cream-50 shadow-lg rounded-lg p-6">
+          <div className="flex items-center justify-center w-12 h-12 mx-auto bg-ember-100 rounded-full mb-4">
             <svg
-              className="w-6 h-6 text-red-600"
+              className="w-6 h-6 text-ember-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -54,16 +54,16 @@ function App() {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
+          <h2 className="text-xl font-bold text-forest-900 text-center mb-2">
             Authentication Error
           </h2>
-          <p className="text-gray-600 text-center mb-6">{firebaseError}</p>
+          <p className="text-stone-600 text-center mb-6">{firebaseError}</p>
           <button
             onClick={() => {
               sessionStorage.removeItem("firebase_init_error");
               window.location.reload();
             }}
-            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
+            className="w-full bg-pine-600 text-white py-2 px-4 rounded-lg hover:bg-pine-700 transition-colors"
           >
             Refresh Page
           </button>
